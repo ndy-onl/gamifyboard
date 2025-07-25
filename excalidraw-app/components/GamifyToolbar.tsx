@@ -1,11 +1,8 @@
 // Datei: /var/www/gamifyboard/excalidraw-app/components/GamifyToolbar.tsx
 
-import React from "react";
-import { nanoid } from "nanoid";
-
-import { newElement } from "@excalidraw/element";
-
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+
+import type React from "react";
 
 interface GamifyToolbarProps {
   excalidrawAPI: ExcalidrawImperativeAPI;

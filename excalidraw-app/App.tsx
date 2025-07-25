@@ -2,8 +2,15 @@ import { Excalidraw, WelcomeScreen } from "@excalidraw/excalidraw";
 
 import { useState, useCallback, useEffect } from "react";
 
-import type { ExcalidrawImperativeAPI, AppState } from "@excalidraw/excalidraw/types";
-import type { ExcalidrawElement, NonDeletedExcalidrawElement, StrokeStyle } from "@excalidraw/element/types";
+import type {
+  ExcalidrawImperativeAPI,
+  AppState,
+} from "@excalidraw/excalidraw/types";
+import type {
+  ExcalidrawElement,
+  NonDeletedExcalidrawElement,
+  StrokeStyle,
+} from "@excalidraw/element/types";
 
 import { PropertiesSidebar } from "./components/PropertiesSidebar";
 import { GamifyToolbar } from "./components/GamifyToolbar";
@@ -133,10 +140,13 @@ const App = () => {
     }
 
     const elements = excalidrawAPI.getSceneElements();
-    let elementsToUpdate: ExcalidrawElement[] = [];
+    const elementsToUpdate: ExcalidrawElement[] = [];
 
     elements.forEach((el) => {
-      if ((el.type === "rectangle" || el.type === "diamond") && el.customData === undefined) {
+      if (
+        (el.type === "rectangle" || el.type === "diamond") &&
+        el.customData === undefined
+      ) {
         elementsToUpdate.push({
           ...el,
           customData: {
@@ -172,8 +182,8 @@ const App = () => {
           </div>
         )}
       >
-          <WelcomeScreen />
-        </Excalidraw>
+        <WelcomeScreen />
+      </Excalidraw>
     </div>
   );
 };
