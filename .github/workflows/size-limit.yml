@@ -25,4 +25,3 @@ jobs:
         run: ls -R packages/excalidraw/dist
       - name: Run size-limit
         run: npx size-limit --json
-        working-directory: packages/excalidraw
