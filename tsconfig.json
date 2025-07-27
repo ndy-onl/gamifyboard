@@ -29,8 +29,8 @@
       "@excalidraw/math/*": ["./packages/math/src/*"],
       "@excalidraw/utils": ["./packages/utils/src/index.ts"],
       "@excalidraw/utils/*": ["./packages/utils/src/*"]
-    }
-  },
+    },
+    "typeRoots": ["./node_modules/@types", "./node_modules"]
   "include": ["packages", "excalidraw-app"],
   "exclude": ["examples", "dist", "types", "tests"]
 }
