@@ -17,8 +17,6 @@ jobs:
           node-version: 18.x
       - name: Install dependencies
         run: yarn install
-      - name: Install dependencies
-        run: yarn install
       - name: Build package
         run: yarn build:package
       - name: List build output
