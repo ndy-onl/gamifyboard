@@ -310,6 +310,11 @@ Für die Funktionen ab Meilenstein 7 wird ein Backend benötigt.
 
     7.3. Steuerung von KI-Agenten
 
+## Anhang A: CI/CD Learnings
+
+- **Monorepo Dependency Installation**: When working with this monorepo, it is crucial to run `yarn install` from the root of the `gamifyboard-app` directory. Installing dependencies only within a specific package (e.g., `packages/excalidraw`) will cause build and test failures in the CI environment.
+- **CI/CD Tooling**: The `andresz1/size-limit-action@v1` GitHub Action has proven to be unreliable for this project. It does not consistently respect the `build_script` and `package_manager` parameters, leading to unpredictable build failures. The recommended approach is to take manual control of the build and analysis process within the CI workflow.
+
 Anhang A. Referenzdokumente
 
     Marktanalyse für kollaborative Whiteboard-Plattform
