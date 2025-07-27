@@ -17,6 +17,7 @@ jobs:
           node-version: "18.x"
       - name: "Install Deps"
         run: yarn install
+        working-directory: ./
       - name: "Test Coverage"
         run: yarn test:coverage
       - name: "Report Coverage"
