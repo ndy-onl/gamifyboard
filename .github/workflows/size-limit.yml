@@ -16,18 +16,11 @@ jobs:
         with:
           node-version: 18.x
       - name: Install dependencies
-        run: yarn
-        working-directory: ./
-        env:
-          CI: true
-      - name: Build package
-        run: yarn build:esm
-        working-directory: packages/excalidraw
-      - name: List build output
-        run: ls -R
-        working-directory: packages/excalidraw
-      - uses: andresz1/size-limit-action@v1
+        run: yarn install
+      - name: Run size-limit
+        uses: andresz1/size-limit-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          skip_step: install, build
+          build_script: build:esm
+          skip_step: install
           directory: packages/excalidraw
