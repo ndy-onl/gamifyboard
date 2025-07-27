@@ -19,7 +19,7 @@ jobs:
         run: yarn install
         working-directory: ./
       - name: "Test Coverage"
-        run: yarn test:coverage
+        run: yarn test:coverage --coverage.reporter=json-summary
       - name: "Report Coverage"
         if: always() # Also generate the report if tests are failing
         uses: davelosert/vitest-coverage-report-action@v2
