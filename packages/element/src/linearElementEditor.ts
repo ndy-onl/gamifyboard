@@ -154,17 +154,17 @@ export class LinearElementEditor {
     element: NonDeleted<ExcalidrawLinearElement>,
     elementsMap: ElementsMap,
   ) {
-    this.elementId = element.id as string & {
-      _brand: "excalidrawLinearElementId";
-    };
     if (!pointsEqual(element.points[0], pointFrom(0, 0))) {
-      console.error("Linear element is not normalized", Error().stack);
       mutateElement(
         element,
         elementsMap,
         LinearElementEditor.getNormalizeElementPointsAndCoords(element),
       );
     }
+
+    this.elementId = element.id as string & {
+      _brand: "excalidrawLinearElementId";
+    };
     this.selectedPointsIndices = null;
     this.lastUncommittedPoint = null;
     this.isDragging = false;

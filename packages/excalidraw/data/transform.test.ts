@@ -748,7 +748,7 @@ describe("Test Transform", () => {
       );
       expect(consoleErrorSpy).toHaveBeenNthCalledWith(
         2,
-        "No element for end binding with id rect-11 found",
+        `No element for end binding with id ${elements[2].end.id} found`,
       );
     });
 
