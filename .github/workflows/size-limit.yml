@@ -23,6 +23,12 @@ jobs:
       - name: List build output
         run: ls -R
         working-directory: packages/excalidraw
+      - name: Install dependencies
+        run: yarn install
+      - name: Build package
+        run: yarn build:package
+      - name: List build output
+        run: ls -R packages/excalidraw/dist
       - name: Run size-limit
         uses: andresz1/size-limit-action@v1
         with:
