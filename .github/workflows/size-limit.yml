@@ -20,9 +20,14 @@ jobs:
         working-directory: ./
         env:
           CI: true
+      - name: Build package
+        run: yarn build:esm
+        working-directory: packages/excalidraw
+      - name: List build output
+        run: ls -R
+        working-directory: packages/excalidraw
       - uses: andresz1/size-limit-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          build_script: build:esm
-          skip_step: install
+          skip_step: install, build
           directory: packages/excalidraw
