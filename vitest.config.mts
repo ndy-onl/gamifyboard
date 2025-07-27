@@ -51,9 +51,10 @@ export default defineConfig({
   test: {
     // Since hooks are running in stack in v2, which means all hooks run serially whereas
     // we need to run them in parallel
-    sequence: {
-      hooks: "parallel",
-    },
+    // sequence: {
+    //   hooks: "parallel",
+    // },
+    threads: false,
     setupFiles: ["./setupTests.ts"],
     globals: true,
     environment: "jsdom",
