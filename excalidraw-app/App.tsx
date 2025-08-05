@@ -7,7 +7,6 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from "react";
-import { act } from "@testing-library/react";
 
 import type {
   ExcalidrawImperativeAPI,
