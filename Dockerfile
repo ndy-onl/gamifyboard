@@ -1,20 +1,17 @@
-FROM --platform=${BUILDPLATFORM} node:18 AS build
+FROM node:18-alpine as builder
 
-WORKDIR /opt/node_app
+WORKDIR /app
 
-COPY . .
+COPY package.json yarn.lock ./
 
-# do not ignore optional dependencies:
-# Error: Cannot find module @rollup/rollup-linux-x64-gnu
-RUN --mount=type=cache,target=/root/.cache/yarn \
-    npm_config_target_arch=${TARGETARCH} yarn --network-timeout 600000
+COPY excalidraw-app excalidraw-app
 
-ARG NODE_ENV=production
+RUN yarn install --frozen-lockfile &&     cd excalidraw-app &&     yarn install --frozen-lockfile &&     yarn build
 
-RUN npm_config_target_arch=${TARGETARCH} yarn build:app:docker
+FROM nginx:alpine
 
-FROM --platform=${TARGETPLATFORM} nginx:1.27-alpine
+COPY --from=builder /app/excalidraw-app/dist /usr/share/nginx/html
 
-COPY --from=build /opt/node_app/excalidraw-app/build /usr/share/nginx/html
+EXPOSE 80
 
-HEALTHCHECK CMD wget -q -O /dev/null http://localhost || exit 1
+CMD ["nginx", "-g", "daemon off;"]
