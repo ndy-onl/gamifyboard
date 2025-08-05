@@ -1,4 +1,4 @@
-import { waitFor, render } from "@excalidraw/excalidraw/tests/test-utils";
+import { waitFor, render, act } from "@excalidraw/excalidraw/tests/test-utils";
 
 import React, { createRef } from "react";
 
