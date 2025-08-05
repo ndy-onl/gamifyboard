@@ -1,6 +1,13 @@
 import { Excalidraw, WelcomeScreen } from "@excalidraw/excalidraw";
 
-import { useState, useCallback, useEffect } from "react";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
+import { act } from "@testing-library/react";
 
 import type {
   ExcalidrawImperativeAPI,
@@ -9,16 +16,39 @@ import type {
 import type {
   ExcalidrawElement,
   NonDeletedExcalidrawElement,
-  StrokeStyle,
-} from "@excalidraw/excalidraw/types";
+} from "@excalidraw/element/types";
+import type { StrokeStyle } from "@excalidraw/element/types";
 
 import { PropertiesSidebar } from "./components/PropertiesSidebar";
 import { GamifyToolbar } from "./components/GamifyToolbar";
-const App = () => {
+
+export interface AppRef {
+  excalidrawAPI: ExcalidrawImperativeAPI | null;
+  checkGameState: (elements: readonly ExcalidrawElement[]) => void;
+}
+
+const isIntersecting = (
+  r1: { x: number; y: number; width: number; height: number },
+  r2: { x: number; y: number; width: number; height: number },
+) => {
+  return (
+    r1.x < r2.x + r2.width &&
+    r1.x + r1.width > r2.x &&
+    r1.y < r2.y + r2.height &&
+    r1.y + r1.height > r2.y
+  );
+};
+
+const App = forwardRef<AppRef>((props, ref) => {
   const [excalidrawAPI, setExcalidrawAPI] =
     useState<ExcalidrawImperativeAPI | null>(null);
   const [selectedElement, setSelectedElement] =
     useState<NonDeletedExcalidrawElement | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    excalidrawAPI,
+    checkGameState: (elements) => checkGameState(elements),
+  }));
 
   const checkGameState = useCallback(
     (elements: readonly ExcalidrawElement[]) => {
@@ -41,12 +71,8 @@ const App = () => {
           return el;
         }
 
-        const cardsInZone = cards.filter(
-          (card) =>
-            card.x > el.x &&
-            card.x < el.x + el.width &&
-            card.y > el.y &&
-            card.y < el.y + el.height,
+        const cardsInZone = cards.filter((card) =>
+          isIntersecting(card, el as any),
         );
 
         const isCorrect =
@@ -64,7 +90,9 @@ const App = () => {
       });
 
       if (needsUpdate) {
-        excalidrawAPI.updateScene({ elements: updatedElements });
+        act(() => {
+          excalidrawAPI.updateScene({ elements: updatedElements });
+        });
       }
     },
     [excalidrawAPI],
@@ -129,7 +157,9 @@ const App = () => {
       ...sceneElements.slice(elementIndex + 1),
     ];
 
-    excalidrawAPI.updateScene({ elements: newSceneElements });
+    act(() => {
+      excalidrawAPI.updateScene({ elements: newSceneElements });
+    });
     setSelectedElement(updatedElement as NonDeletedExcalidrawElement);
   };
 
@@ -159,14 +189,16 @@ const App = () => {
     });
 
     if (elementsToUpdate.length > 0) {
-      excalidrawAPI.updateScene({ elements: elementsToUpdate });
+      act(() => {
+        excalidrawAPI.updateScene({ elements: elementsToUpdate });
+      });
     }
   }, [excalidrawAPI]);
 
   return (
     <div style={{ height: "100vh" }}>
       <Excalidraw
-        excalidrawAPI={setExcalidrawAPI}
+        excalidrawAPI={(api) => setExcalidrawAPI(api)}
         onChange={handleCanvasChange}
         onPointerUp={handlePointerUp}
         renderTopRightUI={() => (
@@ -185,6 +217,6 @@ const App = () => {
       </Excalidraw>
     </div>
   );
-};
+});
 
 export default App;
