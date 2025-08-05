@@ -28,7 +28,8 @@ import { openConfirmModal } from "../OverwriteConfirm/OverwriteConfirmState";
 import Trans from "../Trans";
 import DropdownMenuItem from "../dropdownMenu/DropdownMenuItem";
 import DropdownMenuItemContentRadio from "../dropdownMenu/DropdownMenuItemContentRadio";
-
+import DropdownMenuItemLink from "../dropdownMenu/DropdownMenuItemLink";
+import { GithubIcon } from "../icons";
 import {
   boltIcon,
   DeviceDesktopIcon,
@@ -339,7 +340,19 @@ export const Export = () => {
 Export.displayName = "Export";
 
 export const Socials = () => {
-  return null;
+  const { t } = useI18n();
+
+  return (
+    <>
+      <DropdownMenuItemLink
+        icon={GithubIcon}
+        href="https://github.com/ndy-onl/gamifyboard"
+        aria-label="GitHub"
+      >
+        GitHub
+      </DropdownMenuItemLink>
+    </>
+  );
 };
 Socials.displayName = "Socials";
 

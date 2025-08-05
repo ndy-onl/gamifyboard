@@ -19,7 +19,7 @@ const Header = () => (
   <div className="HelpDialog__header">
     <a
       className="HelpDialog__btn"
-      href="https://docs.GamifyBoard.com"
+      href="https://docu.gamifyboard.com/"
       target="_blank"
       rel="noopener"
     >
@@ -28,7 +28,7 @@ const Header = () => (
     </a>
     <a
       className="HelpDialog__btn"
-      href="https://blog.GamifyBoard.com"
+      href="https://gamifyboard.com/blog"
       target="_blank"
       rel="noopener"
     >
@@ -44,7 +44,6 @@ const Header = () => (
       <div className="HelpDialog__link-icon">{GithubIcon}</div>
       {t("helpDialog.github")}
     </a>
-    
   </div>
 );
 
