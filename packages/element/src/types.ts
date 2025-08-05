@@ -30,7 +30,7 @@ export type TextAlign = typeof TEXT_ALIGN[keyof typeof TEXT_ALIGN];
 
 type VerticalAlignKeys = keyof typeof VERTICAL_ALIGN;
 export type VerticalAlign = typeof VERTICAL_ALIGN[VerticalAlignKeys];
-export type FractionalIndex = string & { _brand: "franctionalIndex" };
+export type FractionalIndex = string & { _brand: "fractionalIndex" };
 
 export type BoundElement = Readonly<{
   id: ExcalidrawLinearElement["id"];

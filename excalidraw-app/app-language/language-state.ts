@@ -2,9 +2,9 @@ import { useEffect } from "react";
 
 import { atom, useAtom } from "../app-jotai";
 
-import { getPreferredLanguage, languageDetector } from "./language-detector";
+import { languageDetector } from "./language-detector";
 
-export const appLangCodeAtom = atom(getPreferredLanguage());
+export const appLangCodeAtom = atom("de-DE");
 
 export const useAppLangCode = () => {
   const [langCode, setLangCode] = useAtom(appLangCodeAtom);

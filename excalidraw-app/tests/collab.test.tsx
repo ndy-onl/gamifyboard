@@ -19,6 +19,12 @@ import ExcalidrawApp from "../App";
 
 const { h } = window;
 
+Object.defineProperty(window, "collab", {
+  value: {
+    startCollaboration: vi.fn(),
+  },
+});
+
 Object.defineProperty(window, "crypto", {
   value: {
     getRandomValues: (arr: number[]) =>
