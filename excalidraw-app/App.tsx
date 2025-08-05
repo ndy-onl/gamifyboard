@@ -7,7 +7,6 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from "react";
-import { act } from "@testing-library/react";
 
 import type {
   ExcalidrawImperativeAPI,
@@ -90,9 +89,7 @@ const App = forwardRef<AppRef>((props, ref) => {
       });
 
       if (needsUpdate) {
-        act(() => {
-          excalidrawAPI.updateScene({ elements: updatedElements });
-        });
+        excalidrawAPI.updateScene({ elements: updatedElements });
       }
     },
     [excalidrawAPI],
@@ -157,9 +154,7 @@ const App = forwardRef<AppRef>((props, ref) => {
       ...sceneElements.slice(elementIndex + 1),
     ];
 
-    act(() => {
-      excalidrawAPI.updateScene({ elements: newSceneElements });
-    });
+    excalidrawAPI.updateScene({ elements: newSceneElements });
     setSelectedElement(updatedElement as NonDeletedExcalidrawElement);
   };
 
@@ -189,9 +184,7 @@ const App = forwardRef<AppRef>((props, ref) => {
     });
 
     if (elementsToUpdate.length > 0) {
-      act(() => {
-        excalidrawAPI.updateScene({ elements: elementsToUpdate });
-      });
+      excalidrawAPI.updateScene({ elements: elementsToUpdate });
     }
   }, [excalidrawAPI]);
 

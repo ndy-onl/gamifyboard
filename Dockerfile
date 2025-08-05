@@ -1,20 +1,39 @@
-FROM --platform=${BUILDPLATFORM} node:18 AS build
+FROM node:18-alpine as builder
 
-WORKDIR /opt/node_app
+WORKDIR /app
 
-COPY . .
+# Define build argument for source commit
+ARG SOURCE_COMMIT
 
-# do not ignore optional dependencies:
-# Error: Cannot find module @rollup/rollup-linux-x64-gnu
-RUN --mount=type=cache,target=/root/.cache/yarn \
-    npm_config_target_arch=${TARGETARCH} yarn --network-timeout 600000
+# Install git
+RUN apk add --no-cache git
 
-ARG NODE_ENV=production
+# Copy package.json and yarn.lock from root
+COPY package.json yarn.lock ./
 
-RUN npm_config_target_arch=${TARGETARCH} yarn build:app:docker
+# Copy the excalidraw-app directory
+COPY excalidraw-app excalidraw-app
 
-FROM --platform=${TARGETPLATFORM} nginx:1.27-alpine
+# Copy .eslintrc.json and packages
+COPY .eslintrc.json .
+COPY packages packages
+COPY scripts scripts
 
-COPY --from=build /opt/node_app/excalidraw-app/build /usr/share/nginx/html
+# Install dependencies in the root and then in excalidraw-app, and run build
+RUN yarn install --frozen-lockfile && \
+    cd excalidraw-app && \
+    yarn install --frozen-lockfile && \
+    VITE_APP_GIT_SHA=$SOURCE_COMMIT VITE_APP_ENABLE_TRACKING=false VITE_APP_ENABLE_ESLINT=false yarn build:app && \
+    yarn build:version
 
-HEALTHCHECK CMD wget -q -O /dev/null http://localhost || exit 1
+# Stage 2: Serve the application with Nginx
+FROM nginx:alpine
+
+# Copy the built files from the builder stage
+COPY --from=builder /app/excalidraw-app/build /usr/share/nginx/html
+
+# Expose port 80 for the web server
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
