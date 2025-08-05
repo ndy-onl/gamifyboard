@@ -6,7 +6,7 @@ COPY package.json yarn.lock ./
 
 COPY excalidraw-app excalidraw-app
 
-RUN yarn install --frozen-lockfile &&     cd excalidraw-app &&     yarn install --frozen-lockfile &&     yarn build
+RUN yarn install --frozen-lockfile &&     cd excalidraw-app &&     yarn install --frozen-lockfile &&     yarn run build
 
 FROM nginx:alpine
 
