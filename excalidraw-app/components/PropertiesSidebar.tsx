@@ -117,8 +117,12 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
             style={{ width: "200px", marginBottom: "0.5rem" }}
           />
           <p>Counter Value: {customData.value || 0}</p>
-          <button onClick={handleIncrement} disabled={!!customData.countsType}>+</button>
-          <button onClick={handleDecrement} disabled={!!customData.countsType}>-</button>
+          <button onClick={handleIncrement} disabled={!!customData.countsType}>
+            +
+          </button>
+          <button onClick={handleDecrement} disabled={!!customData.countsType}>
+            -
+          </button>
         </div>
       )}
 

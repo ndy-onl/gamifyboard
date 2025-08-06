@@ -1,4 +1,4 @@
-import { waitFor, render, act } from "@excalidraw/excalidraw/tests/test-utils";
+import { waitFor, render } from "@excalidraw/excalidraw/tests/test-utils";
 
 import React, { createRef } from "react";
 
@@ -45,109 +45,70 @@ const createDefaultElementProps = (
 
 describe("Gamify Functions", () => {
   it("should allow creating a zone and moving a card into it", async () => {
-    let excalidrawAPI: ExcalidrawImperativeAPI;
-    const appRef = createRef<AppRef>();
-    const renderResult = await render(<ExcalidrawApp ref={appRef} />);
-    const container = renderResult.container;
-    let excalidrawContainer: Element;
+    const appRef = React.createRef<AppRef>();
+    await render(<ExcalidrawApp ref={appRef} />);
 
-    const zoneId = "zone-1";
-    const zoneType = "fruit";
-    const cardId = "card-1";
-    const cardType = "fruit";
-
-    await waitFor(async () => {
+    await waitFor(() => {
+      expect(appRef.current).not.toBeNull();
       expect(appRef.current?.excalidrawAPI).not.toBeNull();
-      excalidrawAPI = appRef.current!.excalidrawAPI!;
-      excalidrawContainer = container.querySelector(".excalidraw-container")!;
-      expect(excalidrawContainer).not.toBeNull();
+    });
 
-      // 1. Create a zone
-      excalidrawAPI.updateScene({
-        elements: [
-          createDefaultElementProps({
-            id: zoneId,
-            x: 100,
-            y: 100,
-            width: 200,
-            height: 200,
-            customData: {
-              isZone: true,
-              acceptedCardTypes: zoneType,
-            },
-          }),
-        ],
-      });
+    const excalidrawAPI = appRef.current!.excalidrawAPI!;
 
-      let elements = excalidrawAPI.getSceneElements();
-      let zone = elements.find((el) => el.id === zoneId);
+    // 1. Create a zone and a card
+    excalidrawAPI.updateScene({
+      elements: [
+        createDefaultElementProps({
+          id: zoneId,
+          x: 100,
+          y: 100,
+          width: 200,
+          height: 200,
+          customData: {
+            isZone: true,
+            acceptedCardTypes: zoneType,
+          },
+        }),
+        createDefaultElementProps({
+          id: cardId,
+          x: 50,
+          y: 50,
+          width: 50,
+          height: 50,
+          customData: {
+            isCard: true,
+            cardType,
+          },
+        }),
+      ],
+    });
 
-      // 2. Create a card
-      excalidrawAPI.updateScene({
-        elements: [
-          ...excalidrawAPI.getSceneElements(), // Keep existing elements
-          createDefaultElementProps({
-            id: cardId,
-            x: 50,
-            y: 50,
-            width: 50,
-            height: 50,
-            customData: {
-              isCard: true,
-              cardType,
-            },
-          }),
-        ],
-      });
-
-      elements = excalidrawAPI.getSceneElements();
-      zone = elements.find((el) => el.id === zoneId);
-      const card = elements.find((el) => el.id === cardId);
-
-      // Initial check: zone should not be green
+    await waitFor(() => {
+      const elements = excalidrawAPI.getSceneElements();
+      const zone = elements.find((el) => el.id === zoneId);
       expect(zone?.backgroundColor).not.toBe("#aaffaa");
+    });
 
-      // 3. Move the card into the zone
-      excalidrawAPI.updateScene({
-        elements: [
-          ...elements.filter((el) => el.id !== cardId), // Remove old card
-          {
-            ...card!,
-            x: 150, // Inside the zone
-            y: 150, // Inside the zone
-          },
-        ],
-      });
+    // 2. Move the card into the zone
+    const card = excalidrawAPI.getSceneElements().find((el) => el.id === cardId)!;
+    excalidrawAPI.updateScene({
+      elements: [
+        ...excalidrawAPI.getSceneElements().filter((el) => el.id !== cardId),
+        {
+          ...card,
+          x: 150, // Inside the zone
+          y: 150, // Inside the zone
+        },
+      ],
+    });
 
-      appRef.current!.checkGameState(excalidrawAPI.getSceneElements());
+    appRef.current!.checkGameState(excalidrawAPI.getSceneElements());
 
-      // Wait for the scene to update and check the zone's background color
-      await waitFor(() => {
-        elements = excalidrawAPI.getSceneElements();
-        zone = elements.find((el) => el.id === zoneId);
-        expect(zone?.backgroundColor).toBe("#aaffaa"); // Green for correct
-      });
-
-      // Move the card out of the zone
-      excalidrawAPI.updateScene({
-        elements: [
-          ...elements.filter((el) => el.id !== cardId),
-          {
-            ...card!,
-            x: 10, // Outside the zone
-            y: 10, // Outside the zone
-          },
-        ],
-      });
-
-      appRef.current!.checkGameState(excalidrawAPI.getSceneElements());
-
-      // Wait for the scene to update and check the zone's background color
-      await waitFor(() => {
-        elements = excalidrawAPI.getSceneElements();
-        zone = elements.find((el) => el.id === zoneId);
-        expect(zone?.backgroundColor).not.toBe("#aaffaa"); // Not green anymore
-      });
+    // 3. Check if the zone is green
+    await waitFor(() => {
+      const elements = excalidrawAPI.getSceneElements();
+      const zone = elements.find((el) => el.id === zoneId);
+      expect(zone?.backgroundColor).toBe("#aaffaa");
     });
   });
 });

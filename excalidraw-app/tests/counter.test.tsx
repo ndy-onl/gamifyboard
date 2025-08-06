@@ -45,14 +45,15 @@ const createDefaultElementProps = (
 
 describe("Counter Functions", () => {
   it("should convert a rectangle to a counter and allow manual counting", async () => {
-    let excalidrawAPI: ExcalidrawImperativeAPI;
     const appRef = createRef<AppRef>();
     await render(<ExcalidrawApp ref={appRef} />);
 
-    await waitFor(async () => {
+    await waitFor(() => {
+      expect(appRef.current).not.toBeNull();
       expect(appRef.current?.excalidrawAPI).not.toBeNull();
-      excalidrawAPI = appRef.current!.excalidrawAPI!;
     });
+
+    const excalidrawAPI = appRef.current!.excalidrawAPI!;
 
     // 1. Create a rectangle
     const rectangleId = "rectangle-1";
@@ -77,7 +78,9 @@ describe("Counter Functions", () => {
     await waitFor(() => {
       const sidebar = document.querySelector(".properties-sidebar-container");
       expect(sidebar).not.toBeNull();
-      const radio = sidebar?.querySelector("input[value=counter]") as HTMLInputElement;
+      const radio = sidebar?.querySelector(
+        "input[value=counter]",
+      ) as HTMLInputElement;
       expect(radio).not.toBeNull();
       act(() => {
         radio.click();
@@ -90,9 +93,11 @@ describe("Counter Functions", () => {
     expect(counter?.customData?.value).toBe(0);
 
     // 4. Manual counting
-        await waitFor(() => {
+    await waitFor(() => {
       const sidebar = document.querySelector(".properties-sidebar-container");
-      const plusButton = sidebar?.querySelector("button:not(:disabled)") as HTMLButtonElement;
+      const plusButton = sidebar?.querySelector(
+        "button:not(:disabled)",
+      ) as HTMLButtonElement;
       expect(plusButton).not.toBeNull();
       act(() => {
         plusButton.click();
@@ -105,14 +110,15 @@ describe("Counter Functions", () => {
   });
 
   it("should automatically count cards in a zone", async () => {
-    let excalidrawAPI: ExcalidrawImperativeAPI;
     const appRef = createRef<AppRef>();
     await render(<ExcalidrawApp ref={appRef} />);
 
-    await waitFor(async () => {
+    await waitFor(() => {
+      expect(appRef.current).not.toBeNull();
       expect(appRef.current?.excalidrawAPI).not.toBeNull();
-      excalidrawAPI = appRef.current!.excalidrawAPI!;
     });
+
+    const excalidrawAPI = appRef.current!.excalidrawAPI!;
 
     const zoneId = "zone-1";
     const cardId = "card-1";
@@ -136,7 +142,7 @@ describe("Counter Functions", () => {
             y: 0,
             width: 50,
             height: 50,
-            customData: { isCard: true, cardType: cardType },
+            customData: { isCard: true, cardType },
           }),
           createDefaultElementProps({
             id: counterId,
@@ -152,22 +158,24 @@ describe("Counter Functions", () => {
     appRef.current!.checkGameState(excalidrawAPI.getSceneElements());
 
     await waitFor(() => {
-      let elements = excalidrawAPI.getSceneElements();
-      let counter = elements.find((el) => el.id === counterId);
+      const elements = excalidrawAPI.getSceneElements();
+      const counter = elements.find((el) => el.id === counterId);
       expect(counter?.customData?.value).toBe(0);
     });
 
     act(() => {
       excalidrawAPI.updateScene({
-        elements: excalidrawAPI.getSceneElements().map(el => el.id === cardId ? { ...el, x: 150, y: 150 } : el)
+        elements: excalidrawAPI
+          .getSceneElements()
+          .map((el) => (el.id === cardId ? { ...el, x: 150, y: 150 } : el)),
       });
     });
 
     appRef.current!.checkGameState(excalidrawAPI.getSceneElements());
 
     await waitFor(() => {
-      let elements = excalidrawAPI.getSceneElements();
-      let counter = elements.find((el) => el.id === counterId);
+      const elements = excalidrawAPI.getSceneElements();
+      const counter = elements.find((el) => el.id === counterId);
       expect(counter?.customData?.value).toBe(1);
     });
   });

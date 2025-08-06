@@ -423,7 +423,10 @@ const drawElementOnCanvas = (
       rc.draw(ShapeCache.get(element)!);
       const value = element.customData?.value ?? 0;
       const fontSize = element.height * 0.6;
-      context.font = getFontString({ fontSize, fontFamily: element.fontFamily });
+      context.font = getFontString({
+        fontSize,
+        fontFamily: element.fontFamily,
+      });
       context.fillStyle = element.strokeColor;
       context.textAlign = "center";
       context.textBaseline = "middle";
