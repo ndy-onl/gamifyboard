@@ -1,15 +1,14 @@
 import { waitFor, render, act } from "@excalidraw/excalidraw/tests/test-utils";
 
-import React, { createRef } from "react";
+import React from "react";
 
-import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import type { Radians } from "@excalidraw/math";
 import type {
   FractionalIndex,
   ExcalidrawRectangleElement,
 } from "@excalidraw/element/types";
 
-import ExcalidrawApp, { type AppRef } from "../App";
+import ExcalidrawApp from "../App";
 
 const createDefaultElementProps = (
   overrides?: Omit<Partial<ExcalidrawRectangleElement>, "type">,
@@ -45,15 +44,18 @@ const createDefaultElementProps = (
 
 describe("Counter Functions", () => {
   it("should convert a rectangle to a counter and allow manual counting", async () => {
-    const appRef = createRef<AppRef>();
-    await render(<ExcalidrawApp ref={appRef} />);
-
-    await waitFor(() => {
-      expect(appRef.current).not.toBeNull();
-      expect(appRef.current?.excalidrawAPI).not.toBeNull();
+    act(() => {
+      render(<ExcalidrawApp />);
     });
 
-    const excalidrawAPI = appRef.current!.excalidrawAPI!;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { excalidrawAPI, checkGameState } = await waitFor(() => {
+      // eslint-disable-line @typescript-eslint/no-unused-vars
+      if (!(window as any).ExcalidrawHandle) {
+        throw new Error("Excalidraw handle not available yet.");
+      }
+      return (window as any).ExcalidrawHandle;
+    });
 
     // 1. Create a rectangle
     const rectangleId = "rectangle-1";
@@ -110,15 +112,18 @@ describe("Counter Functions", () => {
   });
 
   it("should automatically count cards in a zone", async () => {
-    const appRef = createRef<AppRef>();
-    await render(<ExcalidrawApp ref={appRef} />);
-
-    await waitFor(() => {
-      expect(appRef.current).not.toBeNull();
-      expect(appRef.current?.excalidrawAPI).not.toBeNull();
+    act(() => {
+      render(<ExcalidrawApp />);
     });
 
-    const excalidrawAPI = appRef.current!.excalidrawAPI!;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { excalidrawAPI, checkGameState } = await waitFor(() => {
+      // eslint-disable-line @typescript-eslint/no-unused-vars
+      if (!(window as any).ExcalidrawHandle) {
+        throw new Error("Excalidraw handle not available yet.");
+      }
+      return (window as any).ExcalidrawHandle;
+    });
 
     const zoneId = "zone-1";
     const cardId = "card-1";
@@ -155,7 +160,9 @@ describe("Counter Functions", () => {
       });
     });
 
-    appRef.current!.checkGameState(excalidrawAPI.getSceneElements());
+    act(() => {
+      checkGameState(excalidrawAPI.getSceneElements());
+    });
 
     await waitFor(() => {
       const elements = excalidrawAPI.getSceneElements();
@@ -171,7 +178,9 @@ describe("Counter Functions", () => {
       });
     });
 
-    appRef.current!.checkGameState(excalidrawAPI.getSceneElements());
+    act(() => {
+      checkGameState(excalidrawAPI.getSceneElements());
+    });
 
     await waitFor(() => {
       const elements = excalidrawAPI.getSceneElements();

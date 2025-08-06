@@ -15,20 +15,29 @@ describe("Test LanguageList", () => {
 
     // select rectangle tool to show properties menu
     UI.clickTool("rectangle");
-    // english lang should display `Export` label
-    expect(screen.queryByText(/Export/)).not.toBeNull();
+    UI.createElement("rectangle");
+    const propertiesSidebar = document.querySelector(
+      ".properties-sidebar-container",
+    );
+    expect(propertiesSidebar).not.toBeNull();
+    // initial language should display `Eigenschaften` label
+    expect(screen.queryByText(/Eigenschaften/i)).not.toBeNull();
     fireEvent.click(document.querySelector(".dropdown-menu-button")!);
 
     fireEvent.change(document.querySelector(".dropdown-select__language")!, {
-      target: { value: "de-DE" },
-    });
-    // switching to german, `Export` label should be `Exportieren`
-    await waitFor(() => expect(screen.queryByText(/Exportieren/)).not.toBeNull());
-    // reset language
-    fireEvent.change(document.querySelector(".dropdown-select__language")!, {
       target: { value: defaultLang.code },
     });
-    // switching back to English
-    await waitFor(() => expect(screen.queryByText(/Export/)).not.toBeNull());
+    // switching to English, `Properties` label should be present
+    await waitFor(() =>
+      expect(screen.queryByText(/Properties/i)).not.toBeNull(),
+    );
+    // reset language
+    fireEvent.change(document.querySelector(".dropdown-select__language")!, {
+      target: { value: "de-DE" },
+    });
+    // switching back to German
+    await waitFor(() =>
+      expect(screen.queryByText(/Eigenschaften/i)).not.toBeNull(),
+    );
   });
 });

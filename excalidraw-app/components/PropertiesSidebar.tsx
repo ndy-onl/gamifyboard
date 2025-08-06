@@ -1,4 +1,5 @@
 import React from "react";
+import { t } from "@excalidraw/excalidraw/i18n";
 
 import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 
@@ -51,7 +52,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
         borderRadius: "8px",
       }}
     >
-      <h4>Eigenschaften</h4>
+      <h4>{t("propertiesSidebar.title")}</h4>
 
       <div style={{ marginBottom: "1rem" }}>
         <div>
@@ -63,7 +64,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               checked={elementType === "none"}
               onChange={() => handleElementTypeChange("none")}
             />
-            Standard
+            {t("propertiesSidebar.elementType.standard")}
           </label>
         </div>
         <div>
@@ -75,7 +76,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               checked={elementType === "card"}
               onChange={() => handleElementTypeChange("card")}
             />
-            Ist eine Karte
+            {t("propertiesSidebar.elementType.isCard")}
           </label>
         </div>
         <div>
@@ -87,7 +88,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               checked={elementType === "zone"}
               onChange={() => handleElementTypeChange("zone")}
             />
-            Ist eine Zone
+            {t("propertiesSidebar.elementType.isZone")}
           </label>
         </div>
         <div>
@@ -99,7 +100,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               checked={elementType === "counter"}
               onChange={() => handleElementTypeChange("counter")}
             />
-            Ist ein Zähler
+            {t("propertiesSidebar.elementType.isCounter")}
           </label>
         </div>
       </div>
@@ -107,16 +108,18 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
       {elementType === "counter" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Zählt Karten-Typ (leer für manuellen Zähler)
+            {t("propertiesSidebar.counter.countsCardType")}
           </label>
           <input
             type="text"
-            placeholder="z.B. 'apfel' oder 'frage_1'"
+            placeholder={t("propertiesSidebar.counter.placeholder")}
             defaultValue={customData.countsType || ""}
             onChange={(e) => onUpdate({ countsType: e.target.value })}
             style={{ width: "200px", marginBottom: "0.5rem" }}
           />
-          <p>Counter Value: {customData.value || 0}</p>
+          <p>
+            {t("propertiesSidebar.counter.value")}: {customData.value || 0}
+          </p>
           <button onClick={handleIncrement} disabled={!!customData.countsType}>
             +
           </button>
@@ -129,11 +132,11 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
       {elementType === "card" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Karten-Typ
+            {t("propertiesSidebar.card.cardType")}
           </label>
           <input
             type="text"
-            placeholder="z.B. 'apfel' oder 'frage_1'"
+            placeholder={t("propertiesSidebar.card.placeholder")}
             defaultValue={customData.cardType || ""}
             onChange={(e) => onUpdate({ cardType: e.target.value })}
             style={{ width: "200px" }}
@@ -144,11 +147,11 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
       {elementType === "zone" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Akzeptierte Karten-Typen (kommagetrennt)
+            {t("propertiesSidebar.zone.acceptedCardTypes")}
           </label>
           <input
             type="text"
-            placeholder="z.B. 'apfel,birne'"
+            placeholder={t("propertiesSidebar.zone.placeholder")}
             defaultValue={customData.acceptedCardTypes || ""}
             onChange={(e) => onUpdate({ acceptedCardTypes: e.target.value })}
             style={{ width: "200px" }}

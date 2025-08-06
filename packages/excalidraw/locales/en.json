@@ -514,6 +514,28 @@
     "versionNotAvailable": "Version not available",
     "width": "Width"
   },
+  "propertiesSidebar": {
+    "title": "Properties",
+    "elementType": {
+      "standard": "Standard",
+      "isCard": "Is a Card",
+      "isZone": "Is a Zone",
+      "isCounter": "Is a Counter"
+    },
+    "counter": {
+      "countsCardType": "Counts Card Type (empty for manual counter)",
+      "placeholder": "e.g. 'apple' or 'question_1'",
+      "value": "Counter Value"
+    },
+    "card": {
+      "cardType": "Card Type",
+      "placeholder": "e.g. 'apple' or 'question_1'"
+    },
+    "zone": {
+      "acceptedCardTypes": "Accepted Card Types (comma-separated)",
+      "placeholder": "e.g. 'apple,pear'"
+    }
+  },
   "toast": {
     "addedToLibrary": "Added to library",
     "copyStyles": "Copied styles.",

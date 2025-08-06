@@ -1,6 +1,5 @@
 import {
   Excalidraw,
-  LiveCollaborationTrigger,
   TTDDialogTrigger,
   CaptureUpdateAction,
   reconcileElements,
@@ -32,7 +31,14 @@ import {
   isDevEnv,
 } from "@excalidraw/common";
 import polyfill from "@excalidraw/excalidraw/polyfill";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { loadFromBlob } from "@excalidraw/excalidraw/data/blob";
 import { useCallbackRefState } from "@excalidraw/excalidraw/hooks/useCallbackRefState";
 import { t } from "@excalidraw/excalidraw/i18n";
@@ -123,7 +129,7 @@ import {
 } from "./data/LocalData";
 import { isBrowserStorageStateNewer } from "./data/tabSync";
 import { ShareDialog, shareDialogStateAtom } from "./share/ShareDialog";
-import CollabError, { collabErrorIndicatorAtom } from "./collab/CollabError";
+
 import { useHandleAppTheme } from "./useHandleAppTheme";
 import { getPreferredLanguage } from "./app-language/language-detector";
 import { useAppLangCode } from "./app-language/language-state";
@@ -140,6 +146,90 @@ import { GamifyToolbar } from "./components/GamifyToolbar";
 import "./index.scss";
 
 import type { CollabAPI } from "./collab/Collab";
+
+const isIntersecting = (
+  r1: { x: number; y: number; width: number; height: number },
+  r2: { x: number; y: number; width: number; height: number },
+) => {
+  return (
+    r1.x < r2.x + r2.width &&
+    r1.x + r1.width > r2.x &&
+    r1.y < r2.y + r2.height &&
+    r1.y + r1.height > r2.y
+  );
+};
+
+const checkGameState = (
+  excalidrawAPI: ExcalidrawImperativeAPI,
+  elements: readonly any[] | null,
+) => {
+  if (!excalidrawAPI || !elements) {
+    return;
+  }
+
+  const cards = elements.filter((el) => el.customData?.isCard);
+  let needsUpdate = false;
+
+  const updatedElements = elements.map((el) => {
+    if (el.type === "counter") {
+      const countsType = el.customData?.countsType;
+      if (countsType) {
+        const zone = elements.find(
+          (zoneEl) =>
+            zoneEl.customData?.isZone &&
+            (zoneEl.customData.acceptedCardTypes || "")
+              .split(",")
+              .includes(countsType),
+        );
+        if (zone) {
+          const cardsInZone = cards.filter(
+            (card) =>
+              card.customData?.cardType === countsType &&
+              isIntersecting(card, zone as any),
+          );
+          if (el.customData.value !== cardsInZone.length) {
+            needsUpdate = true;
+            return {
+              ...el,
+              customData: { ...el.customData, value: cardsInZone.length },
+            };
+          }
+        }
+      }
+      return el;
+    }
+
+    if (!el.customData?.isZone) {
+      return el;
+    }
+
+    const acceptedTypes = (el.customData.acceptedCardTypes || "")
+      .split(",")
+      .filter(Boolean);
+    if (acceptedTypes.length === 0) {
+      return el;
+    }
+
+    const cardsInZone = cards.filter((card) => isIntersecting(card, el as any));
+
+    const isCorrect =
+      cardsInZone.length > 0 &&
+      cardsInZone.every((card) =>
+        acceptedTypes.includes(card.customData?.cardType),
+      );
+    const newBackgroundColor = isCorrect ? "#aaffaa" : "#ffaaaa";
+
+    if (el.backgroundColor !== newBackgroundColor) {
+      needsUpdate = true;
+      return { ...el, backgroundColor: newBackgroundColor };
+    }
+    return el;
+  });
+
+  if (needsUpdate) {
+    excalidrawAPI.updateScene({ elements: updatedElements });
+  }
+};
 
 polyfill();
 
@@ -336,7 +426,13 @@ const initializeScene = async (opts: {
   return { scene: null, isExternalScene: false };
 };
 
-const ExcalidrawWrapper = () => {
+const ExcalidrawWrapper = ({
+  setExcalidrawAPI,
+  onExcalidrawAPISet,
+}: {
+  setExcalidrawAPI: (api: ExcalidrawImperativeAPI) => void;
+  onExcalidrawAPISet: (api: ExcalidrawImperativeAPI) => void;
+}) => {
   const [selectedElement, setSelectedElement] =
     useState<NonDeletedExcalidrawElement | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -370,12 +466,21 @@ const ExcalidrawWrapper = () => {
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
 
+  useEffect(() => {
+    if (excalidrawAPI) {
+      setExcalidrawAPI(excalidrawAPI);
+      onExcalidrawAPISet(excalidrawAPI);
+      if (isTestEnv()) {
+        (window as any).ExcalidrawAPI = excalidrawAPI;
+      }
+    }
+  }, [excalidrawAPI, setExcalidrawAPI, onExcalidrawAPISet]);
+
   const [, setShareDialogState] = useAtom(shareDialogStateAtom);
   const [collabAPI] = useAtom(collabAPIAtom);
   const [isCollaborating] = useAtomWithInitialValue(isCollaboratingAtom, () => {
     return isCollaborationLink(window.location.href);
   });
-  const collabError = useAtomValue(collabErrorIndicatorAtom);
 
   useHandleLibrary({
     excalidrawAPI,
@@ -723,92 +828,6 @@ const ExcalidrawWrapper = () => {
     }
   };
 
-  const isIntersecting = (
-    r1: { x: number; y: number; width: number; height: number },
-    r2: { x: number; y: number; width: number; height: number },
-  ) => {
-    return (
-      r1.x < r2.x + r2.width &&
-      r1.x + r1.width > r2.x &&
-      r1.y < r2.y + r2.height &&
-      r1.y + r1.height > r2.y
-    );
-  };
-
-  const checkGameState = useCallback(
-    (elements: readonly any[]) => {
-      if (!excalidrawAPI) {
-        return;
-      }
-
-      const cards = elements.filter((el) => el.customData?.isCard);
-      let needsUpdate = false;
-
-      const updatedElements = elements.map((el) => {
-        if (el.type === "counter") {
-          const countsType = el.customData?.countsType;
-          if (countsType) {
-            const zone = elements.find(
-              (zoneEl) =>
-                zoneEl.customData?.isZone &&
-                (zoneEl.customData.acceptedCardTypes || "")
-                  .split(",")
-                  .includes(countsType),
-            );
-            if (zone) {
-              const cardsInZone = cards.filter(
-                (card) =>
-                  card.customData?.cardType === countsType &&
-                  isIntersecting(card, zone as any),
-              );
-              if (el.customData.value !== cardsInZone.length) {
-                needsUpdate = true;
-                return {
-                  ...el,
-                  customData: { ...el.customData, value: cardsInZone.length },
-                };
-              }
-            }
-          }
-          return el;
-        }
-
-        if (!el.customData?.isZone) {
-          return el;
-        }
-
-        const acceptedTypes = (el.customData.acceptedCardTypes || "")
-          .split(",")
-          .filter(Boolean);
-        if (acceptedTypes.length === 0) {
-          return el;
-        }
-
-        const cardsInZone = cards.filter((card) =>
-          isIntersecting(card, el as any),
-        );
-
-        const isCorrect =
-          cardsInZone.length > 0 &&
-          cardsInZone.every((card) =>
-            acceptedTypes.includes(card.customData?.cardType),
-          );
-        const newBackgroundColor = isCorrect ? "#aaffaa" : "#ffaaaa";
-
-        if (el.backgroundColor !== newBackgroundColor) {
-          needsUpdate = true;
-          return { ...el, backgroundColor: newBackgroundColor };
-        }
-        return el;
-      });
-
-      if (needsUpdate) {
-        excalidrawAPI.updateScene({ elements: updatedElements });
-      }
-    },
-    [excalidrawAPI],
-  );
-
   const handleUpdateElement = (updatedData: any) => {
     if (!excalidrawAPI || !selectedElement) {
       return;
@@ -962,8 +981,9 @@ const ExcalidrawWrapper = () => {
           }
         }}
         onPointerUp={() => {
+          // Trigger the check after user interaction
           if (excalidrawAPI) {
-            checkGameState(excalidrawAPI.getSceneElements());
+            checkGameState(excalidrawAPI, excalidrawAPI.getSceneElements());
           }
         }}
         initialData={initialStatePromiseRef.current.promise}
@@ -1306,7 +1326,38 @@ const ExcalidrawWrapper = () => {
   );
 };
 
-const ExcalidrawApp = () => {
+export type AppRef = {
+  excalidrawAPI: ExcalidrawImperativeAPI | null;
+  checkGameState: (elements: readonly any[]) => void;
+};
+
+const ExcalidrawApp = forwardRef<AppRef>((_props, ref) => {
+  const [excalidrawAPI, _setExcalidrawAPI] =
+    useState<ExcalidrawImperativeAPI | null>(null);
+
+  const setExcalidrawAPI = useCallback((api: ExcalidrawImperativeAPI) => {
+    _setExcalidrawAPI(api);
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    excalidrawAPI,
+    checkGameState: (elements: readonly any[]) =>
+      excalidrawAPI && checkGameState(excalidrawAPI, elements),
+  }));
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === "test") {
+      if (excalidrawAPI) {
+        (window as any).ExcalidrawAPI = excalidrawAPI;
+        (window as any).ExcalidrawHandle = {
+          excalidrawAPI,
+          checkGameState: (elements: readonly any[] | null) =>
+            checkGameState(excalidrawAPI, elements),
+        };
+      }
+    }
+  }, [excalidrawAPI]);
+
   const isCloudExportWindow =
     window.location.pathname === "/excalidraw-plus-export";
   if (isCloudExportWindow) {
@@ -1316,10 +1367,13 @@ const ExcalidrawApp = () => {
   return (
     <TopErrorBoundary>
       <Provider store={appJotaiStore}>
-        <ExcalidrawWrapper />
+        <ExcalidrawWrapper
+          setExcalidrawAPI={setExcalidrawAPI}
+          onExcalidrawAPISet={setExcalidrawAPI}
+        />
       </Provider>
     </TopErrorBoundary>
   );
-};
+});
 
 export default ExcalidrawApp;
