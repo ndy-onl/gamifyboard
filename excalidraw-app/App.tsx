@@ -56,9 +56,35 @@ const App = forwardRef<AppRef>((props, ref) => {
       }
 
       const cards = elements.filter((el) => el.customData?.isCard);
+      const counters = elements.filter((el) => el.type === "counter");
       let needsUpdate = false;
 
       const updatedElements = elements.map((el) => {
+        if (el.type === "counter") {
+          const countsType = el.customData?.countsType;
+          if (countsType) {
+            const zone = elements.find(
+              (zoneEl) =>
+                zoneEl.customData?.isZone &&
+                (zoneEl.customData.acceptedCardTypes || "")
+                  .split(",")
+                  .includes(countsType),
+            );
+            if (zone) {
+              const cardsInZone = cards.filter(
+                (card) =>
+                  card.customData?.cardType === countsType &&
+                  isIntersecting(card, zone as any),
+              );
+              if (el.customData.value !== cardsInZone.length) {
+                needsUpdate = true;
+                return { ...el, customData: { ...el.customData, value: cardsInZone.length } };
+              }
+            }
+          }
+          return el;
+        }
+
         if (!el.customData?.isZone) {
           return el;
         }
@@ -141,6 +167,22 @@ const App = forwardRef<AppRef>((props, ref) => {
 
     const newCustomData = { ...selectedElement.customData, ...updatedData };
 
+    if (newCustomData.isCounter && selectedElement.type !== "counter") {
+      const newElement = {
+        ...selectedElement,
+        type: "counter" as const,
+        customData: { ...newCustomData, value: 0 },
+      };
+      const newSceneElements = [
+        ...sceneElements.slice(0, elementIndex),
+        newElement,
+        ...sceneElements.slice(elementIndex + 1),
+      ];
+      excalidrawAPI.updateScene({ elements: newSceneElements });
+      setSelectedElement(newElement as NonDeletedExcalidrawElement);
+      return;
+    }
+
     const updatedElement = {
       ...selectedElement,
       customData: newCustomData,
@@ -195,7 +237,7 @@ const App = forwardRef<AppRef>((props, ref) => {
         onChange={handleCanvasChange}
         onPointerUp={handlePointerUp}
         renderTopRightUI={() => (
-          <div style={{ padding: "10px" }}>
+          <div style={{ padding: "10px" }} className="properties-sidebar-container">
             {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
             {selectedElement && (
               <PropertiesSidebar

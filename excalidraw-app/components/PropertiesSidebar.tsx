@@ -21,6 +21,26 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
     onUpdate({ value: (customData.value || 0) - 1 });
   };
 
+  const handleElementTypeChange = (type: string) => {
+    if (type === "counter") {
+      onUpdate({ isCounter: true, isCard: false, isZone: false });
+    } else if (type === "card") {
+      onUpdate({ isCounter: false, isCard: true, isZone: false });
+    } else if (type === "zone") {
+      onUpdate({ isCounter: false, isCard: false, isZone: true });
+    } else {
+      onUpdate({ isCounter: false, isCard: false, isZone: false });
+    }
+  };
+
+  const elementType = customData.isCounter
+    ? "counter"
+    : customData.isCard
+    ? "card"
+    : customData.isZone
+    ? "zone"
+    : "none";
+
   return (
     <div
       style={{
@@ -32,40 +52,77 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
       }}
     >
       <h4>Eigenschaften</h4>
-      {element.type === "counter" && (
+
+      <div style={{ marginBottom: "1rem" }}>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="none"
+              checked={elementType === "none"}
+              onChange={() => handleElementTypeChange("none")}
+            />
+            Standard
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="card"
+              checked={elementType === "card"}
+              onChange={() => handleElementTypeChange("card")}
+            />
+            Ist eine Karte
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="zone"
+              checked={elementType === "zone"}
+              onChange={() => handleElementTypeChange("zone")}
+            />
+            Ist eine Zone
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="counter"
+              checked={elementType === "counter"}
+              onChange={() => handleElementTypeChange("counter")}
+            />
+            Ist ein Zähler
+          </label>
+        </div>
+      </div>
+
+      {elementType === "counter" && (
         <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Zählt Karten-Typ (leer für manuellen Zähler)
+          </label>
+          <input
+            type="text"
+            placeholder="z.B. 'apfel' oder 'frage_1'"
+            defaultValue={customData.countsType || ""}
+            onChange={(e) => onUpdate({ countsType: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
           <p>Counter Value: {customData.value || 0}</p>
-          <button onClick={handleIncrement}>+</button>
-          <button onClick={handleDecrement}>-</button>
+          <button onClick={handleIncrement} disabled={!!customData.countsType}>+</button>
+          <button onClick={handleDecrement} disabled={!!customData.countsType}>-</button>
         </div>
       )}
 
-      <div style={{ marginBottom: "1rem" }}>
-        <label>
-          <input
-            type="checkbox"
-            checked={!!customData.isCard}
-            onChange={(e) =>
-              onUpdate({ isCard: e.target.checked, isZone: false })
-            }
-          />
-          Ist eine Karte
-        </label>
-      </div>
-      <div style={{ marginBottom: "1rem" }}>
-        <label>
-          <input
-            type="checkbox"
-            checked={!!customData.isZone}
-            onChange={(e) =>
-              onUpdate({ isZone: e.target.checked, isCard: false })
-            }
-          />
-          Ist eine Zone
-        </label>
-      </div>
-
-      {customData.isCard && (
+      {elementType === "card" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
             Karten-Typ
@@ -80,7 +137,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
         </div>
       )}
 
-      {customData.isZone && (
+      {elementType === "zone" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
             Akzeptierte Karten-Typen (kommagetrennt)
