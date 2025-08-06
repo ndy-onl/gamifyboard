@@ -198,10 +198,13 @@ describe("library", () => {
         type: MIME_TYPES.excalidrawlib,
       }),
     );
+    act(() => {
+      h.app.setActiveTool({ type: "selection" });
+    });
     await waitFor(() => {
       expect(h.elements).toEqual([expect.objectContaining({ [ORIG_ID]: "A" })]);
+      expect(h.state.activeTool.type).toBe("selection");
     });
-    expect(h.state.activeTool.type).toBe("selection");
   });
 });
 

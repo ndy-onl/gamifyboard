@@ -66,11 +66,14 @@ describe("Gamify Functions", () => {
       checkGameState(excalidrawAPI.getSceneElements());
     });
 
-    await waitFor(() => {
-      elements = excalidrawAPI.getSceneElements();
-      zone = elements.find((el) => el.id === zoneId);
-      // Now the zone should be green
-      expect(zone?.backgroundColor).toBe("#aaffaa");
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        elements = excalidrawAPI.getSceneElements();
+        zone = elements.find((el) => el.id === zoneId);
+        // Now the zone should be green
+        expect(zone?.backgroundColor).toBe("#aaffaa");
+      },
+      { timeout: 5000 },
+    );
   });
 });
