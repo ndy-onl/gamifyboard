@@ -75,7 +75,8 @@ export const shouldTestInside = (element: ExcalidrawElement) => {
     !isTransparent(element.backgroundColor) ||
     hasBoundTextElement(element) ||
     isIframeLikeElement(element) ||
-    isTextElement(element);
+    isTextElement(element) ||
+    element.type === "counter";
 
   if (element.type === "line") {
     return isDraggableFromInside && isPathALoop(element.points);
@@ -232,6 +233,7 @@ export const intersectElementWithLineSegment = (
     case "frame":
     case "selection":
     case "magicframe":
+    case "counter":
       return intersectRectanguloidWithLineSegment(
         element,
         elementsMap,

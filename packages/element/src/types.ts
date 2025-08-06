@@ -120,6 +120,13 @@ export type ExcalidrawIframeElement = _ExcalidrawElementBase &
     customData?: { generationData?: MagicGenerationData };
   }>;
 
+export type ExcalidrawCounterElement = _ExcalidrawElementBase & {
+  type: "counter";
+  customData?: {
+    value?: number;
+  };
+};
+
 export type ExcalidrawIframeLikeElement =
   | ExcalidrawIframeElement
   | ExcalidrawEmbeddableElement;
@@ -213,7 +220,8 @@ export type ExcalidrawElement =
   | ExcalidrawFrameElement
   | ExcalidrawMagicFrameElement
   | ExcalidrawIframeElement
-  | ExcalidrawEmbeddableElement;
+  | ExcalidrawEmbeddableElement
+  | ExcalidrawCounterElement;
 
 export type ExcalidrawNonSelectionElement = Exclude<
   ExcalidrawElement,
@@ -384,7 +392,7 @@ export type ExcalidrawFreeDrawElement = _ExcalidrawElementBase &
 
 export type FileId = string & { _brand: "FileId" };
 
-export type ExcalidrawElementType = ExcalidrawElement["type"];
+export type ExcalidrawElementType = ExcalidrawElement["type"] | "counter";
 
 /**
  * Map of excalidraw elements.

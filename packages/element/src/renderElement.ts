@@ -417,6 +417,19 @@ const drawElementOnCanvas = (
       rc.draw(ShapeCache.get(element)!);
       break;
     }
+    case "counter": {
+      context.lineJoin = "round";
+      context.lineCap = "round";
+      rc.draw(ShapeCache.get(element)!);
+      const value = element.customData?.value ?? 0;
+      const fontSize = element.height * 0.6;
+      context.font = getFontString({ fontSize, fontFamily: element.fontFamily });
+      context.fillStyle = element.strokeColor;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(String(value), element.width / 2, element.height / 2);
+      break;
+    }
     case "arrow":
     case "line": {
       context.lineJoin = "round";
@@ -827,7 +840,8 @@ export const renderElement = (
     case "image":
     case "text":
     case "iframe":
-    case "embeddable": {
+    case "embeddable":
+    case "counter": {
       // TODO investigate if we can do this in situ. Right now we need to call
       // beforehand because math helpers (such as getElementAbsoluteCoords)
       // rely on existing shapes

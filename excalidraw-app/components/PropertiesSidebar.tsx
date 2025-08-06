@@ -13,6 +13,14 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
 }) => {
   const { customData = {} } = element;
 
+  const handleIncrement = () => {
+    onUpdate({ value: (customData.value || 0) + 1 });
+  };
+
+  const handleDecrement = () => {
+    onUpdate({ value: (customData.value || 0) - 1 });
+  };
+
   return (
     <div
       style={{
@@ -24,6 +32,14 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
       }}
     >
       <h4>Eigenschaften</h4>
+      {element.type === "counter" && (
+        <div style={{ marginBottom: "1rem" }}>
+          <p>Counter Value: {customData.value || 0}</p>
+          <button onClick={handleIncrement}>+</button>
+          <button onClick={handleDecrement}>-</button>
+        </div>
+      )}
+
       <div style={{ marginBottom: "1rem" }}>
         <label>
           <input
