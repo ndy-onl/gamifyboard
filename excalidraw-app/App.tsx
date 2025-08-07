@@ -925,7 +925,11 @@ const ExcalidrawWrapper = ({
     label: "Gamify Pro",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
-    icon: <div style={{ width: 14 }}>{GamifyBoardIcon}</div>,
+    icon: (
+      <div style={{ width: 14 }}>
+        <GamifyBoardIcon />
+      </div>
+    ),
     keywords: ["pro", "gamify", "cloud", "server"],
     perform: () => {
       window.open(
@@ -938,7 +942,11 @@ const ExcalidrawWrapper = ({
     label: "Sign up",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
-    icon: <div style={{ width: 14 }}>{GamifyBoardIcon}</div>,
+    icon: (
+      <div style={{ width: 14 }}>
+        <GamifyBoardIcon />
+      </div>
+    ),
     keywords: ["gamify", "pro", "cloud", "server", "signin", "login", "signup"],
     perform: () => {
       window.open(
