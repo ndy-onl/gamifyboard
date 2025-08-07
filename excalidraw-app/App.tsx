@@ -1,5 +1,6 @@
 import {
   Excalidraw,
+  LiveCollaborationTrigger,
   TTDDialogTrigger,
   CaptureUpdateAction,
   reconcileElements,
@@ -129,6 +130,7 @@ import {
 } from "./data/LocalData";
 import { isBrowserStorageStateNewer } from "./data/tabSync";
 import { ShareDialog, shareDialogStateAtom } from "./share/ShareDialog";
+import CollabError, { collabErrorIndicatorAtom } from "./collab/CollabError";
 
 import { useHandleAppTheme } from "./useHandleAppTheme";
 import { getPreferredLanguage } from "./app-language/language-detector";
@@ -481,6 +483,7 @@ const ExcalidrawWrapper = ({
   const [isCollaborating] = useAtomWithInitialValue(isCollaboratingAtom, () => {
     return isCollaborationLink(window.location.href);
   });
+  const collabError = useAtomValue(collabErrorIndicatorAtom);
 
   useHandleLibrary({
     excalidrawAPI,
@@ -1033,6 +1036,15 @@ const ExcalidrawWrapper = ({
               style={{ padding: "10px" }}
               className="properties-sidebar-container"
             >
+              {collabError.message && <CollabError collabError={collabError} />}
+              {collabAPI && !isCollabDisabled && (
+                <LiveCollaborationTrigger
+                  isCollaborating={isCollaborating}
+                  onSelect={() =>
+                    setShareDialogState({ isOpen: true, type: "share" })
+                  }
+                />
+              )}
               {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
               {selectedElement && (
                 <PropertiesSidebar
