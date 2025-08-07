@@ -1,12 +1,8 @@
 import React from "react";
 
 import { Excalidraw } from "../..";
-import {
-  GlobalTestState,
-  queryByTestId,
-  render,
-  withExcalidrawDimensions,
-} from "../../tests/test-utils";
+import { render, waitFor, GlobalTestState } from "../../tests/test-utils";
+import { TunnelsContext } from "../../context/tunnels";
 
 export const assertSidebarDockButton = async <T extends boolean>(
   hasDockButton: T,
@@ -32,12 +28,21 @@ export const assertSidebarDockButton = async <T extends boolean>(
 export const assertExcalidrawWithSidebar = async (
   sidebar: React.ReactNode,
   name: string,
-  test: () => void,
+  test: () => Promise<void>,
 ) => {
+  const tunnels = {};
   await render(
-    <Excalidraw initialData={{ appState: { openSidebar: { name } } }}>
-      {sidebar}
-    </Excalidraw>,
+    <TunnelsContext.Provider value={tunnels as any}>
+      <Excalidraw initialData={{ appState: { openSidebar: { name } } }}>
+        {sidebar}
+      </Excalidraw>
+    </TunnelsContext.Provider>,
   );
-  await withExcalidrawDimensions({ width: 1920, height: 1080 }, test);
+  await waitFor(() => {
+    const canvas = GlobalTestState.renderResult.container.querySelector("canvas");
+    expect(canvas).not.toBeNull();
+  });
+  await withExcalidrawDimensions({ width: 1920, height: 1080 }, async () => {
+    await test();
+  });
 };

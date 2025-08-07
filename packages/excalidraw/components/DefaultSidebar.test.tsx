@@ -7,6 +7,7 @@ import {
   fireEvent,
   waitFor,
   withExcalidrawDimensions,
+  render,
 } from "../tests/test-utils";
 
 import {

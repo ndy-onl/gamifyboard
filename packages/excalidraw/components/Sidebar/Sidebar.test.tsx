@@ -276,23 +276,16 @@ describe("Sidebar", () => {
     });
 
     it("should be user-dockable when both `onDock` and `docked` supplied", async () => {
-      await render(
-        <Excalidraw
-          initialData={{ appState: { openSidebar: { name: "customSidebar" } } }}
+      await assertExcalidrawWithSidebar(
+        <Sidebar
+          name="customSidebar"
+          className="test-sidebar"
+          onDock={() => {}}
+          docked
         >
-          <Sidebar
-            name="customSidebar"
-            className="test-sidebar"
-            onDock={() => {}}
-            docked
-          >
-            <Sidebar.Header />
-          </Sidebar>
-        </Excalidraw>,
-      );
-
-      await withExcalidrawDimensions(
-        { width: 1920, height: 1080 },
+          <Sidebar.Header />
+        </Sidebar>,
+        "customSidebar",
         async () => {
           await assertSidebarDockButton(true);
         },
@@ -303,22 +296,15 @@ describe("Sidebar", () => {
       // we expect warnings in this test and don't want to pollute stdout
       const mock = jest.spyOn(console, "warn").mockImplementation(() => {});
 
-      await render(
-        <Excalidraw
-          initialData={{ appState: { openSidebar: { name: "customSidebar" } } }}
+      await assertExcalidrawWithSidebar(
+        <Sidebar
+          name="customSidebar"
+          className="test-sidebar"
+          onDock={() => {}}
         >
-          <Sidebar
-            name="customSidebar"
-            className="test-sidebar"
-            onDock={() => {}}
-          >
-            <Sidebar.Header />
-          </Sidebar>
-        </Excalidraw>,
-      );
-
-      await withExcalidrawDimensions(
-        { width: 1920, height: 1080 },
+          <Sidebar.Header />
+        </Sidebar>,
+        "customSidebar",
         async () => {
           await assertSidebarDockButton(false);
         },
