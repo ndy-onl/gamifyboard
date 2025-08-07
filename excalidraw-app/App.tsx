@@ -82,7 +82,7 @@ import type {
 import type { ResolutionType } from "@excalidraw/common/utility-types";
 import type { ResolvablePromise } from "@excalidraw/common/utils";
 
-import GamifyBoardIcon from "../public/gamifyboard-icon.svg?react";
+import gamifyboardIconUrl from "../public/gamifyboard-icon.svg";
 
 import CustomStats from "./CustomStats";
 import {
@@ -927,7 +927,7 @@ const ExcalidrawWrapper = ({
     predicate: true,
     icon: (
       <div style={{ width: 14 }}>
-        <GamifyBoardIcon />
+        <img src={gamifyboardIconUrl} alt="Gamify Pro" style={{ width: '100%', height: 'auto' }} />
       </div>
     ),
     keywords: ["pro", "gamify", "cloud", "server"],
@@ -944,7 +944,7 @@ const ExcalidrawWrapper = ({
     predicate: true,
     icon: (
       <div style={{ width: 14 }}>
-        <GamifyBoardIcon />
+        <img src={gamifyboardIconUrl} alt="Gamify Pro" style={{ width: '100%', height: 'auto' }} />
       </div>
     ),
     keywords: ["gamify", "pro", "cloud", "server", "signin", "login", "signup"],
