@@ -1,4 +1,5 @@
 import React from "react";
+import { t } from "@excalidraw/excalidraw/i18n";
 
 import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 
@@ -13,6 +14,34 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
 }) => {
   const { customData = {} } = element;
 
+  const handleIncrement = () => {
+    onUpdate({ value: (customData.value || 0) + 1 });
+  };
+
+  const handleDecrement = () => {
+    onUpdate({ value: (customData.value || 0) - 1 });
+  };
+
+  const handleElementTypeChange = (type: string) => {
+    if (type === "counter") {
+      onUpdate({ isCounter: true, isCard: false, isZone: false });
+    } else if (type === "card") {
+      onUpdate({ isCounter: false, isCard: true, isZone: false });
+    } else if (type === "zone") {
+      onUpdate({ isCounter: false, isCard: false, isZone: true });
+    } else {
+      onUpdate({ isCounter: false, isCard: false, isZone: false });
+    }
+  };
+
+  const elementType = customData.isCounter
+    ? "counter"
+    : customData.isCard
+    ? "card"
+    : customData.isZone
+    ? "zone"
+    : "none";
+
   return (
     <div
       style={{
@@ -23,40 +52,91 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
         borderRadius: "8px",
       }}
     >
-      <h4>Eigenschaften</h4>
+      <h4>{t("propertiesSidebar.title")}</h4>
+
       <div style={{ marginBottom: "1rem" }}>
-        <label>
-          <input
-            type="checkbox"
-            checked={!!customData.isCard}
-            onChange={(e) =>
-              onUpdate({ isCard: e.target.checked, isZone: false })
-            }
-          />
-          Ist eine Karte
-        </label>
-      </div>
-      <div style={{ marginBottom: "1rem" }}>
-        <label>
-          <input
-            type="checkbox"
-            checked={!!customData.isZone}
-            onChange={(e) =>
-              onUpdate({ isZone: e.target.checked, isCard: false })
-            }
-          />
-          Ist eine Zone
-        </label>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="none"
+              checked={elementType === "none"}
+              onChange={() => handleElementTypeChange("none")}
+            />
+            {t("propertiesSidebar.elementType.standard")}
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="card"
+              checked={elementType === "card"}
+              onChange={() => handleElementTypeChange("card")}
+            />
+            {t("propertiesSidebar.elementType.isCard")}
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="zone"
+              checked={elementType === "zone"}
+              onChange={() => handleElementTypeChange("zone")}
+            />
+            {t("propertiesSidebar.elementType.isZone")}
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="counter"
+              checked={elementType === "counter"}
+              onChange={() => handleElementTypeChange("counter")}
+            />
+            {t("propertiesSidebar.elementType.isCounter")}
+          </label>
+        </div>
       </div>
 
-      {customData.isCard && (
+      {elementType === "counter" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Karten-Typ
+            {t("propertiesSidebar.counter.countsCardType")}
           </label>
           <input
             type="text"
-            placeholder="z.B. 'apfel' oder 'frage_1'"
+            placeholder={t("propertiesSidebar.counter.placeholder")}
+            defaultValue={customData.countsType || ""}
+            onChange={(e) => onUpdate({ countsType: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <p>
+            {t("propertiesSidebar.counter.value")}: {customData.value || 0}
+          </p>
+          <button onClick={handleIncrement} disabled={!!customData.countsType}>
+            +
+          </button>
+          <button onClick={handleDecrement} disabled={!!customData.countsType}>
+            -
+          </button>
+        </div>
+      )}
+
+      {elementType === "card" && (
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            {t("propertiesSidebar.card.cardType")}
+          </label>
+          <input
+            type="text"
+            placeholder={t("propertiesSidebar.card.placeholder")}
             defaultValue={customData.cardType || ""}
             onChange={(e) => onUpdate({ cardType: e.target.value })}
             style={{ width: "200px" }}
@@ -64,14 +144,14 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
         </div>
       )}
 
-      {customData.isZone && (
+      {elementType === "zone" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Akzeptierte Karten-Typen (kommagetrennt)
+            {t("propertiesSidebar.zone.acceptedCardTypes")}
           </label>
           <input
             type="text"
-            placeholder="z.B. 'apfel,birne'"
+            placeholder={t("propertiesSidebar.zone.placeholder")}
             defaultValue={customData.acceptedCardTypes || ""}
             onChange={(e) => onUpdate({ acceptedCardTypes: e.target.value })}
             style={{ width: "200px" }}

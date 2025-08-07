@@ -434,6 +434,28 @@
     "versionNotAvailable": "Version nicht verfügbar",
     "width": "Breite"
   },
+  "propertiesSidebar": {
+    "title": "Eigenschaften",
+    "elementType": {
+      "standard": "Standard",
+      "isCard": "Ist eine Karte",
+      "isZone": "Ist eine Zone",
+      "isCounter": "Ist ein Zähler"
+    },
+    "counter": {
+      "countsCardType": "Zählt Karten-Typ (leer für manuellen Zähler)",
+      "placeholder": "z.B. 'apfel' oder 'frage_1'",
+      "value": "Zählerwert"
+    },
+    "card": {
+      "cardType": "Karten-Typ",
+      "placeholder": "z.B. 'apfel' oder 'frage_1'"
+    },
+    "zone": {
+      "acceptedCardTypes": "Akzeptierte Karten-Typen (kommagetrennt)",
+      "placeholder": "z.B. 'apfel,birne'"
+    }
+  },
   "toast": {
     "addedToLibrary": "Zur Bibliothek hinzugefügt",
     "copyStyles": "Formatierungen kopiert.",

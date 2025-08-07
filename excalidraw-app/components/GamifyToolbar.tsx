@@ -11,5 +11,8 @@ interface GamifyToolbarProps {
 export const GamifyToolbar: React.FC<GamifyToolbarProps> = ({
   excalidrawAPI,
 }) => {
-  return null; // Render nothing if no elements are selected
+  // The toolbar is currently not needed as the functionality is handled
+  // via the PropertiesSidebar. This component remains as a placeholder for
+  // potential future toolbar items.
+  return null;
 };

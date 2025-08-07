@@ -321,8 +321,7 @@
     "magicframe": "Wireframe to code",
     "embeddable": "Web Embed",
     "selection": "Selection",
-    "iframe": "IFrame",
-    "counter": "Counter"
+    "iframe": "IFrame"
   },
   "headings": {
     "canvasActions": "Canvas actions",

@@ -8,6 +8,7 @@ import { DEFAULT_VERTICAL_ALIGN, ROUNDNESS, assertNever } from "@excalidraw/comm
 
 import {
   newArrowElement,
+  newCounterElement,
   newElement,
   newEmbeddableElement,
   newFrameElement,
@@ -360,6 +361,9 @@ export class API {
         break;
       case "magicframe":
         element = newMagicFrameElement({ ...base, width, height });
+        break;
+      case "counter":
+        element = newCounterElement({ ...base, width, height, type });
         break;
       default:
         assertNever(

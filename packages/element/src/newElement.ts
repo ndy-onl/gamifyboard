@@ -48,6 +48,7 @@ import type {
   ExcalidrawArrowElement,
   ExcalidrawElbowArrowElement,
   ExcalidrawLineElement,
+  ExcalidrawCounterElement,
 } from "./types";
 
 export type ElementConstructorOpts = MarkOptional<
@@ -545,5 +546,18 @@ export const newImageElement = (
     fileId: opts.fileId ?? null,
     scale: opts.scale ?? [1, 1],
     crop: opts.crop ?? null,
+  };
+};
+
+export const newCounterElement = (
+  opts: {
+    type: "counter";
+  } & ElementConstructorOpts,
+): NonDeleted<ExcalidrawCounterElement> => {
+  return {
+    ..._newElementBase<ExcalidrawCounterElement>("counter", opts),
+    customData: {
+      value: 0,
+    },
   };
 };

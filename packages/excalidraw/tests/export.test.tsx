@@ -10,9 +10,9 @@ import { encodePngMetadata } from "../data/image";
 import { serializeAsJSON } from "../data/json";
 import { Excalidraw } from "../index";
 import {
-  decodeSvgBase64Payload,
-  encodeSvgBase64Payload,
   exportToSvg,
+  encodeSvgBase64Payload,
+  decodeSvgBase64Payload,
 } from "../scene/export";
 
 import { API } from "./helpers/api";

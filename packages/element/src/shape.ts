@@ -214,6 +214,7 @@ export const generateRoughOptions = (
     case "iframe":
     case "embeddable":
     case "diamond":
+    case "counter":
     case "ellipse": {
       options.fillStyle = element.fillStyle;
       options.fill = isTransparent(element.backgroundColor)
@@ -618,7 +619,8 @@ const generateElementShape = (
   switch (element.type) {
     case "rectangle":
     case "iframe":
-    case "embeddable": {
+    case "embeddable":
+    case "counter": {
       let shape: ElementShapes[typeof element.type];
       // this is for rendering the stroke/bg of the embeddable, especially
       // when the src url is not set
@@ -921,6 +923,7 @@ export const getElementShape = <Point extends GlobalPoint | LocalPoint>(
     case "image":
     case "iframe":
     case "text":
+    case "counter":
     case "selection":
       return getPolygonShape(element);
     case "arrow":

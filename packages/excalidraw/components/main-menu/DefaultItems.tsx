@@ -340,7 +340,7 @@ export const Export = () => {
 Export.displayName = "Export";
 
 export const Socials = () => {
-  const { t } = useI18n();
+  useI18n();
 
   return (
     <>
