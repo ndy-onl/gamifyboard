@@ -16,7 +16,7 @@
     top: 85px; // Align with main toolbar position
     right: 15px;
     z-index: var(--zIndex-layerUI);
-    
+
     // Match Excalidraw Island styling
     --padding: 1;
     box-sizing: border-box;
@@ -25,7 +25,7 @@
     border-radius: var(--border-radius-lg);
     padding: calc(var(--padding) * var(--space-factor));
     transition: box-shadow 0.5s ease-in-out;
-    
+
     width: 280px;
     max-width: calc(100vw - 40px);
     pointer-events: auto;
@@ -62,7 +62,7 @@
       margin-bottom: calc(var(--space-factor) * 0.75);
       box-sizing: border-box;
       font-size: 0.75rem;
-      
+
       &:focus {
         outline: none;
         box-shadow: 0 0 0 1px var(--color-brand-hover);
@@ -95,7 +95,7 @@
         cursor: not-allowed;
       }
     }
-    
+
     // Responsive positioning
     @media screen and (max-width: 640px) {
       position: fixed;
