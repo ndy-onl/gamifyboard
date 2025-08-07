@@ -8,6 +8,7 @@ import { DEFAULT_VERTICAL_ALIGN, ROUNDNESS, assertNever } from "@excalidraw/comm
 
 import {
   newArrowElement,
+  newCounterElement,
   newElement,
   newEmbeddableElement,
   newFrameElement,
@@ -46,7 +47,7 @@ import { createTestHook } from "../../components/App";
 import { getDefaultAppState } from "../../appState";
 import { GlobalTestState, createEvent, fireEvent, act } from "../test-utils";
 
-import type { Action } from "../../actions/types";
+import type { Action, PanelComponentProps } from "../../actions/types";
 import type App from "../../components/App";
 import type { AppState } from "../../types";
 
@@ -360,6 +361,9 @@ export class API {
         break;
       case "magicframe":
         element = newMagicFrameElement({ ...base, width, height });
+        break;
+      case "counter":
+        element = newCounterElement({ ...base, width, height, type });
         break;
       default:
         assertNever(

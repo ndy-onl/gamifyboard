@@ -1,3 +1,4 @@
+import { ExcalidrawElement } from "@excalidraw/element/types";
 import React from "react";
 import { waitFor, render, act } from "@excalidraw/excalidraw/tests/test-utils";
 
@@ -50,12 +51,12 @@ describe("Gamify Functions", () => {
 
     // 3. Check that the zone is NOT initially green
     let elements = excalidrawAPI.getSceneElements();
-    let zone = elements.find((el) => el.id === zoneId);
+    let zone = elements.find((el: ExcalidrawElement) => el.id === zoneId);
     expect(zone?.backgroundColor).not.toBe("#aaffaa");
 
     // 4. Move the card into the zone
     const updatedCard = {
-      ...excalidrawAPI.getSceneElements().find((el) => el.id === cardId)!,
+      ...excalidrawAPI.getSceneElements().find((el: ExcalidrawElement) => el.id === cardId)!,
       x: 10,
       y: 10,
     };
@@ -69,7 +70,7 @@ describe("Gamify Functions", () => {
     await waitFor(
       () => {
         elements = excalidrawAPI.getSceneElements();
-        zone = elements.find((el) => el.id === zoneId);
+        zone = elements.find((el: ExcalidrawElement) => el.id === zoneId);
         // Now the zone should be green
         expect(zone?.backgroundColor).toBe("#aaffaa");
       },

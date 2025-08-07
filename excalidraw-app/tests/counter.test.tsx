@@ -1,3 +1,4 @@
+import { ExcalidrawElement } from "@excalidraw/element/types";
 import { waitFor, render, act } from "@excalidraw/excalidraw/tests/test-utils";
 
 import React from "react";
@@ -90,7 +91,7 @@ describe("Counter Functions", () => {
     });
 
     let elements = excalidrawAPI.getSceneElements();
-    let counter = elements.find((el) => el.id === rectangleId);
+    let counter = elements.find((el: ExcalidrawElement) => el.id === rectangleId);
     expect(counter?.type).toBe("counter");
     expect(counter?.customData?.value).toBe(0);
 
@@ -107,7 +108,7 @@ describe("Counter Functions", () => {
     });
 
     elements = excalidrawAPI.getSceneElements();
-    counter = elements.find((el) => el.id === rectangleId);
+    counter = elements.find((el: ExcalidrawElement) => el.id === rectangleId);
     expect(counter?.customData?.value).toBe(1);
   });
 
@@ -149,13 +150,15 @@ describe("Counter Functions", () => {
             height: 50,
             customData: { isCard: true, cardType },
           }),
-          createDefaultElementProps({
-            id: counterId,
-            x: 400,
-            y: 100,
+          {
+            ...createDefaultElementProps({
+              id: counterId,
+              x: 400,
+              y: 100,
+              customData: { countsType: cardType, value: 0 },
+            }),
             type: "counter",
-            customData: { countsType: cardType, value: 0 },
-          }),
+          } as ExcalidrawElement,
         ],
       });
     });
@@ -166,7 +169,7 @@ describe("Counter Functions", () => {
 
     await waitFor(() => {
       const elements = excalidrawAPI.getSceneElements();
-      const counter = elements.find((el) => el.id === counterId);
+      const counter = elements.find((el: ExcalidrawElement) => el.id === counterId);
       expect(counter?.customData?.value).toBe(0);
     });
 
@@ -174,7 +177,7 @@ describe("Counter Functions", () => {
       excalidrawAPI.updateScene({
         elements: excalidrawAPI
           .getSceneElements()
-          .map((el) => (el.id === cardId ? { ...el, x: 150, y: 150 } : el)),
+          .map((el: ExcalidrawElement) => (el.id === cardId ? { ...el, x: 150, y: 150 } : el)),
       });
     });
 
@@ -184,7 +187,7 @@ describe("Counter Functions", () => {
 
     await waitFor(() => {
       const elements = excalidrawAPI.getSceneElements();
-      const counter = elements.find((el) => el.id === counterId);
+      const counter = elements.find((el: ExcalidrawElement) => el.id === counterId);
       expect(counter?.customData?.value).toBe(1);
     });
   });

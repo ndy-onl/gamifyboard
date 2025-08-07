@@ -28,6 +28,7 @@ import {
 
 import type { ShortcutName } from "../actions/shortcuts";
 import type { ActionName } from "../actions/types";
+import type { History } from "../history";
 
 const checkpoint = (name: string) => {
   expect(renderStaticScene.mock.calls.length).toMatchSnapshot(
