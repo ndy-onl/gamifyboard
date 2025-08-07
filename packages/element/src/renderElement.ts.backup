@@ -425,7 +425,7 @@ const drawElementOnCanvas = (
       const fontSize = element.height * 0.6;
       context.font = getFontString({
         fontSize,
-        fontFamily: 1, // Default font family
+        fontFamily: element.fontFamily,
       });
       context.fillStyle = element.strokeColor;
       context.textAlign = "center";

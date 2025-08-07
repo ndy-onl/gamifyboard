@@ -203,8 +203,7 @@ export type ExcalidrawRectanguloidElement =
   | ExcalidrawIframeLikeElement
   | ExcalidrawFrameLikeElement
   | ExcalidrawEmbeddableElement
-  | ExcalidrawSelectionElement
-  | ExcalidrawCounterElement;
+  | ExcalidrawSelectionElement;
 
 /**
  * ExcalidrawElement should be JSON serializable and (eventually) contain
