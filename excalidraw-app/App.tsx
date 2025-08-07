@@ -927,7 +927,7 @@ const ExcalidrawWrapper = ({
     predicate: true,
     icon: (
       <div style={{ width: 14 }}>
-        <img src={gamifyboardIconUrl} alt="Gamify Pro" style={{ width: '100%', height: 'auto' }} />
+        <GamifyBoardIcon />
       </div>
     ),
     keywords: ["pro", "gamify", "cloud", "server"],
@@ -944,7 +944,7 @@ const ExcalidrawWrapper = ({
     predicate: true,
     icon: (
       <div style={{ width: 14 }}>
-        <img src={gamifyboardIconUrl} alt="Gamify Pro" style={{ width: '100%', height: 'auto' }} />
+        <GamifyBoardIcon />
       </div>
     ),
     keywords: ["gamify", "pro", "cloud", "server", "signin", "login", "signup"],
