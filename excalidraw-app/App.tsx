@@ -1032,10 +1032,7 @@ const ExcalidrawWrapper = ({
         theme={editorTheme}
         renderTopRightUI={(isMobile) => {
           return (
-            <div
-              style={{ padding: "10px" }}
-              className="properties-sidebar-container"
-            >
+            <>
               {collabError.message && <CollabError collabError={collabError} />}
               {collabAPI && !isCollabDisabled && (
                 <LiveCollaborationTrigger
@@ -1046,13 +1043,7 @@ const ExcalidrawWrapper = ({
                 />
               )}
               {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
-              {selectedElement && (
-                <PropertiesSidebar
-                  element={selectedElement}
-                  onUpdate={handleUpdateElement}
-                />
-              )}
-            </div>
+            </>
           );
         }}
         onLinkOpen={(element, event) => {
@@ -1062,6 +1053,12 @@ const ExcalidrawWrapper = ({
           }
         }}
       >
+        {selectedElement && (
+          <PropertiesSidebar
+            element={selectedElement}
+            onUpdate={handleUpdateElement}
+          />
+        )}
         <AppMainMenu
           onCollabDialogOpen={onCollabDialogOpen}
           isCollaborating={isCollaborating}

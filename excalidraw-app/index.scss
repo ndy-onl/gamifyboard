@@ -11,6 +11,103 @@
     align-items: flex-start;
   }
 
+  .properties-sidebar {
+    position: fixed;
+    top: 20px; // Align with main toolbar position
+    right: 20px;
+    z-index: var(--zIndex-layerUI);
+    
+    // Match Excalidraw Island styling
+    --padding: 1;
+    box-sizing: border-box;
+    background-color: var(--island-bg-color);
+    box-shadow: var(--shadow-island);
+    border-radius: var(--border-radius-lg);
+    padding: calc(var(--padding) * var(--space-factor));
+    transition: box-shadow 0.5s ease-in-out;
+    
+    width: 280px;
+    max-width: calc(100vw - 40px);
+    pointer-events: auto;
+
+    h4 {
+      margin-top: 0;
+      margin-bottom: calc(var(--space-factor) * 2);
+      color: var(--color-text);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      margin-bottom: calc(var(--space-factor) * 0.75);
+      color: var(--color-text);
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    input[type="radio"] {
+      margin-right: calc(var(--space-factor) * 0.75);
+      accent-color: var(--color-primary);
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: calc(var(--space-factor) * 0.75);
+      border: 1px solid var(--color-primary-darker);
+      border-radius: var(--border-radius-md);
+      background-color: var(--input-bg-color);
+      color: var(--color-text);
+      margin-bottom: calc(var(--space-factor) * 0.75);
+      box-sizing: border-box;
+      font-size: 0.75rem;
+      
+      &:focus {
+        outline: none;
+        box-shadow: 0 0 0 1px var(--color-brand-hover);
+      }
+    }
+
+    button {
+      background-color: var(--color-primary);
+      color: var(--color-primary-contrast);
+      border: none;
+      padding: calc(var(--space-factor) * 0.75) calc(var(--space-factor) * 1.5);
+      border-radius: var(--border-radius-md);
+      cursor: pointer;
+      margin-right: calc(var(--space-factor) * 0.75);
+      font-size: 0.75rem;
+      font-weight: 500;
+      transition: background-color 0.1s ease;
+
+      &:hover {
+        background-color: var(--color-primary-darker);
+      }
+
+      &:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 1px var(--color-brand-hover);
+      }
+
+      &:disabled {
+        background-color: var(--color-gray-300);
+        cursor: not-allowed;
+      }
+    }
+    
+    // Responsive positioning
+    @media screen and (max-width: 640px) {
+      position: fixed;
+      top: auto;
+      bottom: 20px;
+      right: 20px;
+      left: 20px;
+      width: auto;
+      max-width: none;
+    }
+  }
+
   .footer-center {
     justify-content: flex-end;
     margin-top: auto;

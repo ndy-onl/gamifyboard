@@ -44,6 +44,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
 
   return (
     <div
+      className="properties-sidebar"
       style={{
         background: "#fff",
         padding: "1rem",
