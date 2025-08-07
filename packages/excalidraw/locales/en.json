@@ -606,6 +606,9 @@
         "title": "Excalidraw+",
         "button": "Export to Excalidraw+",
         "description": "Save the scene to your Excalidraw+ workspace."
+      },
+      "gamifyPro": {
+        "button": "Export to Gamify Pro"
       }
     },
     "modal": {

@@ -48,13 +48,15 @@ import {
   GithubIcon,
   XBrandIcon,
   DiscordIcon,
-  ExcalLogo,
   usersIcon,
   exportToPlus,
   share,
   youtubeIcon,
 } from "@excalidraw/excalidraw/components/icons";
+
 import { isElementLink } from "@excalidraw/element";
+
+import GamifyBoardIcon from "../public/gamifyboard-icon.svg?react";
 import { restore, restoreAppState } from "@excalidraw/excalidraw/data/restore";
 import { newElementWith } from "@excalidraw/element";
 import { isInitializedImageElement } from "@excalidraw/element";
@@ -918,40 +920,28 @@ const ExcalidrawWrapper = ({
     );
   }
 
-  const ExcalidrawPlusCommand = {
-    label: "Excalidraw+",
+  const GamifyProCommand = {
+    label: "Gamify Pro",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
-    icon: <div style={{ width: 14 }}>{ExcalLogo}</div>,
-    keywords: ["plus", "cloud", "server"],
+    icon: <div style={{ width: 14 }}>{GamifyBoardIcon}</div>,
+    keywords: ["pro", "gamify", "cloud", "server"],
     perform: () => {
       window.open(
-        `${
-          import.meta.env.VITE_APP_PLUS_LP
-        }/plus?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
+        `https://pro.gamifyboard.com/plus?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
         "_blank",
       );
     },
   };
-  const ExcalidrawPlusAppCommand = {
+  const GamifyProAppCommand = {
     label: "Sign up",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
-    icon: <div style={{ width: 14 }}>{ExcalLogo}</div>,
-    keywords: [
-      "excalidraw",
-      "plus",
-      "cloud",
-      "server",
-      "signin",
-      "login",
-      "signup",
-    ],
+    icon: <div style={{ width: 14 }}>{GamifyBoardIcon}</div>,
+    keywords: ["gamify", "pro", "cloud", "server", "signin", "login", "signup"],
     perform: () => {
       window.open(
-        `${
-          import.meta.env.VITE_APP_PLUS_APP
-        }?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
+        `https://pro.gamifyboard.com/app?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
         "_blank",
       );
     },
@@ -1275,18 +1265,18 @@ const ExcalidrawWrapper = ({
             ...(isExcalidrawPlusSignedUser
               ? [
                   {
-                    ...ExcalidrawPlusAppCommand,
-                    label: "Sign in / Go to Excalidraw+",
+                    ...GamifyProAppCommand,
+                    label: "Sign in / Go to Gamify Pro",
                   },
                 ]
-              : [ExcalidrawPlusCommand, ExcalidrawPlusAppCommand]),
+              : [GamifyProCommand, GamifyProAppCommand]),
 
             {
-              label: t("overwriteConfirm.action.excalidrawPlus.button"),
+              label: t("overwriteConfirm.action.gamifyPro.button"),
               category: DEFAULT_CATEGORIES.export,
               icon: exportToPlus,
               predicate: true,
-              keywords: ["plus", "export", "save", "backup"],
+              keywords: ["pro", "export", "save", "backup"],
               perform: () => {
                 if (excalidrawAPI) {
                   exportToExcalidrawPlus(

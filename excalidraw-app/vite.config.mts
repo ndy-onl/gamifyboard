@@ -293,6 +293,6 @@ export default defineConfig(({ mode }) => {
         minify: true,
       }),
     ],
-    publicDir: "../public",
+    publicDir: path.resolve(__dirname, "../public"),
   };
 });
