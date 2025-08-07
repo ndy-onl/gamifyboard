@@ -28,10 +28,6 @@ describe("Test LanguageList", () => {
       expect(dropdownMenu).not.toBeNull();
     });
 
-    // Add some debugging to see what's in the dropdown
-    const dropdownContent = document.querySelector(".dropdown-menu")?.innerHTML;
-    console.log("Dropdown content:", dropdownContent?.substring(0, 500));
-
     // Wait for language selector
     await waitFor(() => {
       const languageSelect = document.querySelector(
