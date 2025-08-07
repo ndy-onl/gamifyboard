@@ -1,6 +1,7 @@
-import { ExcalidrawElement } from "@excalidraw/element/types";
 import React from "react";
 import { waitFor, render, act } from "@excalidraw/excalidraw/tests/test-utils";
+
+import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import ExcalidrawApp from "../App";
 
@@ -56,7 +57,9 @@ describe("Gamify Functions", () => {
 
     // 4. Move the card into the zone
     const updatedCard = {
-      ...excalidrawAPI.getSceneElements().find((el: ExcalidrawElement) => el.id === cardId)!,
+      ...excalidrawAPI
+        .getSceneElements()
+        .find((el: ExcalidrawElement) => el.id === cardId)!,
       x: 10,
       y: 10,
     };

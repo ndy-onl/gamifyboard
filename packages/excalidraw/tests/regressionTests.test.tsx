@@ -5,9 +5,6 @@ import { FONT_FAMILY, CODES, KEYS, reseed } from "@excalidraw/common";
 
 import { setDateTimeForTests } from "@excalidraw/common";
 
-import type { ShortcutName } from "../actions/shortcuts";
-import type { ActionName } from "../actions/types";
-import type { History } from "../history";
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import { Excalidraw } from "../index";

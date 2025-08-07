@@ -19,6 +19,7 @@ import {
 } from "@excalidraw/excalidraw/tests/test-utils";
 
 import type { AppState } from "@excalidraw/excalidraw/types";
+
 import { selectGroupsForSelectedElements } from "../src/groups";
 
 import type {

@@ -1,7 +1,8 @@
-import { ExcalidrawElement } from "@excalidraw/element/types";
 import { waitFor, render, act } from "@excalidraw/excalidraw/tests/test-utils";
 
 import React from "react";
+
+import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import type { Radians } from "@excalidraw/math";
 import type {
@@ -91,7 +92,9 @@ describe("Counter Functions", () => {
     });
 
     let elements = excalidrawAPI.getSceneElements();
-    let counter = elements.find((el: ExcalidrawElement) => el.id === rectangleId);
+    let counter = elements.find(
+      (el: ExcalidrawElement) => el.id === rectangleId,
+    );
     expect(counter?.type).toBe("counter");
     expect(counter?.customData?.value).toBe(0);
 
@@ -169,7 +172,9 @@ describe("Counter Functions", () => {
 
     await waitFor(() => {
       const elements = excalidrawAPI.getSceneElements();
-      const counter = elements.find((el: ExcalidrawElement) => el.id === counterId);
+      const counter = elements.find(
+        (el: ExcalidrawElement) => el.id === counterId,
+      );
       expect(counter?.customData?.value).toBe(0);
     });
 
@@ -177,7 +182,9 @@ describe("Counter Functions", () => {
       excalidrawAPI.updateScene({
         elements: excalidrawAPI
           .getSceneElements()
-          .map((el: ExcalidrawElement) => (el.id === cardId ? { ...el, x: 150, y: 150 } : el)),
+          .map((el: ExcalidrawElement) =>
+            el.id === cardId ? { ...el, x: 150, y: 150 } : el,
+          ),
       });
     });
 
@@ -187,7 +194,9 @@ describe("Counter Functions", () => {
 
     await waitFor(() => {
       const elements = excalidrawAPI.getSceneElements();
-      const counter = elements.find((el: ExcalidrawElement) => el.id === counterId);
+      const counter = elements.find(
+        (el: ExcalidrawElement) => el.id === counterId,
+      );
       expect(counter?.customData?.value).toBe(1);
     });
   });
