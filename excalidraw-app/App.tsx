@@ -1,5 +1,6 @@
 import {
   Excalidraw,
+  LiveCollaborationTrigger,
   TTDDialogTrigger,
   CaptureUpdateAction,
   reconcileElements,
@@ -129,7 +130,7 @@ import {
 } from "./data/LocalData";
 import { isBrowserStorageStateNewer } from "./data/tabSync";
 import { ShareDialog, shareDialogStateAtom } from "./share/ShareDialog";
-
+import CollabError, { collabErrorIndicatorAtom } from "./collab/CollabError";
 import { useHandleAppTheme } from "./useHandleAppTheme";
 import { getPreferredLanguage } from "./app-language/language-detector";
 import { useAppLangCode } from "./app-language/language-state";
@@ -141,7 +142,6 @@ import DebugCanvas, {
 import { AIComponents } from "./components/AI";
 import { ExcalidrawPlusIframeExport } from "./ExcalidrawPlusIframeExport";
 import { PropertiesSidebar } from "./components/PropertiesSidebar";
-import { GamifyToolbar } from "./components/GamifyToolbar";
 
 import "./index.scss";
 
@@ -481,6 +481,7 @@ const ExcalidrawWrapper = ({
   const [isCollaborating] = useAtomWithInitialValue(isCollaboratingAtom, () => {
     return isCollaborationLink(window.location.href);
   });
+  const collabError = useAtomValue(collabErrorIndicatorAtom);
 
   useHandleLibrary({
     excalidrawAPI,
@@ -956,7 +957,7 @@ const ExcalidrawWrapper = ({
 
   return (
     <div
-      style={{ height: "100%" }}
+      style={{ height: "100%", position: "relative" }}
       className={clsx("excalidraw-app", {
         "is-collaborating": isCollaborating,
       })}
@@ -1028,18 +1029,18 @@ const ExcalidrawWrapper = ({
         autoFocus={true}
         theme={editorTheme}
         renderTopRightUI={(isMobile) => {
+          if (isMobile || !collabAPI || isCollabDisabled) {
+            return null;
+          }
           return (
-            <div
-              style={{ padding: "10px" }}
-              className="properties-sidebar-container"
-            >
-              {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
-              {selectedElement && (
-                <PropertiesSidebar
-                  element={selectedElement}
-                  onUpdate={handleUpdateElement}
-                />
-              )}
+            <div className="top-right-ui">
+              {collabError.message && <CollabError collabError={collabError} />}
+              <LiveCollaborationTrigger
+                isCollaborating={isCollaborating}
+                onSelect={() =>
+                  setShareDialogState({ isOpen: true, type: "share" })
+                }
+              />
             </div>
           );
         }}
@@ -1322,6 +1323,24 @@ const ExcalidrawWrapper = ({
           />
         )}
       </Excalidraw>
+      {selectedElement && (
+        <div
+          className="properties-sidebar-container Island"
+          style={{
+            position: "absolute",
+            top: "16px",
+            right: "16px",
+            width: "250px",
+            zIndex: 10,
+            padding: "1rem",
+          }}
+        >
+          <PropertiesSidebar
+            element={selectedElement}
+            onUpdate={handleUpdateElement}
+          />
+        </div>
+      )}
     </div>
   );
 };

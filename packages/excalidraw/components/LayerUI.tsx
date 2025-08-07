@@ -133,27 +133,27 @@ const DefaultOverwriteConfirmDialog = () => {
   );
 };
 
-const LayerUI = ({
-  actionManager,
-  appState,
-  files,
-  setAppState,
-  elements,
-  canvas,
-  onLockToggle,
-  onHandToolToggle,
-  onPenModeToggle,
-  showExitZenModeBtn,
-  renderTopRightUI,
-  renderCustomStats,
-  UIOptions,
-  onExportImage,
-  renderWelcomeScreen,
-  children,
-  app,
-  isCollaborating,
-  generateLinkForSelection,
-}: LayerUIProps) => {
+  const LayerUI = ({
+    actionManager,
+    appState,
+    files,
+    setAppState,
+    elements,
+    canvas,
+    onLockToggle,
+    onHandToolToggle,
+    onPenModeToggle,
+    showExitZenModeBtn,
+    renderTopRightUI,
+    renderCustomStats,
+    UIOptions,
+    onExportImage,
+    renderWelcomeScreen,
+    children,
+    app,
+    isCollaborating,
+    generateLinkForSelection,
+  }: LayerUIProps) => {
   const device = useDevice();
   const tunnels = useInitializeTunnels();
 
@@ -561,6 +561,23 @@ const LayerUI = ({
               >
                 {t("buttons.scrollBackToContent")}
               </button>
+            )}
+            {selectedElement && (
+              <div
+                className="Island"
+                style={{
+                  position: "absolute",
+                  top: "16px",
+                  right: "16px",
+                  padding: "1rem",
+                  width: "250px",
+                }}
+              >
+                <PropertiesSidebar
+                  element={selectedElement}
+                  onUpdate={handleUpdateElement}
+                />
+              </div>
             )}
           </div>
           {renderSidebars()}
