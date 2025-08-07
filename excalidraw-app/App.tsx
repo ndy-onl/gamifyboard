@@ -1,5 +1,6 @@
 import {
   Excalidraw,
+  LiveCollaborationTrigger,
   TTDDialogTrigger,
   CaptureUpdateAction,
   reconcileElements,
@@ -47,13 +48,14 @@ import {
   GithubIcon,
   XBrandIcon,
   DiscordIcon,
-  ExcalLogo,
   usersIcon,
   exportToPlus,
   share,
   youtubeIcon,
 } from "@excalidraw/excalidraw/components/icons";
+
 import { isElementLink } from "@excalidraw/element";
+
 import { restore, restoreAppState } from "@excalidraw/excalidraw/data/restore";
 import { newElementWith } from "@excalidraw/element";
 import { isInitializedImageElement } from "@excalidraw/element";
@@ -79,6 +81,8 @@ import type {
 } from "@excalidraw/excalidraw/types";
 import type { ResolutionType } from "@excalidraw/common/utility-types";
 import type { ResolvablePromise } from "@excalidraw/common/utils";
+
+import GamifyBoardIcon from "../public/gamifyboard-icon.svg?react";
 
 import CustomStats from "./CustomStats";
 import {
@@ -129,6 +133,7 @@ import {
 } from "./data/LocalData";
 import { isBrowserStorageStateNewer } from "./data/tabSync";
 import { ShareDialog, shareDialogStateAtom } from "./share/ShareDialog";
+import CollabError, { collabErrorIndicatorAtom } from "./collab/CollabError";
 
 import { useHandleAppTheme } from "./useHandleAppTheme";
 import { getPreferredLanguage } from "./app-language/language-detector";
@@ -481,6 +486,7 @@ const ExcalidrawWrapper = ({
   const [isCollaborating] = useAtomWithInitialValue(isCollaboratingAtom, () => {
     return isCollaborationLink(window.location.href);
   });
+  const collabError = useAtomValue(collabErrorIndicatorAtom);
 
   useHandleLibrary({
     excalidrawAPI,
@@ -915,40 +921,36 @@ const ExcalidrawWrapper = ({
     );
   }
 
-  const ExcalidrawPlusCommand = {
-    label: "Excalidraw+",
+  const GamifyProCommand = {
+    label: "Gamify Pro",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
-    icon: <div style={{ width: 14 }}>{ExcalLogo}</div>,
-    keywords: ["plus", "cloud", "server"],
+    icon: (
+      <div style={{ width: 14 }}>
+        <GamifyBoardIcon />
+      </div>
+    ),
+    keywords: ["pro", "gamify", "cloud", "server"],
     perform: () => {
       window.open(
-        `${
-          import.meta.env.VITE_APP_PLUS_LP
-        }/plus?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
+        `https://pro.gamifyboard.com/plus?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
         "_blank",
       );
     },
   };
-  const ExcalidrawPlusAppCommand = {
+  const GamifyProAppCommand = {
     label: "Sign up",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
-    icon: <div style={{ width: 14 }}>{ExcalLogo}</div>,
-    keywords: [
-      "excalidraw",
-      "plus",
-      "cloud",
-      "server",
-      "signin",
-      "login",
-      "signup",
-    ],
+    icon: (
+      <div style={{ width: 14 }}>
+        <GamifyBoardIcon />
+      </div>
+    ),
+    keywords: ["gamify", "pro", "cloud", "server", "signin", "login", "signup"],
     perform: () => {
       window.open(
-        `${
-          import.meta.env.VITE_APP_PLUS_APP
-        }?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
+        `https://pro.gamifyboard.com/app?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
         "_blank",
       );
     },
@@ -1029,18 +1031,18 @@ const ExcalidrawWrapper = ({
         theme={editorTheme}
         renderTopRightUI={(isMobile) => {
           return (
-            <div
-              style={{ padding: "10px" }}
-              className="properties-sidebar-container"
-            >
-              {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
-              {selectedElement && (
-                <PropertiesSidebar
-                  element={selectedElement}
-                  onUpdate={handleUpdateElement}
+            <>
+              {collabError.message && <CollabError collabError={collabError} />}
+              {collabAPI && !isCollabDisabled && (
+                <LiveCollaborationTrigger
+                  isCollaborating={isCollaborating}
+                  onSelect={() =>
+                    setShareDialogState({ isOpen: true, type: "share" })
+                  }
                 />
               )}
-            </div>
+              {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
+            </>
           );
         }}
         onLinkOpen={(element, event) => {
@@ -1050,6 +1052,12 @@ const ExcalidrawWrapper = ({
           }
         }}
       >
+        {selectedElement && (
+          <PropertiesSidebar
+            element={selectedElement}
+            onUpdate={handleUpdateElement}
+          />
+        )}
         <AppMainMenu
           onCollabDialogOpen={onCollabDialogOpen}
           isCollaborating={isCollaborating}
@@ -1266,18 +1274,18 @@ const ExcalidrawWrapper = ({
             ...(isExcalidrawPlusSignedUser
               ? [
                   {
-                    ...ExcalidrawPlusAppCommand,
-                    label: "Sign in / Go to Excalidraw+",
+                    ...GamifyProAppCommand,
+                    label: "Sign in / Go to Gamify Pro",
                   },
                 ]
-              : [ExcalidrawPlusCommand, ExcalidrawPlusAppCommand]),
+              : [GamifyProCommand, GamifyProAppCommand]),
 
             {
-              label: t("overwriteConfirm.action.excalidrawPlus.button"),
+              label: t("overwriteConfirm.action.gamifyPro.button"),
               category: DEFAULT_CATEGORIES.export,
               icon: exportToPlus,
               predicate: true,
-              keywords: ["plus", "export", "save", "backup"],
+              keywords: ["pro", "export", "save", "backup"],
               perform: () => {
                 if (excalidrawAPI) {
                   exportToExcalidrawPlus(

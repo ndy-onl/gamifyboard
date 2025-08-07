@@ -80,7 +80,7 @@ describe("Counter Functions", () => {
 
     // 3. Wait for the sidebar to appear and convert to counter
     await waitFor(() => {
-      const sidebar = document.querySelector(".properties-sidebar-container");
+      const sidebar = document.querySelector(".properties-sidebar");
       expect(sidebar).not.toBeNull();
       const radio = sidebar?.querySelector(
         "input[value=counter]",
@@ -100,7 +100,7 @@ describe("Counter Functions", () => {
 
     // 4. Manual counting
     await waitFor(() => {
-      const sidebar = document.querySelector(".properties-sidebar-container");
+      const sidebar = document.querySelector(".properties-sidebar");
       const plusButton = sidebar?.querySelector(
         "button:not(:disabled)",
       ) as HTMLButtonElement;
