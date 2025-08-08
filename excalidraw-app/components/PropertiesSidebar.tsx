@@ -44,9 +44,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
     : "none";
 
   return (
-    <div
-      className="properties-sidebar"
-    >
+    <div className="properties-sidebar">
       <h4>{t("propertiesSidebar.title")}</h4>
 
       <div style={{ marginBottom: "1rem" }}>
