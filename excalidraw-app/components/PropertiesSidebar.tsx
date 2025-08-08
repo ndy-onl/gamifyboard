@@ -46,13 +46,6 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
   return (
     <div
       className="properties-sidebar"
-      style={{
-        background: "#fff",
-        padding: "1rem",
-        width: "250px",
-        border: "1px solid #ccc",
-        borderRadius: "8px",
-      }}
     >
       <h4>{t("propertiesSidebar.title")}</h4>
 

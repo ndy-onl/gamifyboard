@@ -110,9 +110,14 @@ export default defineConfig(({ mode }) => {
       // don't auto-inline small assets (i.e. fonts hosted on CDN)
       assetsInlineLimit: 0,
     },
+    css: {
+      preprocessorOptions: {
+        scss: {},
+      },
+    },
     plugins: [
       Sitemap({
-        hostname: "https://excalidraw.com",
+        hostname: "https://gamifyboard.ndy.onl/",
         outDir: "build",
         changefreq: "monthly",
         // its static in public folder
