@@ -654,7 +654,11 @@ body.excalidraw-cursor-resize * {
   @at-root .excalidraw.theme--dark#{&} {
     .App-mobile-menu,
     .App-menu__left {
-      --button-hover-bg: color-mix(in srgb, var(--color-surface-primary-container) 80%, white);
+      --button-hover-bg: color-mix(
+        in srgb,
+        var(--color-surface-primary-container) 80%,
+        white
+      );
       --button-bg: var(--color-surface-high);
     }
   }
