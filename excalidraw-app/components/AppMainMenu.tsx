@@ -1,8 +1,5 @@
-import {
-  loginIcon,
-  eyeIcon,
-  createIcon,
-} from "@excalidraw/excalidraw/components/icons";
+import { GamifyBoardIcon } from "./GamifyBoardIcon";
+import { loginIcon, eyeIcon } from "@excalidraw/excalidraw/components/icons";
 import { MainMenu } from "@excalidraw/excalidraw/index";
 import React from "react";
 
@@ -15,17 +12,7 @@ import { isExcalidrawPlusSignedUser } from "../app_constants";
 
 import { saveDebugState } from "./DebugCanvas";
 
-const GamifyBoardIcon = createIcon(
-  <path
-    d="m 438.49277,242.30083 -136.24246,235.9784 136.24246,235.9784 h 272.48345 l 135.5834,-234.837 H 574.73441 v 79.7492 h 134.07591 l -43.687,75.6673 H 484.3455 l -90.38896,-156.5579 90.38896,-156.5579 h 180.77782 l 45.1946,78.2789 h 91.7063 l -91.048,-157.6994 z"
-    transform="translate(-302.25031,-242.30083)"
-  />,
-  {
-    width: 544,
-    height: 472,
-    viewBox: "0 0 544.30932 471.95679",
-  },
-);
+
 
 export const AppMainMenu: React.FC<{
   onCollabDialogOpen: () => any;
@@ -53,7 +40,7 @@ export const AppMainMenu: React.FC<{
       <MainMenu.DefaultItems.ClearCanvas />
       <MainMenu.Separator />
       <MainMenu.ItemLink
-        icon={GamifyBoardIcon}
+        icon={<GamifyBoardIcon theme={props.theme} />}
         href="https://pro.GamifyBoard.com"
         className=""
       >
