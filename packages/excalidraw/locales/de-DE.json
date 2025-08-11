@@ -319,9 +319,9 @@
     "link_title": "Teilbarer Link",
     "link_details": "Als schreibgeschützten Link exportieren.",
     "link_button": "Als Link exportieren",
-    "excalidrawplus_description": "Speichere die Szene in deinem Excalidraw+ Arbeitsbereich.",
+    "excalidrawplus_description": "Speichere die Szene in deinem GamifyBoard-Pro Arbeitsbereich.",
     "excalidrawplus_button": "Exportieren",
-    "excalidrawplus_exportError": "Konnte nicht nach Excalidraw+ exportieren..."
+    "excalidrawplus_exportError": "Konnte nicht zu GamifyBoard-Pro exportieren..."
   },
   "helpDialog": {
     "blog": "Lies unseren Blog",
@@ -489,7 +489,7 @@
   "welcomeScreen": {
     "app": {
       "center_heading": "Alle Daten werden lokal in Deinem Browser gespeichert.",
-      "center_heading_plus": "Möchtest du stattdessen zu Excalidraw+ gehen?",
+      "center_heading_plus": "Möchtest du stattdessen zu GamifyBoard-Pro gehen?",
       "menuHint": "Exportieren, Einstellungen, Sprachen, ..."
     },
     "defaults": {
@@ -519,9 +519,9 @@
         "description": "Exportiere die Zeichnungsdaten in eine Datei, von der Du später importieren kannst."
       },
       "excalidrawPlus": {
-        "title": "Excalidraw+",
-        "button": "Export nach Excalidraw+",
-        "description": "Speichere die Szene in deinem Excalidraw+-Arbeitsbereich."
+        "title": "GamifyBoard-Pro",
+        "button": "Export zu GamifyBoard-Pro",
+        "description": "Speichere die Szene in deinem GamifyBoard-Pro-Arbeitsbereich."
       }
     },
     "modal": {

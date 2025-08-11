@@ -915,29 +915,27 @@ const ExcalidrawWrapper = ({
     );
   }
 
-  const ExcalidrawPlusCommand = {
-    label: "Excalidraw+",
+  const GamifyBoardProCommand = {
+    label: "GamifyBoard-Pro",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
     icon: <div style={{ width: 14 }}>{ExcalLogo}</div>,
-    keywords: ["plus", "cloud", "server"],
+    keywords: ["pro", "cloud", "server", "gamifyboard"],
     perform: () => {
       window.open(
-        `${
-          import.meta.env.VITE_APP_PLUS_LP
-        }/plus?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
+        "https://pro.gamifyboard.com/",
         "_blank",
       );
     },
   };
-  const ExcalidrawPlusAppCommand = {
-    label: "Sign up",
+  const GamifyBoardProAppCommand = {
+    label: "Sign up for Pro",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
     icon: <div style={{ width: 14 }}>{ExcalLogo}</div>,
     keywords: [
-      "excalidraw",
-      "plus",
+      "gamifyboard",
+      "pro",
       "cloud",
       "server",
       "signin",
@@ -946,9 +944,7 @@ const ExcalidrawWrapper = ({
     ],
     perform: () => {
       window.open(
-        `${
-          import.meta.env.VITE_APP_PLUS_APP
-        }?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
+        "https://pro.gamifyboard.com/",
         "_blank",
       );
     },
@@ -1204,60 +1200,7 @@ const ExcalidrawWrapper = ({
               ],
               perform: () => {
                 window.open(
-                  "https://github.com/excalidraw/excalidraw",
-                  "_blank",
-                  "noopener noreferrer",
-                );
-              },
-            },
-            {
-              label: t("labels.followUs"),
-              icon: XBrandIcon,
-              category: DEFAULT_CATEGORIES.links,
-              predicate: true,
-              keywords: ["twitter", "contact", "social", "community"],
-              perform: () => {
-                window.open(
-                  "https://x.com/excalidraw",
-                  "_blank",
-                  "noopener noreferrer",
-                );
-              },
-            },
-            {
-              label: t("labels.discordChat"),
-              category: DEFAULT_CATEGORIES.links,
-              predicate: true,
-              icon: DiscordIcon,
-              keywords: [
-                "chat",
-                "talk",
-                "contact",
-                "bugs",
-                "requests",
-                "report",
-                "feedback",
-                "suggestions",
-                "social",
-                "community",
-              ],
-              perform: () => {
-                window.open(
-                  "https://discord.gg/UexuTaE",
-                  "_blank",
-                  "noopener noreferrer",
-                );
-              },
-            },
-            {
-              label: "YouTube",
-              icon: youtubeIcon,
-              category: DEFAULT_CATEGORIES.links,
-              predicate: true,
-              keywords: ["features", "tutorials", "howto", "help", "community"],
-              perform: () => {
-                window.open(
-                  "https://youtube.com/@excalidraw",
+                  "https://github.com/ndy-onl/gamifyboard",
                   "_blank",
                   "noopener noreferrer",
                 );
@@ -1266,11 +1209,11 @@ const ExcalidrawWrapper = ({
             ...(isExcalidrawPlusSignedUser
               ? [
                   {
-                    ...ExcalidrawPlusAppCommand,
-                    label: "Sign in / Go to Excalidraw+",
+                    ...GamifyBoardProAppCommand,
+                    label: "Sign in / Go to GamifyBoard-Pro",
                   },
                 ]
-              : [ExcalidrawPlusCommand, ExcalidrawPlusAppCommand]),
+              : [GamifyBoardProCommand, GamifyBoardProAppCommand]),
 
             {
               label: t("overwriteConfirm.action.excalidrawPlus.button"),
