@@ -1,5 +1,7 @@
 import React from "react";
 
+import { useUIAppState } from "../context/ui-appState";
+
 import "./GamifyBoardLogo.scss";
 
 interface LogoProps {
@@ -15,6 +17,9 @@ export const GamifyBoardLogo = ({
   withText, // Ignored
   isNotLink, // Ignored
 }: LogoProps) => {
+  const { theme } = useUIAppState();
+  const fillColor = theme === "dark" ? "#FFFFFF" : "#000000";
+
   return (
     <div className={`GamifyBoardLogo is-${size}`} style={style}>
       {/* SVG content from public/gamifyboard-wordmark.svg */}
@@ -38,7 +43,7 @@ export const GamifyBoardLogo = ({
         <g id="layer1" transform="translate(-302.25031,-242.30083)">
           <path
             id="path2"
-            style={{ strokeWidth: "11.4716px" }}
+            style={{ strokeWidth: "11.4716px", fill: "var(--color-primary)" }}
             d="m 438.49277,242.30083 -136.24246,235.9784 136.24246,235.9784 h 272.48345 l 135.5834,-234.837 H 574.73441 v 79.7492 h 134.07591 l -43.687,75.6673 H 484.3455 l -90.38896,-156.5579 90.38896,-156.5579 h 180.77782 l 45.1946,78.2789 h 91.7063 l -91.048,-157.6994 z"
           />
           <text
@@ -50,7 +55,7 @@ export const GamifyBoardLogo = ({
 
               whiteSpace: "pre",
 
-              fill: "#000000",
+              fill: fillColor,
               strokeWidth: "29.3065px",
             }}
             transform="matrix(2.3631793,0,0,2.3631793,-2344.6075,-2392.9794)"
