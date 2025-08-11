@@ -39,7 +39,7 @@ export const AppMainMenu: React.FC<{
       <MainMenu.DefaultItems.ClearCanvas />
       <MainMenu.Separator />
       <MainMenu.ItemLink
-        icon={<GamifyBoardIcon theme={props.theme} />}
+        icon={<GamifyBoardIcon theme={props.theme === "system" ? undefined : props.theme} />}
         href="https://pro.GamifyBoard.com"
         className=""
       >

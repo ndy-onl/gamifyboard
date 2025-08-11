@@ -1,5 +1,6 @@
 import React from "react";
 import { THEME } from "@excalidraw/common";
+import type { Theme } from "@excalidraw/element/types";
 
 export const GamifyBoardIcon: React.FC<{ theme?: Theme }> = ({ theme }) => {
   const iconColor = theme === THEME.DARK ? "white" : "black";

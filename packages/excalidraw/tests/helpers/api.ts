@@ -104,10 +104,12 @@ export class API {
     });
   };
 
-  // eslint-disable-next-line prettier/prettier
-  static updateElement = (...args: any[]) => {
+  static updateElement = <T extends ExcalidrawElement>(
+    element: T,
+    updates: Omit<Partial<T>, "id" | "updated">,
+  ) => {
     act(() => {
-      h.app.scene.mutateElement(...args);
+      h.app.scene.mutateElement(element, updates as Omit<Partial<T>, "id" | "updated">);
     });
   };
 
