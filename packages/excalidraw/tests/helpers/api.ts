@@ -105,9 +105,7 @@ export class API {
   };
 
   // eslint-disable-next-line prettier/prettier
-    static updateElement = <T extends ExcalidrawElement>(
-    ...args: any[]
-  ) => {
+  static updateElement = (...args: any[]) => {
     act(() => {
       h.app.scene.mutateElement(...args);
     });
