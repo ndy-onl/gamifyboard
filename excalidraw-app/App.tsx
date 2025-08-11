@@ -929,10 +929,7 @@ const ExcalidrawWrapper = ({
     ),
     keywords: ["pro", "cloud", "server", "gamifyboard"],
     perform: () => {
-      window.open(
-        "https://pro.gamifyboard.com/",
-        "_blank",
-      );
+      window.open("https://pro.gamifyboard.com/", "_blank");
     },
   };
   const GamifyBoardProAppCommand = {
@@ -954,10 +951,7 @@ const ExcalidrawWrapper = ({
       "signup",
     ],
     perform: () => {
-      window.open(
-        "https://pro.gamifyboard.com/",
-        "_blank",
-      );
+      window.open("https://pro.gamifyboard.com/", "_blank");
     },
   };
 
