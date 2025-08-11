@@ -1,5 +1,6 @@
 import {
   Excalidraw,
+  LiveCollaborationTrigger,
   TTDDialogTrigger,
   CaptureUpdateAction,
   reconcileElements,
@@ -45,15 +46,13 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import {
   GithubIcon,
-  XBrandIcon,
-  DiscordIcon,
-  ExcalLogo,
   usersIcon,
   exportToPlus,
   share,
-  youtubeIcon,
 } from "@excalidraw/excalidraw/components/icons";
+
 import { isElementLink } from "@excalidraw/element";
+
 import { restore, restoreAppState } from "@excalidraw/excalidraw/data/restore";
 import { newElementWith } from "@excalidraw/element";
 import { isInitializedImageElement } from "@excalidraw/element";
@@ -79,6 +78,8 @@ import type {
 } from "@excalidraw/excalidraw/types";
 import type { ResolutionType } from "@excalidraw/common/utility-types";
 import type { ResolvablePromise } from "@excalidraw/common/utils";
+
+import GamifyBoardIcon from "./components/GamifyBoardIcon";
 
 import CustomStats from "./CustomStats";
 import {
@@ -129,6 +130,7 @@ import {
 } from "./data/LocalData";
 import { isBrowserStorageStateNewer } from "./data/tabSync";
 import { ShareDialog, shareDialogStateAtom } from "./share/ShareDialog";
+import CollabError, { collabErrorIndicatorAtom } from "./collab/CollabError";
 
 import { useHandleAppTheme } from "./useHandleAppTheme";
 import { getPreferredLanguage } from "./app-language/language-detector";
@@ -481,6 +483,7 @@ const ExcalidrawWrapper = ({
   const [isCollaborating] = useAtomWithInitialValue(isCollaboratingAtom, () => {
     return isCollaborationLink(window.location.href);
   });
+  const collabError = useAtomValue(collabErrorIndicatorAtom);
 
   useHandleLibrary({
     excalidrawAPI,
@@ -919,7 +922,7 @@ const ExcalidrawWrapper = ({
     label: "GamifyBoard-Pro",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
-    icon: <div style={{ width: 14 }}>{ExcalLogo}</div>,
+    icon: <div style={{ width: 14 }}><GamifyBoardIcon /></div>,
     keywords: ["pro", "cloud", "server", "gamifyboard"],
     perform: () => {
       window.open(
@@ -932,7 +935,7 @@ const ExcalidrawWrapper = ({
     label: "Sign up for Pro",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
-    icon: <div style={{ width: 14 }}>{ExcalLogo}</div>,
+    icon: <div style={{ width: 14 }}><GamifyBoardIcon /></div>,
     keywords: [
       "gamifyboard",
       "pro",
@@ -1025,18 +1028,18 @@ const ExcalidrawWrapper = ({
         theme={editorTheme}
         renderTopRightUI={(isMobile) => {
           return (
-            <div
-              style={{ padding: "10px" }}
-              className="properties-sidebar-container"
-            >
-              {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
-              {selectedElement && (
-                <PropertiesSidebar
-                  element={selectedElement}
-                  onUpdate={handleUpdateElement}
+            <>
+              {collabError.message && <CollabError collabError={collabError} />}
+              {collabAPI && !isCollabDisabled && (
+                <LiveCollaborationTrigger
+                  isCollaborating={isCollaborating}
+                  onSelect={() =>
+                    setShareDialogState({ isOpen: true, type: "share" })
+                  }
                 />
               )}
-            </div>
+              {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
+            </>
           );
         }}
         onLinkOpen={(element, event) => {
@@ -1046,6 +1049,12 @@ const ExcalidrawWrapper = ({
           }
         }}
       >
+        {selectedElement && (
+          <PropertiesSidebar
+            element={selectedElement}
+            onUpdate={handleUpdateElement}
+          />
+        )}
         <AppMainMenu
           onCollabDialogOpen={onCollabDialogOpen}
           isCollaborating={isCollaborating}
@@ -1220,7 +1229,7 @@ const ExcalidrawWrapper = ({
               category: DEFAULT_CATEGORIES.export,
               icon: exportToPlus,
               predicate: true,
-              keywords: ["plus", "export", "save", "backup"],
+              keywords: ["pro", "export", "save", "backup"],
               perform: () => {
                 if (excalidrawAPI) {
                   exportToExcalidrawPlus(

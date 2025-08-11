@@ -58,9 +58,7 @@ export const AppWelcomeScreen: React.FC<{
           )}
           {!isExcalidrawPlusSignedUser && (
             <WelcomeScreen.Center.MenuItemLink
-              href={`${
-                import.meta.env.VITE_APP_PLUS_LP
-              }/plus?utm_source=excalidraw&utm_medium=app&utm_content=welcomeScreenGuest`}
+              href="https://app.gamifyboard.com"
               shortcut={null}
               icon={loginIcon}
             >

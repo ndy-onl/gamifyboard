@@ -16,13 +16,25 @@ describe("Test LanguageList", () => {
     // select rectangle tool to show properties menu
     UI.clickTool("rectangle");
     UI.createElement("rectangle");
-    const propertiesSidebar = document.querySelector(
-      ".properties-sidebar-container",
-    );
+    const propertiesSidebar = document.querySelector(".properties-sidebar");
     expect(propertiesSidebar).not.toBeNull();
     // initial language should display `Eigenschaften` label
     expect(screen.queryByText(/Eigenschaften/i)).not.toBeNull();
     fireEvent.click(document.querySelector(".dropdown-menu-button")!);
+
+    // Wait for dropdown menu to be fully rendered and debug what's there
+    await waitFor(() => {
+      const dropdownMenu = document.querySelector(".dropdown-menu");
+      expect(dropdownMenu).not.toBeNull();
+    });
+
+    // Wait for language selector
+    await waitFor(() => {
+      const languageSelect = document.querySelector(
+        ".dropdown-select__language",
+      );
+      expect(languageSelect).not.toBeNull();
+    });
 
     fireEvent.change(document.querySelector(".dropdown-select__language")!, {
       target: { value: defaultLang.code },
@@ -32,6 +44,13 @@ describe("Test LanguageList", () => {
       expect(screen.queryByText(/Properties/i)).not.toBeNull(),
     );
     // reset language
+    await waitFor(() => {
+      const languageSelect = document.querySelector(
+        ".dropdown-select__language",
+      );
+      expect(languageSelect).not.toBeNull();
+    });
+
     fireEvent.change(document.querySelector(".dropdown-select__language")!, {
       target: { value: "de-DE" },
     });

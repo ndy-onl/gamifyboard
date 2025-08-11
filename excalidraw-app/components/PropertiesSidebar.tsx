@@ -1,5 +1,5 @@
 import React from "react";
-import { t } from "@excalidraw/excalidraw/i18n";
+import { useI18n } from "@excalidraw/excalidraw/i18n";
 
 import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 
@@ -12,6 +12,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
   element,
   onUpdate,
 }) => {
+  const { t } = useI18n();
   const { customData = {} } = element;
 
   const handleIncrement = () => {
@@ -43,15 +44,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
     : "none";
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        padding: "1rem",
-        width: "250px",
-        border: "1px solid #ccc",
-        borderRadius: "8px",
-      }}
-    >
+    <div className="properties-sidebar">
       <h4>{t("propertiesSidebar.title")}</h4>
 
       <div style={{ marginBottom: "1rem" }}>

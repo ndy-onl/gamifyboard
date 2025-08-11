@@ -18,6 +18,7 @@ COPY excalidraw-app excalidraw-app
 COPY .eslintrc.json .
 COPY packages packages
 COPY scripts scripts
+COPY public public
 
 # Install dependencies in the root and then in excalidraw-app, and run build
 RUN yarn install --frozen-lockfile && \

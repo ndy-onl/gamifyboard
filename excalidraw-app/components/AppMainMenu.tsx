@@ -1,10 +1,6 @@
-import {
-  loginIcon,
-  ExcalLogo,
-  eyeIcon,
-} from "@excalidraw/excalidraw/components/icons";
-import { MainMenu } from "@excalidraw/excalidraw/index";
 import React from "react";
+import { MainMenu } from "@excalidraw/excalidraw/index";
+import { loginIcon, eyeIcon } from "@excalidraw/excalidraw/components/icons";
 
 import { isDevEnv } from "@excalidraw/common";
 
@@ -12,6 +8,8 @@ import type { Theme } from "@excalidraw/element/types";
 
 import { LanguageList } from "../app-language/LanguageList";
 import { isExcalidrawPlusSignedUser } from "../app_constants";
+
+import { GamifyBoardIcon } from "./GamifyBoardIcon";
 
 import { saveDebugState } from "./DebugCanvas";
 
@@ -41,13 +39,15 @@ export const AppMainMenu: React.FC<{
       <MainMenu.DefaultItems.ClearCanvas />
       <MainMenu.Separator />
       <MainMenu.ItemLink
-        icon={ExcalLogo}
-        href={`${
-          import.meta.env.VITE_APP_PLUS_LP
-        }/plus?utm_source=excalidraw&utm_medium=app&utm_content=hamburger`}
+        icon={
+          <GamifyBoardIcon
+            theme={props.theme === "system" ? undefined : props.theme}
+          />
+        }
+        href="https://pro.GamifyBoard.com"
         className=""
       >
-        Excalidraw+
+        GamifyBoard-Pro
       </MainMenu.ItemLink>
       <MainMenu.DefaultItems.Socials />
       <MainMenu.ItemLink
