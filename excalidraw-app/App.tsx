@@ -474,6 +474,11 @@ const ExcalidrawWrapper = ({
       onExcalidrawAPISet(excalidrawAPI);
       if (isTestEnv()) {
         (window as any).ExcalidrawAPI = excalidrawAPI;
+        (window as any).ExcalidrawHandle = {
+          excalidrawAPI,
+          checkGameState: (elements: readonly any[] | null) =>
+            checkGameState(excalidrawAPI, elements),
+        };
       }
     }
   }, [excalidrawAPI, setExcalidrawAPI, onExcalidrawAPISet]);
@@ -722,11 +727,11 @@ const ExcalidrawWrapper = ({
       ) {
         if (import.meta.env.VITE_APP_DISABLE_PREVENT_UNLOAD !== "true") {
           preventUnload(event);
-        } else {
-          console.warn(
-            "preventing unload disabled (VITE_APP_DISABLE_PREVENT_UNLOAD)",
-          );
         }
+      } else {
+        console.warn(
+          "preventing unload disabled (VITE_APP_DISABLE_PREVENT_UNLOAD)",
+        );
       }
     };
     window.addEventListener(EVENT.BEFORE_UNLOAD, unloadHandler);
