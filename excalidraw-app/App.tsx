@@ -722,11 +722,11 @@ const ExcalidrawWrapper = ({
       ) {
         if (import.meta.env.VITE_APP_DISABLE_PREVENT_UNLOAD !== "true") {
           preventUnload(event);
-        } else {
-          console.warn(
-            "preventing unload disabled (VITE_APP_DISABLE_PREVENT_UNLOAD)",
-          );
         }
+      } else {
+        console.warn(
+          "preventing unload disabled (VITE_APP_DISABLE_PREVENT_UNLOAD)",
+        );
       }
     };
     window.addEventListener(EVENT.BEFORE_UNLOAD, unloadHandler);
@@ -929,7 +929,10 @@ const ExcalidrawWrapper = ({
     ),
     keywords: ["pro", "cloud", "server", "gamifyboard"],
     perform: () => {
-      window.open("https://pro.gamifyboard.com/", "_blank");
+      window.open(
+        "https://pro.gamifyboard.com/",
+        "_blank",
+      );
     },
   };
   const GamifyBoardProAppCommand = {
@@ -951,7 +954,10 @@ const ExcalidrawWrapper = ({
       "signup",
     ],
     perform: () => {
-      window.open("https://pro.gamifyboard.com/", "_blank");
+      window.open(
+        "https://pro.gamifyboard.com/",
+        "_blank",
+      );
     },
   };
 
@@ -1303,11 +1309,6 @@ const ExcalidrawApp = forwardRef<AppRef>((_props, ref) => {
     if (process.env.NODE_ENV === "test") {
       if (excalidrawAPI) {
         (window as any).ExcalidrawAPI = excalidrawAPI;
-        (window as any).ExcalidrawHandle = {
-          excalidrawAPI,
-          checkGameState: (elements: readonly any[] | null) =>
-            checkGameState(excalidrawAPI, elements),
-        };
       }
     }
   }, [excalidrawAPI]);
