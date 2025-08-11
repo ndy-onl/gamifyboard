@@ -922,20 +922,25 @@ const ExcalidrawWrapper = ({
     label: "GamifyBoard-Pro",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
-    icon: <div style={{ width: 14 }}><GamifyBoardIcon /></div>,
+    icon: (
+      <div style={{ width: 14 }}>
+        <GamifyBoardIcon />
+      </div>
+    ),
     keywords: ["pro", "cloud", "server", "gamifyboard"],
     perform: () => {
-      window.open(
-        "https://pro.gamifyboard.com/",
-        "_blank",
-      );
+      window.open("https://pro.gamifyboard.com/", "_blank");
     },
   };
   const GamifyBoardProAppCommand = {
     label: "Sign up for Pro",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
-    icon: <div style={{ width: 14 }}><GamifyBoardIcon /></div>,
+    icon: (
+      <div style={{ width: 14 }}>
+        <GamifyBoardIcon />
+      </div>
+    ),
     keywords: [
       "gamifyboard",
       "pro",
@@ -946,10 +951,7 @@ const ExcalidrawWrapper = ({
       "signup",
     ],
     perform: () => {
-      window.open(
-        "https://pro.gamifyboard.com/",
-        "_blank",
-      );
+      window.open("https://pro.gamifyboard.com/", "_blank");
     },
   };
 
