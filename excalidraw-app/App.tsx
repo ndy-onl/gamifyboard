@@ -474,6 +474,11 @@ const ExcalidrawWrapper = ({
       onExcalidrawAPISet(excalidrawAPI);
       if (isTestEnv()) {
         (window as any).ExcalidrawAPI = excalidrawAPI;
+        (window as any).ExcalidrawHandle = {
+          excalidrawAPI,
+          checkGameState: (elements: readonly any[] | null) =>
+            checkGameState(excalidrawAPI, elements),
+        };
       }
     }
   }, [excalidrawAPI, setExcalidrawAPI, onExcalidrawAPISet]);
@@ -1303,6 +1308,11 @@ const ExcalidrawApp = forwardRef<AppRef>((_props, ref) => {
     if (process.env.NODE_ENV === "test") {
       if (excalidrawAPI) {
         (window as any).ExcalidrawAPI = excalidrawAPI;
+        (window as any).ExcalidrawHandle = {
+          excalidrawAPI,
+          checkGameState: (elements: readonly any[] | null) =>
+            checkGameState(excalidrawAPI, elements),
+        };
       }
     }
   }, [excalidrawAPI]);
