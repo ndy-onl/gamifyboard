@@ -79,7 +79,7 @@ import type {
 import type { ResolutionType } from "@excalidraw/common/utility-types";
 import type { ResolvablePromise } from "@excalidraw/common/utils";
 
-import GamifyBoardIcon from "./components/GamifyBoardIcon";
+import { GamifyBoardIcon } from "./components/GamifyBoardIcon";
 
 import CustomStats from "./CustomStats";
 import {
