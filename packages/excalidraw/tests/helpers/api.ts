@@ -109,7 +109,10 @@ export class API {
     updates: Omit<Partial<T>, "id" | "updated">,
   ) => {
     act(() => {
-      h.app.scene.mutateElement(element, updates as Omit<Partial<T>, "id" | "updated">);
+      h.app.scene.mutateElement(
+        element,
+        updates as Omit<Partial<T>, "id" | "updated">,
+      );
     });
   };
 
