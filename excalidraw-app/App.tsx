@@ -46,12 +46,9 @@ import { t } from "@excalidraw/excalidraw/i18n";
 
 import {
   GithubIcon,
-  XBrandIcon,
-  DiscordIcon,
   usersIcon,
   exportToPlus,
   share,
-  youtubeIcon,
 } from "@excalidraw/excalidraw/components/icons";
 
 import { isElementLink } from "@excalidraw/element";
@@ -82,7 +79,7 @@ import type {
 import type { ResolutionType } from "@excalidraw/common/utility-types";
 import type { ResolvablePromise } from "@excalidraw/common/utils";
 
-import GamifyBoardIcon from "../public/gamifyboard-icon.svg?react";
+import { GamifyBoardIcon } from "./components/GamifyBoardIcon";
 
 import CustomStats from "./CustomStats";
 import {
@@ -921,8 +918,8 @@ const ExcalidrawWrapper = ({
     );
   }
 
-  const GamifyProCommand = {
-    label: "Gamify Pro",
+  const GamifyBoardProCommand = {
+    label: "GamifyBoard-Pro",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
     icon: (
@@ -930,16 +927,13 @@ const ExcalidrawWrapper = ({
         <GamifyBoardIcon />
       </div>
     ),
-    keywords: ["pro", "gamify", "cloud", "server"],
+    keywords: ["pro", "cloud", "server", "gamifyboard"],
     perform: () => {
-      window.open(
-        `https://pro.gamifyboard.com/plus?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
-        "_blank",
-      );
+      window.open("https://pro.gamifyboard.com/", "_blank");
     },
   };
-  const GamifyProAppCommand = {
-    label: "Sign up",
+  const GamifyBoardProAppCommand = {
+    label: "Sign up for Pro",
     category: DEFAULT_CATEGORIES.links,
     predicate: true,
     icon: (
@@ -947,12 +941,17 @@ const ExcalidrawWrapper = ({
         <GamifyBoardIcon />
       </div>
     ),
-    keywords: ["gamify", "pro", "cloud", "server", "signin", "login", "signup"],
+    keywords: [
+      "gamifyboard",
+      "pro",
+      "cloud",
+      "server",
+      "signin",
+      "login",
+      "signup",
+    ],
     perform: () => {
-      window.open(
-        `https://pro.gamifyboard.com/app?utm_source=excalidraw&utm_medium=app&utm_content=command_palette`,
-        "_blank",
-      );
+      window.open("https://pro.gamifyboard.com/", "_blank");
     },
   };
 
@@ -1212,60 +1211,7 @@ const ExcalidrawWrapper = ({
               ],
               perform: () => {
                 window.open(
-                  "https://github.com/excalidraw/excalidraw",
-                  "_blank",
-                  "noopener noreferrer",
-                );
-              },
-            },
-            {
-              label: t("labels.followUs"),
-              icon: XBrandIcon,
-              category: DEFAULT_CATEGORIES.links,
-              predicate: true,
-              keywords: ["twitter", "contact", "social", "community"],
-              perform: () => {
-                window.open(
-                  "https://x.com/excalidraw",
-                  "_blank",
-                  "noopener noreferrer",
-                );
-              },
-            },
-            {
-              label: t("labels.discordChat"),
-              category: DEFAULT_CATEGORIES.links,
-              predicate: true,
-              icon: DiscordIcon,
-              keywords: [
-                "chat",
-                "talk",
-                "contact",
-                "bugs",
-                "requests",
-                "report",
-                "feedback",
-                "suggestions",
-                "social",
-                "community",
-              ],
-              perform: () => {
-                window.open(
-                  "https://discord.gg/UexuTaE",
-                  "_blank",
-                  "noopener noreferrer",
-                );
-              },
-            },
-            {
-              label: "YouTube",
-              icon: youtubeIcon,
-              category: DEFAULT_CATEGORIES.links,
-              predicate: true,
-              keywords: ["features", "tutorials", "howto", "help", "community"],
-              perform: () => {
-                window.open(
-                  "https://youtube.com/@excalidraw",
+                  "https://github.com/ndy-onl/gamifyboard",
                   "_blank",
                   "noopener noreferrer",
                 );
@@ -1274,14 +1220,14 @@ const ExcalidrawWrapper = ({
             ...(isExcalidrawPlusSignedUser
               ? [
                   {
-                    ...GamifyProAppCommand,
-                    label: "Sign in / Go to Gamify Pro",
+                    ...GamifyBoardProAppCommand,
+                    label: "Sign in / Go to GamifyBoard-Pro",
                   },
                 ]
-              : [GamifyProCommand, GamifyProAppCommand]),
+              : [GamifyBoardProCommand, GamifyBoardProAppCommand]),
 
             {
-              label: t("overwriteConfirm.action.gamifyPro.button"),
+              label: t("overwriteConfirm.action.excalidrawPlus.button"),
               category: DEFAULT_CATEGORIES.export,
               icon: exportToPlus,
               predicate: true,
