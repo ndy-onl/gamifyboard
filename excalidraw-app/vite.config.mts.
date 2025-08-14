@@ -1,0 +1,59 @@
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+import * as path from "path";
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: ["./tests/setup.ts"],
+    exclude: ["./tests/e2e/**"],
+    testTimeout: 30000,
+    hookTimeout: 30000,
+    deps: {
+      inline: ['axios'],
+      moduleDirectories: [path.resolve(__dirname, '../../node_modules')],
+    },
+  },
+  resolve: {
+    alias: {
+      "@excalidraw/excalidraw": path.resolve(__dirname, "../packages/excalidraw/index.tsx"),
+      "@excalidraw/excalidraw/test-utils": path.resolve(__dirname, "../packages/excalidraw/test-utils/index.ts"),
+      "@excalidraw/excalidraw/components/icons": path.resolve(__dirname, "../packages/excalidraw/components/icons.ts"),
+      "@excalidraw/excalidraw/components/CommandPalette": path.resolve(__dirname, "../packages/excalidraw/components/CommandPalette/index.ts"),
+      "@excalidraw/excalidraw/components/OverwriteConfirm": path.resolve(__dirname, "../packages/excalidraw/components/OverwriteConfirm/index.ts"),
+      "@excalidraw/excalidraw/components/ShareableLinkDialog": path.resolve(__dirname, "../packages/excalidraw/components/ShareableLinkDialog/index.ts"),
+      "@excalidraw/excalidraw/components/Trans": path.resolve(__dirname, "../packages/excalidraw/components/Trans.tsx"),
+      "@excalidraw/excalidraw/appState": path.resolve(__dirname, "../packages/excalidraw/appState.ts"),
+      "@excalidraw/excalidraw/analytics": path.resolve(__dirname, "../packages/excalidraw/analytics.ts"),
+      "@excalidraw/excalidraw/polyfill": path.resolve(__dirname, "../packages/excalidraw/polyfill.ts"),
+      "@excalidraw/excalidraw/data/blob": path.resolve(__dirname, "../packages/excalidraw/data/blob.ts"),
+      "@excalidraw/excalidraw/hooks/useCallbackRefState": path.resolve(__dirname, "../packages/excalidraw/hooks/useCallbackRefState.ts"),
+      "@excalidraw/excalidraw/i18n": path.resolve(__dirname, "../packages/excalidraw/i18n.ts"),
+      "@excalidraw/excalidraw/data/restore": path.resolve(__dirname, "../packages/excalidraw/data/restore.ts"),
+      "@excalidraw/excalidraw/data/library": path.resolve(__dirname, "../packages/excalidraw/data/library.ts"),
+      "@excalidraw/excalidraw/data/reconcile": path.resolve(__dirname, "../packages/excalidraw/data/reconcile.ts"),
+      "@excalidraw/excalidraw/types": path.resolve(__dirname, "../packages/excalidraw/types.ts"),
+      "@excalidraw/common": path.resolve(__dirname, "../packages/common/src/index.ts"),
+      "@excalidraw/common/*": path.resolve(__dirname, "../packages/common/src/*"),
+      "@excalidraw/element": path.resolve(__dirname, "../packages/element/src/index.ts"),
+      "@excalidraw/element/*": path.resolve(__dirname, "../packages/element/src/*"),
+      "@excalidraw/math": path.resolve(__dirname, "../packages/math/src/index.ts"),
+      "@excalidraw/math/*": path.resolve(__dirname, "../packages/math/src/*"),
+      "@excalidraw/utils": path.resolve(__dirname, "../packages/utils/src/index.ts"),
+      "@excalidraw/utils/*": path.resolve(__dirname, "../packages/utils/src/*"),
+      "src": path.resolve(__dirname, "../src"),
+      "axios": path.resolve(__dirname, "../../node_modules/axios"),
+      "@": path.resolve(__dirname, "../src"),
+    },
+  },
+  optimizeDeps: {
+    include: ['axios'],
+  },
+  server: {
+    fs: {
+      allow: ['..'],
+    },
+  },
+});
