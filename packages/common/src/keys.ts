@@ -1,6 +1,6 @@
-import { isDarwin } from "./constants";
+import { isDarwin } from "./constants.js";
 
-import type { ValueOf } from "./utility-types";
+import type { ValueOf } from "./utility-types.js";
 
 export const CODES = {
   EQUAL: "Equal",

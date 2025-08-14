@@ -1,4 +1,4 @@
-import type { GlobalPoint, LocalPoint, Vector } from "./types";
+import type { Point, Vector, GlobalPoint, LocalPoint } from "./types.js";
 
 /**
  * Create a vector from the x and y coordiante elements.

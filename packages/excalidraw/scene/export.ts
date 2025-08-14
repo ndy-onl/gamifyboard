@@ -12,8 +12,8 @@ import {
   arrayToMap,
   distance,
   getFontString,
-  toBrandedType,
 } from "@excalidraw/common";
+import { toBrandedType } from "@excalidraw/common/utility-types";
 
 import { getCommonBounds, getElementAbsoluteCoords } from "@excalidraw/element";
 

@@ -1,8 +1,8 @@
-import { isPoint, pointDistance, pointFrom, pointFromVector } from "./point";
-import { vector, vectorNormal, vectorNormalize, vectorScale } from "./vector";
-import { LegendreGaussN24CValues, LegendreGaussN24TValues } from "./constants";
+import { isPoint, pointDistance, pointFrom, pointFromVector } from "./point.js";
+import { vector, vectorNormal, vectorNormalize, vectorScale } from "./vector.js";
+import { LegendreGaussN24CValues, LegendreGaussN24TValues } from "./constants.js";
 
-import type { Curve, GlobalPoint, LineSegment, LocalPoint } from "./types";
+import type { Point, Vector, GlobalPoint, LocalPoint, Curve, LineSegment } from "./types.js";
 
 /**
  *

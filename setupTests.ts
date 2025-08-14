@@ -1,9 +1,12 @@
 import fs from "fs";
 
 // vitest.setup.ts
+import { vi } from "vitest";
 import "vitest-canvas-mock";
 import "@testing-library/jest-dom";
-import { vi } from "vitest";
+
+// Add this line to mock 'jest' for jest-canvas-mock
+global.jest = vi;
 
 import polyfill from "./packages/excalidraw/polyfill";
 import { yellow } from "./packages/excalidraw/tests/helpers/colorize";

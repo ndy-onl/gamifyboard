@@ -1,4 +1,4 @@
-import type { GlobalPoint, LocalPoint, Triangle } from "./types";
+import type { GlobalPoint, LocalPoint, Point, Triangle } from "./types.js";
 
 // Types
 

@@ -1,7 +1,7 @@
-import { pointFrom } from "./point";
-import { lineSegment, lineSegmentIntersectionPoints } from "./segment";
+import { pointFrom } from "./point.js";
+import { lineSegment, lineSegmentIntersectionPoints } from "./segment.js";
 
-import type { GlobalPoint, LineSegment, LocalPoint, Rectangle } from "./types";
+import type { GlobalPoint, LocalPoint, Point, Polygon, Radians, Rectangle, LineSegment } from "./types.js";
 
 export function rectangle<P extends GlobalPoint | LocalPoint>(
   topLeft: P,

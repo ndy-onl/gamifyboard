@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@excalidraw/excalidraw/*": ["packages/excalidraw/dist/types/src/*"],
+      "@excalidraw/math/*": ["packages/math/dist/types/src/*"],
+      "@excalidraw/common/*": ["packages/common/dist/types/src/*"],
+      "@excalidraw/element/*": ["packages/element/dist/types/src/*"],
+      "@excalidraw/utils/*": ["packages/utils/dist/types/src/*"]
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { promiseTry, resolvablePromise } from ".";
 
-import type { ResolvablePromise } from ".";
+import type { ResolvablePromise } from "./utility-types.js";
 
 import type { MaybePromise } from "./utility-types";
 

@@ -3,11 +3,11 @@ import throttle from "lodash.throttle";
 import {
   randomInteger,
   arrayToMap,
-  toBrandedType,
   isDevEnv,
   isTestEnv,
   toArray,
 } from "@excalidraw/common";
+import { toBrandedType } from "@excalidraw/common/utility-types";
 import { isNonDeletedElement } from "@excalidraw/element";
 import { isFrameLikeElement } from "@excalidraw/element";
 import { getElementsInGroup } from "@excalidraw/element";

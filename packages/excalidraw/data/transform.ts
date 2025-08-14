@@ -12,9 +12,9 @@ import {
   cloneJSON,
   getFontString,
   isDevEnv,
-  toBrandedType,
   getLineHeight,
 } from "@excalidraw/common";
+import { toBrandedType } from "@excalidraw/common/utility-types";
 
 import { bindLinearElement } from "@excalidraw/element";
 import {

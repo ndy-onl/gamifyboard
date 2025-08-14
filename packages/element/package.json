@@ -3,21 +3,19 @@
   "version": "0.18.0",
   "type": "module",
   "types": "./dist/types/element/src/index.d.ts",
-  "main": "./dist/prod/index.js",
-  "module": "./dist/prod/index.js",
   "exports": {
     ".": {
-      "types": "./dist/types/element/src/index.d.ts",
-      "development": "./dist/dev/index.js",
-      "production": "./dist/prod/index.js",
-      "default": "./dist/prod/index.js"
+      "types": "./src/index.d.ts",
+      "import": "./src/index.ts",
+      "require": "./src/index.ts"
     },
     "./*": {
-      "types": "./dist/types/element/src/*.d.ts",
-      "development": "./dist/dev/index.js",
-      "production": "./dist/prod/index.js",
-      "default": "./dist/prod/index.js"
-    }
+      "types": "./src/*.d.ts",
+      "development": "./src/*.ts",
+      "production": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist/*"
@@ -53,7 +51,7 @@
   "bugs": "https://github.com/excalidraw/excalidraw/issues",
   "repository": "https://github.com/excalidraw/excalidraw",
   "scripts": {
-    "gen:types": "rimraf types && tsc",
+    "gen:types": "rimraf types && tsc -p ../../tsconfig.build.json",
     "build:esm": "rimraf dist && node ../../scripts/buildBase.js && yarn gen:types"
   },
   "dependencies": {

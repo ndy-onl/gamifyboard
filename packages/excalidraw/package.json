@@ -3,34 +3,57 @@
   "version": "0.18.0",
   "type": "module",
   "types": "./dist/types/excalidraw/index.d.ts",
-  "main": "./dist/prod/index.js",
-  "module": "./dist/prod/index.js",
   "exports": {
-    "./common/*": {
-      "types": "./dist/types/common/src/*.d.ts"
-    },
-    "./element/*": {
-      "types": "./dist/types/element/src/*.d.ts"
-    },
-    "./math/*": {
-      "types": "./dist/types/math/src/*.d.ts"
-    },
-    "./utils/*": {
-      "types": "./dist/types/utils/src/*.d.ts"
-    },
-    "./*": {
-      "types": "./dist/types/excalidraw/*.d.ts"
-    },
-    "./index.css": {
-      "development": "./dist/dev/index.css",
-      "production": "./dist/prod/index.css"
-    },
     ".": {
-      "types": "./dist/types/excalidraw/index.d.ts",
-      "development": "./dist/dev/index.js",
-      "production": "./dist/prod/index.js",
-      "default": "./dist/prod/index.js"
-    }
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./i18n": {
+      "types": "./src/i18n.d.ts",
+      "default": "./src/i18n.ts"
+    },
+    "./tests/helpers/ui": {
+      "types": "./src/tests/helpers/ui.d.ts",
+      "default": "./src/tests/helpers/ui.ts"
+    },
+    "./tests/helpers/api": {
+      "types": "./src/tests/helpers/api.d.ts",
+      "default": "./src/tests/helpers/api.ts"
+    },
+    "./tests/test-utils": {
+      "types": "./src/tests/test-utils.d.ts",
+      "default": "./src/tests/test-utils.ts"
+    },
+    "./tests/fixtures/diagramFixture": {
+      "types": "./src/tests/fixtures/diagramFixture.d.ts",
+      "default": "./src/tests/fixtures/diagramFixture.ts"
+    },
+    "./actions": {
+      "types": "./src/actions/index.d.ts",
+      "default": "./src/actions/index.ts"
+    },
+    "./actions/*": {
+      "types": "./src/actions/*.d.ts",
+      "default": "./src/actions/*.ts"
+    },
+    "./data/image": {
+      "types": "./src/data/image.d.ts",
+      "default": "./src/data/image.ts"
+    },
+    "./scene/export": {
+      "types": "./src/scene/export.d.ts",
+      "default": "./src/scene/export.ts"
+    },
+    "./renderer/interactiveScene": {
+      "types": "./src/renderer/interactiveScene.d.ts",
+      "default": "./src/renderer/interactiveScene.ts"
+    },
+    "./renderer/staticScene": {
+      "types": "./src/renderer/staticScene.d.ts",
+      "default": "./src/renderer/staticScene.ts"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist/*"
@@ -70,7 +93,7 @@
   "bugs": "https://github.com/excalidraw/excalidraw/issues",
   "homepage": "https://github.com/excalidraw/excalidraw/tree/master/packages/excalidraw",
   "scripts": {
-    "gen:types": "rimraf types && tsc",
+    "gen:types": "rimraf types && tsc -p ../../tsconfig.build.json",
     "build:esm": "rimraf dist && node ../../scripts/buildPackage.js && yarn gen:types"
   },
   "peerDependencies": {

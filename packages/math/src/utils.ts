@@ -31,3 +31,4 @@ export const isFiniteNumber = (value: any): value is number => {
 
 export const isCloseTo = (a: number, b: number, precision = PRECISION) =>
   Math.abs(a - b) < precision;
+

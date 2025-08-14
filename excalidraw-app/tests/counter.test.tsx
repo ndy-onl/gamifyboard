@@ -1,14 +1,14 @@
-import { waitFor, render, act } from "@excalidraw/excalidraw/tests/test-utils";
+import { waitFor, render, act } from "#excalidraw/excalidraw/tests/test-utils";
 
 import React from "react";
 
-import type { ExcalidrawElement } from "@excalidraw/element/types";
+import type { ExcalidrawElement } from "#excalidraw/element/types";
 
-import type { Radians } from "@excalidraw/math";
+import type { Radians } from "#excalidraw/math";
 import type {
   FractionalIndex,
   ExcalidrawRectangleElement,
-} from "@excalidraw/element/types";
+} from "#excalidraw/element/types";
 
 import ExcalidrawApp from "../App";
 

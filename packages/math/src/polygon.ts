@@ -1,8 +1,8 @@
-import { pointsEqual } from "./point";
-import { lineSegment, pointOnLineSegment } from "./segment";
-import { PRECISION } from "./utils";
+import { pointsEqual } from "./point.js";
+import { lineSegment, pointOnLineSegment } from "./segment.js";
+import { PRECISION } from "./utils.js";
 
-import type { GlobalPoint, LocalPoint, Polygon } from "./types";
+import type { GlobalPoint, LocalPoint, Point, Polygon } from "./types.js";
 
 export function polygon<Point extends GlobalPoint | LocalPoint>(
   ...points: Point[]

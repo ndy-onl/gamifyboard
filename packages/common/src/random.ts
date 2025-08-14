@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { Random } from "roughjs/bin/math";
 
-import { isTestEnv } from "./utils";
+import { isTestEnv, randomInteger } from "./utils.js";
 
 let random = new Random(Date.now());
 let testIdBase = 0;

@@ -1,6 +1,6 @@
-import { pointFrom } from "./point";
+import { pointFrom } from "./point.js";
 
-import type { GlobalPoint, Line, LocalPoint } from "./types";
+import type { GlobalPoint, Line, LocalPoint, Point } from "./types.js";
 
 /**
  * Create a line from two points.

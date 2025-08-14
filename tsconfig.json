@@ -1,36 +1,42 @@
 {
   "compilerOptions": {
-    "rootDir": "./",
-    "target": "ESNext",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable", "es2022"],
     "module": "ESNext",
+    "skipLibCheck": true,
     "moduleResolution": "node",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
+    "jsxRuntime": "automatic",
+    "jsxFactory": "React.createElement",
+    "jsxFragmentFactory": "React.Fragment",
+    "strict": true,
+    "noImplicitAny": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "paths": {
-      "@excalidraw/common": ["./packages/common/src/index.ts"],
-      "@excalidraw/common/*": ["./packages/common/src/*"],
-      "@excalidraw/excalidraw": ["./packages/excalidraw/index.tsx"],
-      "@excalidraw/excalidraw/*": ["./packages/excalidraw/*"],
-      "@excalidraw/element": ["./packages/element/src/index.ts"],
-      "@excalidraw/element/*": ["./packages/element/src/*"],
-      "@excalidraw/math": ["./packages/math/src/index.ts"],
-      "@excalidraw/math/*": ["./packages/math/src/*"],
-      "@excalidraw/utils": ["./packages/utils/src/index.ts"],
-      "@excalidraw/utils/*": ["./packages/utils/src/*"]
-    }
+      "@/api": ["src/api.ts"],
+      "@excalidraw/excalidraw/*": ["packages/excalidraw/src/*"],
+      "@excalidraw/math/*": ["packages/math/src/*"],
+      "@excalidraw/common/*": ["packages/common/src/*"],
+      "@excalidraw/element/*": ["packages/element/src/*"],
+      "@excalidraw/utils/*": ["packages/utils/src/*"]
+    },
+    "baseUrl": "."
   },
-  "include": ["packages", "excalidraw-app"],
-  "exclude": ["examples", "dist", "types", "tests"]
+  "include": ["src", "excalidraw-app/src", "packages/*/src"],
+  "references": [
+    { "path": "./packages/math" },
+    { "path": "./packages/common" },
+    { "path": "./packages/element" },
+    { "path": "./packages/utils" },
+    { "path": "./packages/excalidraw" }
+  ]
 }

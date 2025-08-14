@@ -1,20 +1,20 @@
-import { line, linesIntersectAt } from "./line";
+import { line, linesIntersectAt } from "./line.js";
 import {
   isPoint,
   pointCenter,
   pointFromVector,
   pointRotateRads,
-} from "./point";
-import { PRECISION } from "./utils";
+} from "./point.js";
+import { PRECISION } from "./utils.js";
 import {
   vectorAdd,
   vectorCross,
   vectorFromPoint,
   vectorScale,
   vectorSubtract,
-} from "./vector";
+} from "./vector.js";
 
-import type { GlobalPoint, LineSegment, LocalPoint, Radians } from "./types";
+import type { GlobalPoint, LineSegment, LocalPoint, Point, Radians } from "./types.js";
 
 /**
  * Create a line segment from two points.

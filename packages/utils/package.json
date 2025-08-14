@@ -3,18 +3,33 @@
   "version": "0.1.2",
   "type": "module",
   "types": "./dist/types/utils/src/index.d.ts",
-  "main": "./dist/prod/index.js",
-  "module": "./dist/prod/index.js",
   "exports": {
     ".": {
-      "types": "./dist/types/utils/src/index.d.ts",
-      "development": "./dist/dev/index.js",
-      "production": "./dist/prod/index.js",
-      "default": "./dist/prod/index.js"
+      "types": "./src/index.d.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./export": {
+      "types": "./src/export.d.ts",
+      "default": "./src/export.ts"
+    },
+    "./shape": {
+      "types": "./src/shape.d.ts",
+      "default": "./src/shape.ts"
+    },
+    "./test-utils": {
+      "types": "./src/test-utils.d.ts",
+      "default": "./src/test-utils.ts"
+    },
+    "./withinBounds": {
+      "types": "./src/withinBounds.d.ts",
+      "default": "./src/withinBounds.ts"
     },
     "./*": {
-      "types": "./dist/types/utils/src/*.d.ts"
-    }
+      "types": "./src/*.d.ts",
+      "default": "./src/*.ts"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist/*"
@@ -69,7 +84,7 @@
   "bugs": "https://github.com/excalidraw/excalidraw/issues",
   "repository": "https://github.com/excalidraw/excalidraw",
   "scripts": {
-    "gen:types": "rimraf types && tsc",
+    "gen:types": "rimraf types && tsc -p ../../tsconfig.build.json",
     "build:esm": "rimraf dist && node ../../scripts/buildUtils.js && yarn gen:types"
   }
 }

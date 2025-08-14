@@ -1,8 +1,15 @@
 {
-  "extends": "../tsconfig.base.json",
+  "extends": "@excalidraw/typescript-config/base.json",
   "compilerOptions": {
-    "outDir": "./dist/types"
+    "moduleResolution": "node",
+    "outDir": "dist/types",
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "rootDir": "src",
+    "composite": true
   },
-  "include": ["src/**/*", "global.d.ts"],
-  "exclude": ["**/*.test.*", "tests", "types", "examples", "dist"]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }

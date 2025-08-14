@@ -1,6 +1,6 @@
 import oc from "open-color";
 
-import type { Merge } from "./utility-types";
+import type { ValueOf, Merge } from "./utility-types.js";
 
 export const COLOR_OUTLINE_CONTRAST_THRESHOLD = 240;
 

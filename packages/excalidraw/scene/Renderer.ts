@@ -1,6 +1,7 @@
 import { isElementInViewport } from "@excalidraw/element";
 
-import { memoize, toBrandedType } from "@excalidraw/common";
+import { memoize } from "@excalidraw/common";
+import { toBrandedType } from "@excalidraw/common/utility-types";
 
 import type {
   ExcalidrawElement,

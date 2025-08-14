@@ -1,8 +1,30 @@
 {
-  "extends": "../tsconfig.base.json",
+  "extends": "@excalidraw/typescript-config/base.json",
   "compilerOptions": {
-    "outDir": "./dist/types"
+    "outDir": "./dist/types",
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "composite": true
   },
-  "include": ["src/**/*", "global.d.ts"],
-  "exclude": ["**/*.test.*", "tests", "types", "examples", "dist"]
+  "files": [
+    "src/global.d.ts",
+    "src/utility-types.ts",
+    "src/colors.ts",
+    "src/constants.ts",
+    "src/binary-heap.ts",
+    "src/font-metadata.ts",
+    "src/keys.ts",
+    "src/points.ts",
+    "src/promise-pool.ts",
+    "src/queue.ts",
+    "src/random.ts",
+    "src/url.ts",
+    "src/utils.ts",
+    "src/emitter.ts",
+    "src/index.ts",
+    "src/utils.test.ts"
+  ],
+  "exclude": ["node_modules", "dist"],
+  "references": [{ "path": "../math" }]
 }

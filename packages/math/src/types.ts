@@ -23,6 +23,8 @@ export type Degrees = number & { _brand: "excalimath_degree" };
  */
 export type InclusiveRange = [number, number] & { _brand: "excalimath_degree" };
 
+export type Range = InclusiveRange;
+
 //
 // Point
 //
@@ -42,6 +44,8 @@ export type GlobalPoint = [x: number, y: number] & {
 export type LocalPoint = [x: number, y: number] & {
   _brand: "excalimath__localpoint";
 };
+
+export type Point = GlobalPoint | LocalPoint;
 
 // Line
 

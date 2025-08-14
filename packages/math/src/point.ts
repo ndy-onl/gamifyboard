@@ -1,14 +1,8 @@
-import { degreesToRadians } from "./angle";
-import { PRECISION } from "./utils";
-import { vectorFromPoint, vectorScale } from "./vector";
+import { degreesToRadians } from "./angle.js";
+import { PRECISION } from "./utils.js";
+import { vectorFromPoint, vectorScale } from "./vector.js";
 
-import type {
-  LocalPoint,
-  GlobalPoint,
-  Radians,
-  Degrees,
-  Vector,
-} from "./types";
+import type { GlobalPoint, LocalPoint, Point, Vector, Radians, Degrees } from "./types.js";
 
 /**
  * Create a properly typed Point instance from the X and Y coordinates.

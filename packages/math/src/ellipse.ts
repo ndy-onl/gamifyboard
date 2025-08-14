@@ -3,15 +3,15 @@ import {
   pointDistance,
   pointFromVector,
   pointsEqual,
-} from "./point";
-import { PRECISION } from "./utils";
+} from "./point.js";
+import { PRECISION } from "./utils.js";
 import {
   vector,
   vectorAdd,
   vectorDot,
   vectorFromPoint,
   vectorScale,
-} from "./vector";
+} from "./vector.js";
 
 import type {
   Ellipse,
@@ -19,7 +19,7 @@ import type {
   Line,
   LineSegment,
   LocalPoint,
-} from "./types";
+} from "./types.js";
 
 /**
  * Construct an Ellipse object from the parameters

@@ -1,6 +1,6 @@
-import { toBrandedType } from "@excalidraw/common";
+import { toBrandedType } from "@excalidraw/common/utility-types";
 
-import type { InclusiveRange } from "./types";
+import type { Range, InclusiveRange } from "./types.js";
 
 /**
  * Create an inclusive range from the two numbers provided.

@@ -77,9 +77,10 @@ import type {
   UIAppState,
 } from "@excalidraw/excalidraw/types";
 import type { ResolutionType } from "@excalidraw/common/utility-types";
-import type { ResolvablePromise } from "@excalidraw/common/utils";
+import type { ResolvablePromise }  from "@excalidraw/common/utils";
 
 import { GamifyBoardIcon } from "./components/GamifyBoardIcon";
+import { authAtom } from "./state/auth";
 
 import CustomStats from "./CustomStats";
 import {
@@ -144,10 +145,20 @@ import { AIComponents } from "./components/AI";
 import { ExcalidrawPlusIframeExport } from "./ExcalidrawPlusIframeExport";
 import { PropertiesSidebar } from "./components/PropertiesSidebar";
 import { GamifyToolbar } from "./components/GamifyToolbar";
+import AuthPanel from './components/AuthPanel';
+import LoginModal from './components/LoginModal';
+import RegisterModal from './components/RegisterModal';
+import './components/Modal.scss';
 
 import "./index.scss";
 
 import type { CollabAPI } from "./collab/Collab";
+
+import Auth from './components/Auth';
+import { GamifyUserMenu } from './components/GamifyUserMenu';
+import { EditorJotaiProvider } from '../packages/excalidraw/editor-jotai';
+import BoardList from './components/BoardList';
+import { getBoard } from './src/api';
 
 const isIntersecting = (
   r1: { x: number; y: number; width: number; height: number },
@@ -299,6 +310,8 @@ const shareableLinkConfirmDialog = {
 const initializeScene = async (opts: {
   collabAPI: CollabAPI | null;
   excalidrawAPI: ExcalidrawImperativeAPI;
+  selectedBoardId: string | null;
+  token: string | null;
 }): Promise<
   { scene: ExcalidrawInitialDataState | null } & (
     | { isExternalScene: true; id: string; key: string }
@@ -380,6 +393,19 @@ const initializeScene = async (opts: {
         isExternalScene,
       };
     }
+  } else if (opts.selectedBoardId && opts.token) {
+    try {
+      const board = await getBoard(opts.selectedBoardId, opts.token);
+      if (board && board.data) {
+        scene = {
+          elements: board.data.elements || [],
+          appState: board.data.appState || {},
+          files: board.data.files || {},
+        };
+      }
+    } catch (error) {
+      console.error("Failed to load board from backend", error);
+    }
   }
 
   if (roomLinkData && opts.collabAPI) {
@@ -431,12 +457,26 @@ const initializeScene = async (opts: {
 const ExcalidrawWrapper = ({
   setExcalidrawAPI,
   onExcalidrawAPISet,
+  selectedBoardId,
+  token,
+  onLoginClick,
+  authPanelView,
+  setAuthPanelView,
 }: {
   setExcalidrawAPI: (api: ExcalidrawImperativeAPI) => void;
   onExcalidrawAPISet: (api: ExcalidrawImperativeAPI) => void;
+  selectedBoardId: string | null;
+  token: string | null;
+  onLoginClick: () => void;
+  authPanelView: "login" | "register" | null;
+  setAuthPanelView: (view: "login" | "register" | null) => void;
 }) => {
   const [selectedElement, setSelectedElement] =
     useState<NonDeletedExcalidrawElement | null>(null);
+  const [auth, setAuth] = useAtom(authAtom);
+  console.log("Auth Access Token:", auth.accessToken);
+
+  
   const [errorMessage, setErrorMessage] = useState("");
   const isCollabDisabled = isRunningInIframe();
 
@@ -498,21 +538,6 @@ const ExcalidrawWrapper = ({
   });
 
   const [, forceRefresh] = useState(false);
-
-  useEffect(() => {
-    if (isDevEnv()) {
-      const debugState = loadSavedDebugState();
-
-      if (debugState.enabled && !window.visualDebug) {
-        window.visualDebug = {
-          data: [],
-        };
-      } else {
-        delete window.visualDebug;
-      }
-      forceRefresh((prev) => !prev);
-    }
-  }, [excalidrawAPI]);
 
   useEffect(() => {
     if (!excalidrawAPI || (!isCollabDisabled && !collabAPI)) {
@@ -586,7 +611,7 @@ const ExcalidrawWrapper = ({
       }
     };
 
-    initializeScene({ collabAPI, excalidrawAPI }).then(async (data) => {
+    initializeScene({ collabAPI, excalidrawAPI, selectedBoardId, token }).then(async (data) => {
       loadImages(data, /* isInitialLoad */ true);
       initialStatePromiseRef.current.promise.resolve(data.scene);
     });
@@ -603,7 +628,7 @@ const ExcalidrawWrapper = ({
         }
         excalidrawAPI.updateScene({ appState: { isLoading: true } });
 
-        initializeScene({ collabAPI, excalidrawAPI }).then((data) => {
+        initializeScene({ collabAPI, excalidrawAPI, selectedBoardId, token }).then((data) => {
           loadImages(data);
           if (data.scene) {
             excalidrawAPI.updateScene({
@@ -713,7 +738,7 @@ const ExcalidrawWrapper = ({
       );
       clearTimeout(titleTimeout);
     };
-  }, [isCollabDisabled, collabAPI, excalidrawAPI, setLangCode]);
+  }, [isCollabDisabled, collabAPI, excalidrawAPI, setLangCode, selectedBoardId, token]);
 
   useEffect(() => {
     const unloadHandler = (event: BeforeUnloadEvent) => {
@@ -967,7 +992,8 @@ const ExcalidrawWrapper = ({
         "is-collaborating": isCollaborating,
       })}
     >
-      <Excalidraw
+      <EditorJotaiProvider>
+        <Excalidraw
         excalidrawAPI={excalidrawRefCallback}
         onChange={(elements, appState, files) => {
           onChange(elements, appState, files);
@@ -1045,6 +1071,12 @@ const ExcalidrawWrapper = ({
                   }
                 />
               )}
+              <GamifyUserMenu
+                excalidrawAPI={excalidrawAPI}
+                onLoginClick={onLoginClick}
+                authPanelView={authPanelView}
+                setAuthPanelView={setAuthPanelView}
+              />
               {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
             </>
           );
@@ -1060,6 +1092,12 @@ const ExcalidrawWrapper = ({
           <PropertiesSidebar
             element={selectedElement}
             onUpdate={handleUpdateElement}
+          />
+        )}
+        {authPanelView && (
+          <AuthPanel
+            authPanelView={authPanelView}
+            setAuthPanelView={setAuthPanelView}
           />
         )}
         <AppMainMenu
@@ -1281,6 +1319,7 @@ const ExcalidrawWrapper = ({
           />
         )}
       </Excalidraw>
+    </EditorJotaiProvider>
     </div>
   );
 };
@@ -1290,9 +1329,11 @@ export type AppRef = {
   checkGameState: (elements: readonly any[]) => void;
 };
 
-const ExcalidrawApp = forwardRef<AppRef>((_props, ref) => {
+const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props, ref) => {
   const [excalidrawAPI, _setExcalidrawAPI] =
     useState<ExcalidrawImperativeAPI | null>(null);
+
+  const [authPanelView, setAuthPanelView] = useState<"login" | "register" | null>(null);
 
   const setExcalidrawAPI = useCallback((api: ExcalidrawImperativeAPI) => {
     _setExcalidrawAPI(api);
@@ -1329,6 +1370,9 @@ const ExcalidrawApp = forwardRef<AppRef>((_props, ref) => {
         <ExcalidrawWrapper
           setExcalidrawAPI={setExcalidrawAPI}
           onExcalidrawAPISet={setExcalidrawAPI}
+          onLoginClick={() => setAuthPanelView("login")}
+          authPanelView={authPanelView}
+          setAuthPanelView={setAuthPanelView}
         />
       </Provider>
     </TopErrorBoundary>

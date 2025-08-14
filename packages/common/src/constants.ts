@@ -4,7 +4,7 @@ import type {
 } from "@excalidraw/element/types";
 import type { AppProps, AppState } from "@excalidraw/excalidraw/types";
 
-import { COLOR_PALETTE } from "./colors";
+import { COLOR_PALETTE } from "./colors.js";
 
 export const isDarwin = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 export const isWindows = /^Win/.test(navigator.platform);

@@ -2,22 +2,14 @@
   "name": "@excalidraw/math",
   "version": "0.18.0",
   "type": "module",
-  "types": "./dist/types/math/src/index.d.ts",
-  "main": "./dist/prod/index.js",
-  "module": "./dist/prod/index.js",
+  "types": "./dist/types/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/types/math/src/index.d.ts",
-      "development": "./dist/dev/index.js",
-      "production": "./dist/prod/index.js",
-      "default": "./dist/prod/index.js"
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "require": "./src/index.ts"
     },
-    "./*": {
-      "types": "./dist/types/math/src/*.d.ts",
-      "development": "./dist/dev/index.js",
-      "production": "./dist/prod/index.js",
-      "default": "./dist/prod/index.js"
-    }
+    "./package.json": "./package.json"
   },
   "files": [
     "dist/*"
@@ -56,11 +48,8 @@
   },
   "bugs": "https://github.com/excalidraw/excalidraw/issues",
   "repository": "https://github.com/excalidraw/excalidraw",
-  "scripts": {
-    "gen:types": "rimraf types && tsc",
-    "build:esm": "rimraf dist && node ../../scripts/buildBase.js && yarn gen:types"
-  },
+  "scripts": {},
   "dependencies": {
-    "@excalidraw/common": "0.18.0"
+    
   }
 }
