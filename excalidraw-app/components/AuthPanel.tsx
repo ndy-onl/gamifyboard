@@ -3,7 +3,7 @@ import { useSetAtom } from 'jotai';
 import { authAtom } from '../state/auth';
 import { loginUser, registerUser, getProfile } from '../src/api';
 
-const AuthPanel = ({ authPanelView, setAuthPanelView }) => {
+const AuthPanel = React.forwardRef(({ authPanelView, setAuthPanelView }, ref) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -29,6 +29,7 @@ const AuthPanel = ({ authPanelView, setAuthPanelView }) => {
         console.log('Registration successful:', response.data);
       }
       setAuth({ user: response.data.user, accessToken: response.data.access_token }); // Set the global auth state
+      localStorage.setItem('accessToken', response.data.access_token); // Added for persistent login
       setAuthPanelView(null); // Close panel on success
 
       /* --- TEST CASE --- 
@@ -48,33 +49,36 @@ const AuthPanel = ({ authPanelView, setAuthPanelView }) => {
   };
 
   return (
-    <div className="properties-sidebar auth-panel">
+    <div className="properties-sidebar auth-panel" ref={ref}>
       <div className="properties-sidebar-header">
         <h3>{isLoginView ? 'Login' : 'Register'}</h3>
-        <button className="close" onClick={() => setAuthPanelView(null)}>
-          &#x2715;
-        </button>
       </div>
       <div className="properties-sidebar-content">
         <form onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.stopPropagation()}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.stopPropagation()}
-            required
-          />
+          <div>
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              required
+            />
+          </div>
+          <div>
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              required
+            />
+          </div>
           {error && <p className="error">{error}</p>}
-          <button type="submit">{isLoginView ? 'Login' : 'Register'}</button>
+          <div>
+            <button type="submit">{isLoginView ? 'Login' : 'Register'}</button>
+          </div>
         </form>
         <div className="Modal__switch">
           {isLoginView ? (
@@ -96,6 +100,6 @@ const AuthPanel = ({ authPanelView, setAuthPanelView }) => {
       </div>
     </div>
   );
-};
+}); // Closing for React.forwardRef
 
 export default AuthPanel;

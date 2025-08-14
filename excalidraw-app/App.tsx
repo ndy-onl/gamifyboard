@@ -156,7 +156,7 @@ import type { CollabAPI } from "./collab/Collab";
 
 import Auth from './components/Auth';
 import BoardList from './components/BoardList';
-import { getBoard } from './src/api';
+import { getBoard, getProfile } from './src/api';
 
 const isIntersecting = (
   r1: { x: number; y: number; width: number; height: number },
@@ -481,9 +481,41 @@ const ExcalidrawWrapper = ({
   const [errorMessage, setErrorMessage] = useState("");
   const isCollabDisabled = isRunningInIframe();
 
+  const authPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (authPanelRef.current && !authPanelRef.current.contains(event.target as Node)) {
+        if (authPanelView) {
+          setAuthPanelView(null);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [authPanelView, setAuthPanelView]);
+
   const { editorTheme, appTheme, setAppTheme } = useHandleAppTheme();
 
   const [langCode, setLangCode] = useAppLangCode();
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('accessToken');
+    if (storedToken) {
+      getProfile()
+        .then(response => {
+          setAuth({ user: response.data.user, accessToken: storedToken });
+        })
+        .catch(error => {
+          console.error('Failed to re-authenticate user:', error);
+          localStorage.removeItem('accessToken');
+          setAuth({ user: null, accessToken: null });
+        });
+    }
+  }, []); // Empty dependency array to run only once on mount
 
   // initial state
   // ---------------------------------------------------------------------------
@@ -1061,7 +1093,7 @@ const ExcalidrawWrapper = ({
         theme={editorTheme}
         renderTopRightUI={(isMobile) => {
           return (
-            <>
+            <div style={{ display: "flex", gap: "10px" }}>
               {collabError.message && <CollabError collabError={collabError} />}
               {collabAPI && !isCollabDisabled && (
                 <LiveCollaborationTrigger
@@ -1071,19 +1103,19 @@ const ExcalidrawWrapper = ({
                   }
                 />
               )}
-              <div style={{ display: "flex", gap: "10px", paddingRight: "10px" }}>
+              <div style={{ display: "flex", gap: "10px" }}>
                 {auth.accessToken ? (
-                  <button className="excalidraw-button" onClick={handleLogout}>
+                  <button className="excalidraw-button collab-button" onClick={handleLogout} style={{ padding: "8px 16px", width: "54px" }}>
                     Logout
                   </button>
                 ) : (
-                  <button className="excalidraw-button" onClick={onLoginClick}>
+                  <button className="excalidraw-button collab-button" onClick={onLoginClick} style={{ padding: "8px 16px", width: "54px" }}>
                     Login
                   </button>
                 )}
               </div>
               {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
-            </>
+            </div>
           );
         }}
         onLinkOpen={(element, event) => {
@@ -1103,6 +1135,7 @@ const ExcalidrawWrapper = ({
           <AuthPanel
             authPanelView={authPanelView}
             setAuthPanelView={setAuthPanelView}
+            ref={authPanelRef}
           />
         )}
         <AppMainMenu
