@@ -173,6 +173,26 @@
     "tab": "Tab",
     "shapeSwitch": "Switch shape"
   },
+  "auth": {
+    "termsAndPrivacy": "I accept the <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
+    "noAccount": "Don't have an account?",
+    "registerHere": "Register here",
+    "alreadyHaveAccount": "Already have an account?",
+    "loginHere": "Login here",
+    "forgotPassword": "Forgot password?",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "passwordsDoNotMatch": "Passwords do not match.",
+    "mustAcceptTerms": "You must accept the terms and privacy policy.",
+    "loginSuccessful": "Login successful!",
+    "registrationSuccessful": "Registration successful!",
+    "login": "Login",
+    "register": "Register",
+    "loginFailed": "Login failed. Please try again. Details: {details}",
+    "registrationFailed": "Registration failed. Please try again. Details: {details}"
+  },
   "elementLink": {
     "title": "Link to object",
     "desc": "Click on a shape on canvas or paste a link.",

@@ -41,7 +41,6 @@
     label {
       display: flex;
       align-items: center;
-      margin-bottom: calc(var(--space-factor) * 0.75);
       color: var(--color-text);
       font-size: 0.75rem;
       cursor: pointer;
@@ -52,7 +51,9 @@
       accent-color: var(--color-primary);
     }
 
-    input[type="text"] {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
       width: 100%;
       padding: calc(var(--space-factor) * 0.75);
       border: 1px solid var(--color-primary-darker);
@@ -66,6 +67,20 @@
       &:focus {
         outline: none;
         box-shadow: 0 0 0 1px var(--color-brand-hover);
+      }
+    }
+
+    .terms-checkbox {
+      display: flex;
+      align-items: center;
+      margin-bottom: calc(var(--space-factor) * 0.75);
+
+      input[type="checkbox"] {
+        margin-right: calc(var(--space-factor) * 0.5);
+      }
+
+      label {
+        margin-bottom: 0;
       }
     }
 
@@ -211,4 +226,10 @@
       color: black !important;
     }
   }
+}
+
+.Modal__switch-link {
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
 }

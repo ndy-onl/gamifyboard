@@ -140,6 +140,26 @@
     "textToDiagram": "Text zu Diagramm",
     "prompt": "Eingabe"
   },
+  "auth": {
+    "termsAndPrivacy": "Ich akzeptiere die <terms>Nutzungsbedingungen</terms> und die <privacy>Datenschutzerklärung</privacy>.",
+    "noAccount": "Noch kein Account?",
+    "registerHere": "Hier registrieren",
+    "alreadyHaveAccount": "Bereits einen Account?",
+    "loginHere": "Hier einloggen",
+    "forgotPassword": "Passwort vergessen?",
+    "username": "Benutzername",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "passwordsDoNotMatch": "Die Passwörter stimmen nicht überein.",
+    "mustAcceptTerms": "Sie müssen die Nutzungsbedingungen und die Datenschutzerklärung akzeptieren.",
+    "loginSuccessful": "Login erfolgreich!",
+    "registrationSuccessful": "Registrierung erfolgreich!",
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "loginFailed": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut. Details: {details}",
+    "registrationFailed": "Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut. Details: {details}"
+  },
   "library": {
     "noItems": "Noch keine Elemente hinzugefügt...",
     "hint_emptyLibrary": "Wähle ein Element auf der Zeichenfläche, um es hier hinzuzufügen. Oder installiere eine Bibliothek aus dem öffentlichen Verzeichnis.",

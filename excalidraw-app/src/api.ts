@@ -1,7 +1,7 @@
 import apiClient from './apiClient';
 
-export const registerUser = (email, password) => {
-  return apiClient.post('/auth/register', { email, password });
+export const registerUser = (username, email, password) => {
+  return apiClient.post('/auth/register', { username, email, password });
 };
 
 export const getProfile = () => {
