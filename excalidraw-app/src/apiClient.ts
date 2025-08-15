@@ -10,9 +10,12 @@ const apiClient = axios.create({
 // Request interceptor to add the access token to every request
 apiClient.interceptors.request.use(
   (config) => {
-    const token = appJotaiStore.get(authAtom).accessToken;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (config.skipAuth) {
+      return config;
+    }
+    const auth = appJotaiStore.get(authAtom);
+    if (auth?.accessToken) {
+      config.headers.Authorization = `Bearer ${auth.accessToken}`;
     }
     return config;
   },
@@ -28,7 +31,7 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== '/auth/login' && originalRequest.url !== '/auth/register') {
       originalRequest._retry = true;
       try {
         // The httpOnly cookie is sent automatically by the browser

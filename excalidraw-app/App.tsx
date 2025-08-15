@@ -80,13 +80,13 @@ import type { ResolutionType } from "@excalidraw/common/utility-types";
 import type { ResolvablePromise }  from "@excalidraw/common/utils";
 
 import { GamifyBoardIcon } from "./components/GamifyBoardIcon";
-import { authAtom } from "./state/auth";
 
 import CustomStats from "./CustomStats";
 import {
   Provider,
   useAtom,
   useAtomValue,
+  useSetAtom,
   useAtomWithInitialValue,
   appJotaiStore,
 } from "./app-jotai";
@@ -156,7 +156,8 @@ import type { CollabAPI } from "./collab/Collab";
 
 import Auth from './components/Auth';
 import BoardList from './components/BoardList';
-import { getBoard, getProfile } from './src/api';
+import { getBoard, getProfile } from './src/api'; // logoutUser wird jetzt von logoutActionAtom behandelt
+import { authStatusAtom, loginActionAtom, logoutActionAtom } from "./state/authAtoms"; // Neue Importe
 
 const isIntersecting = (
   r1: { x: number; y: number; width: number; height: number },
@@ -294,7 +295,7 @@ if (window.self !== window.top) {
 
 const shareableLinkConfirmDialog = {
   title: t("overwriteConfirm.modal.shareableLink.title"),
-  description: (
+  description: () => (
     <Trans
       i18nKey="overwriteConfirm.modal.shareableLink.description"
       bold={(text) => <strong>{text}</strong>}
@@ -452,6 +453,46 @@ const initializeScene = async (opts: {
   return { scene: null, isExternalScene: false };
 };
 
+const renderTopRightUI = ({
+  isMobile,
+  collabError,
+  collabAPI,
+  isCollabDisabled,
+  setShareDialogState,
+  isLoggedIn,
+  loggedInUiState, // NEU: loggedInUiState akzeptieren
+  handleLogout,
+  onLoginClick,
+  excalidrawAPI,
+  isCollaborating,
+}) => {
+  return (
+    <div style={{ display: "flex", gap: "10px" }}>
+      {collabError.message && <CollabError collabError={collabError} />}
+      {collabAPI && !isCollabDisabled && (
+        <LiveCollaborationTrigger
+          isCollaborating={isCollaborating}
+          onSelect={() =>
+            setShareDialogState({ isOpen: true, type: "share" })
+          }
+        />
+      )}
+      <div style={{ display: "flex", gap: "10px" }}>
+        {isLoggedIn || loggedInUiState ? (
+          <button className="excalidraw-button collab-button" onClick={handleLogout} style={{ padding: "8px 16px", width: "54px" }}>
+            Logout
+          </button>
+        ) : (
+          <button className="excalidraw-button collab-button" onClick={onLoginClick} style={{ padding: "8px 16px", width: "54px" }}>
+            Login
+          </button>
+        )}
+      </div>
+      {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
+    </div>
+  );
+};
+
 const ExcalidrawWrapper = ({
   setExcalidrawAPI,
   onExcalidrawAPISet,
@@ -460,7 +501,9 @@ const ExcalidrawWrapper = ({
   onLoginClick,
   authPanelView,
   setAuthPanelView,
-}: {
+  onLoginSuccess,
+  onLogoutSuccess, // DIESE ZEILE HINZUFÜGEN
+}: { // Dies ist der Typdefinitionsblock
   setExcalidrawAPI: (api: ExcalidrawImperativeAPI) => void;
   onExcalidrawAPISet: (api: ExcalidrawImperativeAPI) => void;
   selectedBoardId: string | null;
@@ -468,18 +511,21 @@ const ExcalidrawWrapper = ({
   onLoginClick: () => void;
   authPanelView: "login" | "register" | null;
   setAuthPanelView: (view: "login" | "register" | null) => void;
+  onLoginSuccess: () => void;
+  onLogoutSuccess: () => void; // DIESE ZEILE HINZUFÜGEN
 }) => {
   const [selectedElement, setSelectedElement] =
     useState<NonDeletedExcalidrawElement | null>(null);
-  const [auth, setAuth] = useAtom(authAtom);
-  console.log("Auth Access Token:", auth.accessToken);
+  const { isLoggedIn, user, accessToken } = useAtomValue(authStatusAtom); // NEU: authStatusAtom verwenden
+  const setLogoutAction = useSetAtom(logoutActionAtom); // NEU: setLogoutAction verwenden
+  console.log("Auth Access Token:", accessToken); // Neuen accessToken verwenden
 
-  const handleLogout = () => {
-    setAuth({ user: null, accessToken: null });
-    // TODO: Add a call to the /auth/logout endpoint
+  const handleLogout = async () => {
+    await setLogoutAction(onLogoutSuccess); // handleLogoutSuccess HIER HINZUFÜGEN
   };
   const [errorMessage, setErrorMessage] = useState("");
   const isCollabDisabled = isRunningInIframe();
+  const [loggedInUiState, setLoggedInUiState] = useState(false); // NEU: loggedInUiState definieren
 
   const authPanelRef = useRef<HTMLDivElement>(null);
 
@@ -498,24 +544,13 @@ const ExcalidrawWrapper = ({
     };
   }, [authPanelView, setAuthPanelView]);
 
+  
+
   const { editorTheme, appTheme, setAppTheme } = useHandleAppTheme();
 
   const [langCode, setLangCode] = useAppLangCode();
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('accessToken');
-    if (storedToken) {
-      getProfile()
-        .then(response => {
-          setAuth({ user: response.data.user, accessToken: storedToken });
-        })
-        .catch(error => {
-          console.error('Failed to re-authenticate user:', error);
-          localStorage.removeItem('accessToken');
-          setAuth({ user: null, accessToken: null });
-        });
-    }
-  }, []); // Empty dependency array to run only once on mount
+  // Persistenter Login wird jetzt von authAtomWithStorage automatisch übernommen
 
   // initial state
   // ---------------------------------------------------------------------------
@@ -1092,31 +1127,19 @@ const ExcalidrawWrapper = ({
         autoFocus={true}
         theme={editorTheme}
         renderTopRightUI={(isMobile) => {
-          return (
-            <div style={{ display: "flex", gap: "10px" }}>
-              {collabError.message && <CollabError collabError={collabError} />}
-              {collabAPI && !isCollabDisabled && (
-                <LiveCollaborationTrigger
-                  isCollaborating={isCollaborating}
-                  onSelect={() =>
-                    setShareDialogState({ isOpen: true, type: "share" })
-                  }
-                />
-              )}
-              <div style={{ display: "flex", gap: "10px" }}>
-                {auth.accessToken ? (
-                  <button className="excalidraw-button collab-button" onClick={handleLogout} style={{ padding: "8px 16px", width: "54px" }}>
-                    Logout
-                  </button>
-                ) : (
-                  <button className="excalidraw-button collab-button" onClick={onLoginClick} style={{ padding: "8px 16px", width: "54px" }}>
-                    Login
-                  </button>
-                )}
-              </div>
-              {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
-            </div>
-          );
+          return renderTopRightUI({
+            isMobile,
+            collabError,
+            collabAPI,
+            isCollabDisabled,
+            setShareDialogState,
+            isLoggedIn,
+            loggedInUiState, // NEU: loggedInUiState übergeben
+            handleLogout,
+            onLoginClick,
+            excalidrawAPI,
+            isCollaborating,
+          });
         }}
         onLinkOpen={(element, event) => {
           if (element.link && isElementLink(element.link)) {
@@ -1136,6 +1159,7 @@ const ExcalidrawWrapper = ({
             authPanelView={authPanelView}
             setAuthPanelView={setAuthPanelView}
             ref={authPanelRef}
+            onLoginSuccess={onLoginSuccess}
           />
         )}
         <AppMainMenu
@@ -1372,6 +1396,16 @@ const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props,
 
   const [authPanelView, setAuthPanelView] = useState<"login" | "register" | null>(null);
 
+  const [wrapperKey, setWrapperKey] = useState(0); // NEW: State to force ExcalidrawWrapper re-render
+
+  const handleLoginSuccess = useCallback(() => { // In ExcalidrawApp-Scope definiert
+    setWrapperKey(prev => prev + 1);
+  }, []);
+
+  const handleLogoutSuccessInApp = useCallback(() => {
+    setWrapperKey(prev => prev + 1);
+  }, []);
+
   const setExcalidrawAPI = useCallback((api: ExcalidrawImperativeAPI) => {
     _setExcalidrawAPI(api);
   }, []);
@@ -1405,11 +1439,14 @@ const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props,
     <TopErrorBoundary>
       <Provider store={appJotaiStore}>
         <ExcalidrawWrapper
+          key={wrapperKey} // NEW: Apply key to force re-render
           setExcalidrawAPI={setExcalidrawAPI}
           onExcalidrawAPISet={setExcalidrawAPI}
           onLoginClick={() => setAuthPanelView("login")}
           authPanelView={authPanelView}
           setAuthPanelView={setAuthPanelView}
+          onLoginSuccess={handleLoginSuccess} // Keep this
+          onLogoutSuccess={handleLogoutSuccessInApp} // NEW: Pass logout success handler
         />
       </Provider>
     </TopErrorBoundary>

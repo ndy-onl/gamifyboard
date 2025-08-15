@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useSetAtom } from 'jotai';
-import { authAtom } from '../state/auth';
-import { loginUser, registerUser, getProfile } from '../src/api';
+import { loginActionAtom } from '../state/authAtoms'; // Neuer Import
+import { registerUser } from '../src/api'; // registerUser beibehalten, falls noch für die Registrierung verwendet
 
-const AuthPanel = React.forwardRef(({ authPanelView, setAuthPanelView }, ref) => {
+const AuthPanel = React.forwardRef(({ authPanelView, setAuthPanelView, onLoginSuccess }, ref) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const setAuth = useSetAtom(authAtom);
+  const [success, setSuccess] = useState('');
+  const setLoginAction = useSetAtom(loginActionAtom); // NEU: setLoginAction verwenden
 
   if (!authPanelView) {
     return null;
@@ -20,31 +21,24 @@ const AuthPanel = React.forwardRef(({ authPanelView, setAuthPanelView }, ref) =>
     setError('');
 
     try {
-      let response;
       if (isLoginView) {
-        response = await loginUser(email, password);
-        console.log('Login successful:', response.data);
+        await setLoginAction({ email, password }); // Call the action atom
       } else {
-        response = await registerUser(email, password);
+        // If registerUser is still used for registration, keep it.
+        // Otherwise, you might want a registerActionAtom as well.
+        const response = await registerUser(email, password);
         console.log('Registration successful:', response.data);
+        // For registration, you might still need to call onLoginSuccess or update authAtom
+        // depending on whether registration automatically logs in.
       }
-      setAuth({ user: response.data.user, accessToken: response.data.access_token }); // Set the global auth state
-      localStorage.setItem('accessToken', response.data.access_token); // Added for persistent login
-      setAuthPanelView(null); // Close panel on success
-
-      /* --- TEST CASE --- 
-      // Fetch profile right after login to test the interceptor
-      try {
-        const profileResponse = await getProfile();
-        console.log('Successfully fetched profile:', profileResponse.data);
-      } catch (profileError) {
-        console.error('Could not fetch profile after login:', profileError);
-      }
-      // --- END TEST CASE --- */
+      setSuccess('Login successful!'); // Set success message
+      onLoginSuccess(); // Notify parent component
 
     } catch (err) {
       console.error(`${isLoginView ? 'Login' : 'Registration'} error:`, err);
-      setError(`${isLoginView ? 'Login' : 'Registration'} failed. Please try again.`);
+      setError(`${isLoginView ? 'Login' : 'Registration'} failed. Please try again. Details: ${err.message || err}`);
+    } finally {
+      setAuthPanelView(null); // Close panel on success
     }
   };
 
@@ -76,6 +70,7 @@ const AuthPanel = React.forwardRef(({ authPanelView, setAuthPanelView }, ref) =>
             />
           </div>
           {error && <p className="error">{error}</p>}
+          {success && <p className="success">{success}</p>}
           <div>
             <button type="submit">{isLoginView ? 'Login' : 'Register'}</button>
           </div>

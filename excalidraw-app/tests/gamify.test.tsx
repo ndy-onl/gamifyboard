@@ -1,5 +1,6 @@
 import React from "react";
-import { waitFor, render, act } from "@excalidraw/excalidraw/tests/test-utils";
+import { waitFor, act } from "@testing-library/react";
+import { render } from "./test-utils";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 
