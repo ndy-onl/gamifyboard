@@ -47,14 +47,11 @@ const AuthPanel = React.forwardRef(({ authPanelView, setAuthPanelView, onLoginSu
       }
       setSuccess(isLoginView ? t('auth.loginSuccessful') : t('auth.registrationSuccessful'));
       onLoginSuccess();
+      setAuthPanelView(null);
 
     } catch (err) {
       console.error(`${isLoginView ? 'Login' : 'Registration'} error:`, err);
       setError(t(isLoginView ? 'auth.loginFailed' : 'auth.registrationFailed', { details: err.message || '' }));
-    } finally {
-      if (success) {
-        setAuthPanelView(null);
-      }
     }
   };
 
