@@ -30,14 +30,13 @@ RUN yarn install --frozen-lockfile && \
     cd excalidraw-app && \
     yarn install --frozen-lockfile && \
     VITE_APP_GIT_SHA=$SOURCE_COMMIT VITE_APP_ENABLE_TRACKING=false VITE_APP_ENABLE_ESLINT=false yarn build:app && \
-    mkdir -p build && \
     yarn build:version
 
 # Stage 2: Serve the application with Nginx
 FROM nginx:alpine
 
 # Copy the built files from the builder stage
-COPY --from=builder /app/excalidraw-app/build /usr/share/nginx/html
+COPY --from=builder /app/excalidraw-app/dist /usr/share/nginx/html
 RUN ls -l /usr/share/nginx/html
 
 # Copy the custom Nginx configuration
