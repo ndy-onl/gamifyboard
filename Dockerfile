@@ -16,12 +16,14 @@ COPY excalidraw-app excalidraw-app
 
 # Copy .eslintrc.json and packages
 COPY .eslintrc.json .
+COPY tsconfig.json .
 COPY packages packages
 COPY scripts scripts
 COPY public public
 
 # Install dependencies in the root and then in excalidraw-app, and run build
 RUN yarn install --frozen-lockfile && \
+    yarn build:packages && \
     cd excalidraw-app && \
     yarn install --frozen-lockfile && \
     VITE_APP_GIT_SHA=$SOURCE_COMMIT VITE_APP_ENABLE_TRACKING=false VITE_APP_ENABLE_ESLINT=false yarn build:app && \
