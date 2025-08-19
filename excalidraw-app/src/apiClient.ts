@@ -7,7 +7,7 @@ const apiClient = axios.create({
   withCredentials: true, // Ensures cookies (like httpOnly refresh token) are sent
 });
 
-console.log('VITE_APP_API_URL:', import.meta.env.VITE_APP_API_URL);
+
 
 // Request interceptor to add the access token to every request
 apiClient.interceptors.request.use(
