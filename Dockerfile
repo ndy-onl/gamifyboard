@@ -38,6 +38,7 @@ FROM nginx:alpine
 
 # Copy the built files from the builder stage
 COPY --from=builder /app/excalidraw-app/build /usr/share/nginx/html
+RUN ls -l /usr/share/nginx/html
 
 # Copy the custom Nginx configuration
 RUN cat > /etc/nginx/conf.d/default.conf <<EOF
