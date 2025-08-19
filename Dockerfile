@@ -4,6 +4,8 @@ WORKDIR /app
 
 # Define build argument for source commit
 ARG SOURCE_COMMIT
+ARG VITE_APP_API_URL
+ENV VITE_APP_API_URL=$VITE_APP_API_URL
 
 # Install git
 RUN apk add --no-cache git
@@ -29,7 +31,7 @@ RUN yarn install --frozen-lockfile && \
     yarn build:packages && \
     cd excalidraw-app && \
     yarn install --frozen-lockfile && \
-    VITE_APP_GIT_SHA=$SOURCE_COMMIT VITE_APP_ENABLE_TRACKING=false VITE_APP_ENABLE_ESLINT=false yarn build:app && \
+    VITE_APP_GIT_SHA=$SOURCE_COMMIT VITE_APP_ENABLE_TRACKING=false VITE_APP_ENABLE_ESLINT=false VITE_APP_API_URL=$VITE_APP_API_URL yarn build:app && \
     yarn build:version
 
 # Stage 2: Serve the application with Nginx
