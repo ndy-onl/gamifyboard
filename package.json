@@ -92,5 +92,7 @@
   "resolutions": {
     "strip-ansi": "6.0.1"
   },
-  "dependencies": {}
+  "dependencies": {
+    "isomorphic-webcrypto": "^2.3.8"
+  }
 }

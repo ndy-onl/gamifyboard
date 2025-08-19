@@ -9,6 +9,8 @@ import { act, waitFor } from "@testing-library/react";
 import { render } from "./test-utils";
 import { vi } from "vitest";
 
+vi.mock("../hooks/useCollaboration");
+
 import { StoreIncrement } from "@excalidraw/element";
 
 import type { DurableIncrement, EphemeralIncrement } from "@excalidraw/element";
@@ -22,7 +24,12 @@ const { h } = window;
 
 Object.defineProperty(window, "collab", {
   value: {
-    startCollaboration: vi.fn(),
+    startCollaboration: vi.fn().mockImplementation(() => {
+      h.app.updateScene({
+        elements: h.elements.filter((el) => !el.isDeleted),
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+    }),
   },
 });
 

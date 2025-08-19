@@ -1,3 +1,4 @@
+import "isomorphic-webcrypto";
 import {
   Excalidraw,
   LiveCollaborationTrigger,
@@ -96,11 +97,7 @@ import {
   STORAGE_KEYS,
   SYNC_BROWSER_TABS_TIMEOUT,
 } from "./app_constants";
-import Collab, {
-  collabAPIAtom,
-  isCollaboratingAtom,
-  isOfflineAtom,
-} from "./collab/Collab";
+
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
@@ -152,12 +149,72 @@ import './components/Modal.scss';
 
 import "./index.scss";
 
-import type { CollabAPI } from "./collab/Collab";
+
 
 import Auth from './components/Auth';
 import BoardList from './components/BoardList';
 import { getBoard, getProfile } from './src/api'; // logoutUser wird jetzt von logoutActionAtom behandelt
 import { authStatusAtom, loginActionAtom, logoutActionAtom } from "./state/authAtoms"; // Neue Importe
+import { BoardListDialog } from "./components/BoardListDialog";
+import { actionLoadScene } from "@excalidraw/excalidraw/actions";
+import { Card } from "@excalidraw/excalidraw/components/Card";
+import { ToolButton } from "@excalidraw/excalidraw/components/ToolButton";
+import { saveAs } from "@excalidraw/excalidraw/components/icons";
+import { createBoard } from "./src/api";
+import { useCollaboration } from "./hooks/useCollaboration";
+
+const SaveToProDialog = ({
+  excalidrawAPI,
+  elements,
+  appState,
+  files,
+  onSuccess,
+  onError,
+}) => {
+  const [boardName, setBoardName] = useState(excalidrawAPI.getName());
+
+  const onSave = async () => {
+    if (!excalidrawAPI) {
+      onError(new Error("Excalidraw API not available"));
+      return;
+    }
+    try {
+      const elements = excalidrawAPI.getSceneElements();
+      const appState = excalidrawAPI.getAppState();
+      const files = excalidrawAPI.getFiles();
+      await createBoard(boardName, { elements, appState, files });
+      onSuccess();
+    } catch (error: any) {
+      onError(error);
+    }
+  };
+
+  return (
+    <Card color="pink">
+      <div className="Card-icon">{saveAs}</div>
+      <h2>Save to GamifyBoard Pro</h2>
+      <div className="Card-details">
+        Save your board to the GamifyBoard cloud to collaborate and share.
+      </div>
+      <input
+        type="text"
+        value={boardName}
+        onChange={(e) => setBoardName(e.target.value)}
+        placeholder="Board name"
+      />
+      <ToolButton
+        className="Card-button"
+        type="button"
+        title="Save to GamifyBoard Pro"
+        aria-label="Save to GamifyBoard Pro"
+        showAriaLabel={true}
+        onClick={onSave}
+      >
+        Save
+      </ToolButton>
+    </Card>
+  );
+};
 
 const isIntersecting = (
   r1: { x: number; y: number; width: number; height: number },
@@ -307,7 +364,6 @@ const shareableLinkConfirmDialog = {
 } as const;
 
 const initializeScene = async (opts: {
-  collabAPI: CollabAPI | null;
   excalidrawAPI: ExcalidrawImperativeAPI;
   selectedBoardId: string | null;
   token: string | null;
@@ -394,11 +450,22 @@ const initializeScene = async (opts: {
     }
   } else if (opts.selectedBoardId && opts.token) {
     try {
-      const board = await getBoard(opts.selectedBoardId, opts.token);
-      if (board && board.data) {
+      const response = await getBoard(opts.selectedBoardId, opts.token);
+      const board = response.data; // The actual board object from backend
+      if (board && board.data && board.data.elements && board.data.appState) {
+        const loadedAppState = {
+          ...board.data.appState,
+          showWelcomeScreen: false,
+          openDialog: null, // Prevent any dialog from opening on load
+          collaborators: new Map(
+            Object.entries(board.data.appState.collaborators || {}),
+          ),
+        };
+
         scene = {
-          elements: board.data.elements || [],
-          appState: board.data.appState || {},
+          ...scene,
+          elements: board.data.elements,
+          appState: restoreAppState(loadedAppState, scene.appState),
           files: board.data.files || {},
         };
       }
@@ -407,40 +474,7 @@ const initializeScene = async (opts: {
     }
   }
 
-  if (roomLinkData && opts.collabAPI) {
-    const { excalidrawAPI } = opts;
-
-    const scene = await opts.collabAPI.startCollaboration(roomLinkData);
-
-    return {
-      // when collaborating, the state may have already been updated at this
-      // point (we may have received updates from other clients), so reconcile
-      // elements and appState with existing state
-      scene: {
-        ...scene,
-        appState: {
-          ...restoreAppState(
-            {
-              ...scene?.appState,
-              theme: localDataState?.appState?.theme || scene?.appState?.theme,
-            },
-            excalidrawAPI.getAppState(),
-          ),
-          // necessary if we're invoking from a hashchange handler which doesn't
-          // go through App.initializeScene() that resets this flag
-          isLoading: false,
-        },
-        elements: reconcileElements(
-          scene?.elements || [],
-          excalidrawAPI.getSceneElementsIncludingDeleted() as RemoteExcalidrawElement[],
-          excalidrawAPI.getAppState(),
-        ),
-      },
-      isExternalScene: true,
-      id: roomLinkData.roomId,
-      key: roomLinkData.roomKey,
-    };
-  } else if (scene) {
+   else if (scene) {
     return isExternalScene && jsonBackendMatch
       ? {
           scene,
@@ -456,7 +490,6 @@ const initializeScene = async (opts: {
 const renderTopRightUI = ({
   isMobile,
   collabError,
-  collabAPI,
   isCollabDisabled,
   setShareDialogState,
   isLoggedIn,
@@ -469,14 +502,13 @@ const renderTopRightUI = ({
   return (
     <div style={{ display: "flex", gap: "10px" }}>
       {collabError.message && <CollabError collabError={collabError} />}
-      {collabAPI && !isCollabDisabled && (
-        <LiveCollaborationTrigger
-          isCollaborating={isCollaborating}
-          onSelect={() =>
-            setShareDialogState({ isOpen: true, type: "share" })
-          }
-        />
-      )}
+      <button
+        className="excalidraw-button collab-button"
+        onClick={() => setShareDialogState({ isOpen: true, type: "share" })}
+        style={{ padding: "8px 16px" }}
+      >
+        Share
+      </button>
       <div style={{ display: "flex", gap: "10px" }}>
         {isLoggedIn || loggedInUiState ? (
           <button className="excalidraw-button collab-button" onClick={handleLogout} style={{ padding: "8px 16px", width: "54px" }}>
@@ -493,27 +525,59 @@ const renderTopRightUI = ({
   );
 };
 
+
+
 const ExcalidrawWrapper = ({
   setExcalidrawAPI,
   onExcalidrawAPISet,
-  selectedBoardId,
-  token,
   onLoginClick,
   authPanelView,
   setAuthPanelView,
   onLoginSuccess,
-  onLogoutSuccess, // DIESE ZEILE HINZUFÜGEN
-}: { // Dies ist der Typdefinitionsblock
+  onLogoutSuccess,
+}: {
   setExcalidrawAPI: (api: ExcalidrawImperativeAPI) => void;
   onExcalidrawAPISet: (api: ExcalidrawImperativeAPI) => void;
-  selectedBoardId: string | null;
-  token: string | null;
   onLoginClick: () => void;
   authPanelView: "login" | "register" | null;
   setAuthPanelView: (view: "login" | "register" | null) => void;
   onLoginSuccess: () => void;
-  onLogoutSuccess: () => void; // DIESE ZEILE HINZUFÜGEN
+  onLogoutSuccess: () => void;
 }) => {
+  const [isBoardListDialogOpen, setIsBoardListDialogOpen] = useState(false);
+  const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
+
+  const onLoadBoard = (boardId: string) => {
+    setSelectedBoardId(boardId);
+    setIsBoardListDialogOpen(false);
+  };
+
+  const handleLoadFromFile = () => {
+    if (!excalidrawAPI) {
+      return;
+    }
+    // we need to close the dialog first, so that the file open dialog is not blocked
+    setIsBoardListDialogOpen(false);
+    excalidrawAPI.actionManager.executeAction(actionLoadScene);
+  };
+
+  const handleSaveToCloud = async () => {
+    if (!excalidrawAPI) {
+      return;
+    }
+    try {
+      const elements = excalidrawAPI.getSceneElements();
+      const appState = excalidrawAPI.getAppState();
+      const files = excalidrawAPI.getFiles();
+      const name = excalidrawAPI.getName() || "Untitled";
+      await createBoard(name, { elements, appState, files });
+      excalidrawAPI.setToast({ message: "Board saved successfully!" });
+    } catch (error: any) {
+      excalidrawAPI.setToast({ message: "Failed to save board.", color: "danger" });
+      console.error(error);
+    }
+  };
+  const isInitialLoadRef = useRef(true);
   const [selectedElement, setSelectedElement] =
     useState<NonDeletedExcalidrawElement | null>(null);
   const { isLoggedIn, user, accessToken } = useAtomValue(authStatusAtom); // NEU: authStatusAtom verwenden
@@ -576,6 +640,11 @@ const ExcalidrawWrapper = ({
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
 
+  const { isCollaborating, updateBoard } = useCollaboration(
+    excalidrawAPI,
+    selectedBoardId,
+  );
+
   useEffect(() => {
     if (excalidrawAPI) {
       setExcalidrawAPI(excalidrawAPI);
@@ -591,11 +660,7 @@ const ExcalidrawWrapper = ({
     }
   }, [excalidrawAPI, setExcalidrawAPI, onExcalidrawAPISet]);
 
-  const [, setShareDialogState] = useAtom(shareDialogStateAtom);
-  const [collabAPI] = useAtom(collabAPIAtom);
-  const [isCollaborating] = useAtomWithInitialValue(isCollaboratingAtom, () => {
-    return isCollaborationLink(window.location.href);
-  });
+  const [shareDialogState, setShareDialogState] = useAtom(shareDialogStateAtom);
   const collabError = useAtomValue(collabErrorIndicatorAtom);
 
   useHandleLibrary({
@@ -608,205 +673,29 @@ const ExcalidrawWrapper = ({
   const [, forceRefresh] = useState(false);
 
   useEffect(() => {
-    if (!excalidrawAPI || (!isCollabDisabled && !collabAPI)) {
+    if (!excalidrawAPI) {
       return;
     }
 
-    const loadImages = (
-      data: ResolutionType<typeof initializeScene>,
-      isInitialLoad = false,
-    ) => {
-      if (!data.scene) {
-        return;
-      }
-      if (collabAPI?.isCollaborating()) {
-        if (data.scene.elements) {
-          collabAPI
-            .fetchImageFilesFromFirebase({
-              elements: data.scene.elements,
-              forceFetchFiles: true,
-            })
-            .then(({ loadedFiles, erroredFiles }) => {
-              excalidrawAPI.addFiles(loadedFiles);
-              updateStaleImageStatuses({
-                excalidrawAPI,
-                erroredFiles,
-                elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
-              });
-            });
-        }
+    initializeScene({
+      excalidrawAPI,
+      selectedBoardId,
+      token: accessToken,
+    }).then(async (data) => {
+      if (isInitialLoadRef.current) {
+        initialStatePromiseRef.current.promise.resolve(data.scene);
+        isInitialLoadRef.current = false;
       } else {
-        const fileIds =
-          data.scene.elements?.reduce((acc, element) => {
-            if (isInitializedImageElement(element)) {
-              return acc.concat(element.fileId);
-            }
-            return acc;
-          }, [] as FileId[]) || [];
-
-        if (data.isExternalScene) {
-          loadFilesFromFirebase(
-            `${FIREBASE_STORAGE_PREFIXES.shareLinkFiles}/${data.id}`,
-            data.key,
-            fileIds,
-          ).then(({ loadedFiles, erroredFiles }) => {
-            excalidrawAPI.addFiles(loadedFiles);
-            updateStaleImageStatuses({
-              excalidrawAPI,
-              erroredFiles,
-              elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
-            });
-          });
-        } else if (isInitialLoad) {
-          if (fileIds.length) {
-            LocalData.fileStorage
-              .getFiles(fileIds)
-              .then(({ loadedFiles, erroredFiles }) => {
-                if (loadedFiles.length) {
-                  excalidrawAPI.addFiles(loadedFiles);
-                }
-                updateStaleImageStatuses({
-                  excalidrawAPI,
-                  erroredFiles,
-                  elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
-                });
-              });
-          }
-          // on fresh load, clear unused files from IDB (from previous
-          // session)
-          LocalData.fileStorage.clearObsoleteFiles({ currentFileIds: fileIds });
-        }
-      }
-    };
-
-    initializeScene({ collabAPI, excalidrawAPI, selectedBoardId, token }).then(async (data) => {
-      loadImages(data, /* isInitialLoad */ true);
-      initialStatePromiseRef.current.promise.resolve(data.scene);
-    });
-
-    const onHashChange = async (event: HashChangeEvent) => {
-      event.preventDefault();
-      const libraryUrlTokens = parseLibraryTokensFromUrl();
-      if (!libraryUrlTokens) {
-        if (
-          collabAPI?.isCollaborating() &&
-          !isCollaborationLink(window.location.href)
-        ) {
-          collabAPI.stopCollaboration(false);
-        }
-        excalidrawAPI.updateScene({ appState: { isLoading: true } });
-
-        initializeScene({ collabAPI, excalidrawAPI, selectedBoardId, token }).then((data) => {
-          loadImages(data);
-          if (data.scene) {
-            excalidrawAPI.updateScene({
-              ...data.scene,
-              ...restore(data.scene, null, null, { repairBindings: true }),
-              captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-            });
-          }
-        });
-      }
-    };
-
-    const titleTimeout = setTimeout(
-      () => (document.title = APP_NAME),
-      TITLE_TIMEOUT,
-    );
-
-    const syncData = debounce(() => {
-      if (isTestEnv()) {
-        return;
-      }
-      if (
-        !document.hidden &&
-        ((collabAPI && !collabAPI.isCollaborating()) || isCollabDisabled)
-      ) {
-        // don't sync if local state is newer or identical to browser state
-        if (isBrowserStorageStateNewer(STORAGE_KEYS.VERSION_DATA_STATE)) {
-          const localDataState = importFromLocalStorage();
-          const username = importUsernameFromLocalStorage();
-          setLangCode(getPreferredLanguage());
+        if (data.scene) {
           excalidrawAPI.updateScene({
-            ...localDataState,
-            captureUpdate: CaptureUpdateAction.NEVER,
+            ...data.scene,
+            ...restore(data.scene, null, null, { repairBindings: true }),
+            captureUpdate: CaptureUpdateAction.IMMEDIATELY,
           });
-          LibraryIndexedDBAdapter.load().then((data) => {
-            if (data) {
-              excalidrawAPI.updateLibrary({
-                libraryItems: data.libraryItems,
-              });
-            }
-          });
-          collabAPI?.setUsername(username || "");
-        }
-
-        if (isBrowserStorageStateNewer(STORAGE_KEYS.VERSION_FILES)) {
-          const elements = excalidrawAPI.getSceneElementsIncludingDeleted();
-          const currFiles = excalidrawAPI.getFiles();
-          const fileIds =
-            elements?.reduce((acc, element) => {
-              if (
-                isInitializedImageElement(element) &&
-                // only load and update images that aren't already loaded
-                !currFiles[element.fileId]
-              ) {
-                return acc.concat(element.fileId);
-              }
-              return acc;
-            }, [] as FileId[]) || [];
-          if (fileIds.length) {
-            LocalData.fileStorage
-              .getFiles(fileIds)
-              .then(({ loadedFiles, erroredFiles }) => {
-                if (loadedFiles.length) {
-                  excalidrawAPI.addFiles(loadedFiles);
-                }
-                updateStaleImageStatuses({
-                  excalidrawAPI,
-                  erroredFiles,
-                  elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
-                });
-              });
-          }
         }
       }
-    }, SYNC_BROWSER_TABS_TIMEOUT);
-
-    const onUnload = () => {
-      LocalData.flushSave();
-    };
-
-    const visibilityChange = (event: FocusEvent | Event) => {
-      if (event.type === EVENT.BLUR || document.hidden) {
-        LocalData.flushSave();
-      }
-      if (
-        event.type === EVENT.VISIBILITY_CHANGE ||
-        event.type === EVENT.FOCUS
-      ) {
-        syncData();
-      }
-    };
-
-    window.addEventListener(EVENT.HASHCHANGE, onHashChange, false);
-    window.addEventListener(EVENT.UNLOAD, onUnload, false);
-    window.addEventListener(EVENT.BLUR, visibilityChange, false);
-    document.addEventListener(EVENT.VISIBILITY_CHANGE, visibilityChange, false);
-    window.addEventListener(EVENT.FOCUS, visibilityChange, false);
-    return () => {
-      window.removeEventListener(EVENT.HASHCHANGE, onHashChange, false);
-      window.removeEventListener(EVENT.UNLOAD, onUnload, false);
-      window.removeEventListener(EVENT.BLUR, visibilityChange, false);
-      window.removeEventListener(EVENT.FOCUS, visibilityChange, false);
-      document.removeEventListener(
-        EVENT.VISIBILITY_CHANGE,
-        visibilityChange,
-        false,
-      );
-      clearTimeout(titleTimeout);
-    };
-  }, [isCollabDisabled, collabAPI, excalidrawAPI, setLangCode, selectedBoardId, token]);
+    });
+  }, [excalidrawAPI, selectedBoardId, accessToken]);
 
   useEffect(() => {
     const unloadHandler = (event: BeforeUnloadEvent) => {
@@ -838,9 +727,9 @@ const ExcalidrawWrapper = ({
     appState: AppState,
     files: BinaryFiles,
   ) => {
-    if (collabAPI?.isCollaborating()) {
-      collabAPI.syncElements(elements);
-    }
+    updateBoard(elements);
+
+    // old collab logic removed
 
     // this check is redundant, but since this is a hot path, it's best
     // not to evaludate the nested expression every time
@@ -990,12 +879,9 @@ const ExcalidrawWrapper = ({
     );
   };
 
-  const isOffline = useAtomValue(isOfflineAtom);
+  
 
-  const onCollabDialogOpen = useCallback(
-    () => setShareDialogState({ isOpen: true, type: "collaborationOnly" }),
-    [setShareDialogState],
-  );
+  // onCollabDialogOpen removed
 
   // browsers generally prevent infinite self-embedding, there are
   // cases where it still happens, and while we disallow self-embedding
@@ -1056,9 +942,7 @@ const ExcalidrawWrapper = ({
   return (
     <div
       style={{ height: "100%" }}
-      className={clsx("excalidraw-app", {
-        "is-collaborating": isCollaborating,
-      })}
+      className="excalidraw-app"
     >
       <Excalidraw
         excalidrawAPI={excalidrawRefCallback}
@@ -1086,37 +970,42 @@ const ExcalidrawWrapper = ({
           }
         }}
         initialData={initialStatePromiseRef.current.promise}
-        isCollaborating={isCollaborating}
-        onPointerUpdate={collabAPI?.onPointerUpdate}
         UIOptions={{
           canvasActions: {
             toggleTheme: true,
+            saveToActiveFile: false,
             export: {
               onExportToBackend,
-              renderCustomUI: excalidrawAPI
-                ? (elements, appState, files) => {
-                    return (
-                      <ExportToExcalidrawPlus
-                        elements={elements}
-                        appState={appState}
-                        files={files}
-                        name={excalidrawAPI.getName()}
-                        onError={(error) => {
-                          excalidrawAPI?.updateScene({
-                            appState: {
-                              errorMessage: error.message,
-                            },
-                          });
-                        }}
-                        onSuccess={() => {
-                          excalidrawAPI.updateScene({
-                            appState: { openDialog: null },
-                          });
-                        }}
-                      />
-                    );
-                  }
-                : undefined,
+              renderCustomUI: (elements, appState, files) => {
+                if (!excalidrawAPI) {
+                  return null;
+                }
+                return (
+                  <Provider store={appJotaiStore}>
+                    <SaveToProDialog
+                      excalidrawAPI={excalidrawAPI}
+                      elements={elements}
+                      appState={appState}
+                      files={files}
+                      onSuccess={() => {
+                        excalidrawAPI.updateScene({
+                          appState: {
+                            openDialog: null,
+                            toast: { message: "Board saved successfully!" },
+                          },
+                        });
+                      }}
+                      onError={(error) => {
+                        excalidrawAPI.updateScene({
+                          appState: {
+                            errorMessage: error.message,
+                          },
+                        });
+                      }}
+                    />
+                  </Provider>
+                );
+              },
             },
           },
         }}
@@ -1130,7 +1019,6 @@ const ExcalidrawWrapper = ({
           return renderTopRightUI({
             isMobile,
             collabError,
-            collabAPI,
             isCollabDisabled,
             setShareDialogState,
             isLoggedIn,
@@ -1162,16 +1050,22 @@ const ExcalidrawWrapper = ({
             onLoginSuccess={onLoginSuccess}
           />
         )}
+                {isBoardListDialogOpen && (
+          <BoardListDialog
+            onClose={() => setIsBoardListDialogOpen(false)}
+            onLoadBoard={onLoadBoard}
+            onLoadFromFile={handleLoadFromFile}
+          />
+        )}
         <AppMainMenu
-          onCollabDialogOpen={onCollabDialogOpen}
-          isCollaborating={isCollaborating}
           isCollabEnabled={!isCollabDisabled}
           theme={appTheme}
           setTheme={(theme) => setAppTheme(theme)}
           refresh={() => forceRefresh((prev) => !prev)}
+          onOpenBoardListDialog={() => setIsBoardListDialogOpen(true)}
+          onSaveToCloud={handleSaveToCloud}
         />
         <AppWelcomeScreen
-          onCollabDialogOpen={onCollabDialogOpen}
           isCollabEnabled={!isCollabDisabled}
         />
         <OverwriteConfirmDialog>
@@ -1198,11 +1092,10 @@ const ExcalidrawWrapper = ({
         {excalidrawAPI && <AIComponents excalidrawAPI={excalidrawAPI} />}
 
         <TTDDialogTrigger />
-        {isCollaborating && isOffline && (
-          <div className="collab-offline-warning">
-            {t("alerts.collabOfflineWarning")}
-          </div>
+        {shareDialogState.isOpen && (
+          <ShareDialog onExportToBackend={onExportToBackend} excalidrawAPI={excalidrawAPI} />
         )}
+        
         {latestShareableLink && (
           <ShareableLinkDialog
             link={latestShareableLink}
@@ -1210,26 +1103,9 @@ const ExcalidrawWrapper = ({
             setErrorMessage={setErrorMessage}
           />
         )}
-        {excalidrawAPI && !isCollabDisabled && (
-          <Collab excalidrawAPI={excalidrawAPI} />
-        )}
+        
 
-        <ShareDialog
-          collabAPI={collabAPI}
-          onExportToBackend={async () => {
-            if (excalidrawAPI) {
-              try {
-                await onExportToBackend(
-                  excalidrawAPI.getSceneElements(),
-                  excalidrawAPI.getAppState(),
-                  excalidrawAPI.getFiles(),
-                );
-              } catch (error: any) {
-                setErrorMessage(error.message);
-              }
-            }
-          }}
-        />
+        
 
         {errorMessage && (
           <ErrorDialog onClose={() => setErrorMessage("")}>
@@ -1239,67 +1115,6 @@ const ExcalidrawWrapper = ({
 
         <CommandPalette
           customCommandPaletteItems={[
-            {
-              label: t("labels.liveCollaboration"),
-              category: DEFAULT_CATEGORIES.app,
-              keywords: [
-                "team",
-                "multiplayer",
-                "share",
-                "public",
-                "session",
-                "invite",
-              ],
-              icon: usersIcon,
-              perform: () => {
-                setShareDialogState({
-                  isOpen: true,
-                  type: "collaborationOnly",
-                });
-              },
-            },
-            {
-              label: t("roomDialog.button_stopSession"),
-              category: DEFAULT_CATEGORIES.app,
-              predicate: () => !!collabAPI?.isCollaborating(),
-              keywords: [
-                "stop",
-                "session",
-                "end",
-                "leave",
-                "close",
-                "exit",
-                "collaboration",
-              ],
-              perform: () => {
-                if (collabAPI) {
-                  collabAPI.stopCollaboration();
-                  if (!collabAPI.isCollaborating()) {
-                    setShareDialogState({ isOpen: false });
-                  }
-                }
-              },
-            },
-            {
-              label: t("labels.share"),
-              category: DEFAULT_CATEGORIES.app,
-              predicate: true,
-              icon: share,
-              keywords: [
-                "link",
-                "shareable",
-                "readonly",
-                "export",
-                "publish",
-                "snapshot",
-                "url",
-                "collaborate",
-                "invite",
-              ],
-              perform: async () => {
-                setShareDialogState({ isOpen: true, type: "share" });
-              },
-            },
             {
               label: "GitHub",
               icon: GithubIcon,

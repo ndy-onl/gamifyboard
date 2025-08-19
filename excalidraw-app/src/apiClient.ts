@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { appJotaiStore } from '../app-jotai';
-import { authAtom } from '../state/auth';
+import { authAtom } from '../state/authAtoms';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_APP_API_URL,
