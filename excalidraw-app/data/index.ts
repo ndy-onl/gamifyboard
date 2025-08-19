@@ -63,8 +63,9 @@ export const getSyncableElements = (
     isSyncableElement(element),
   ) as SyncableExcalidrawElement[];
 
-const BACKEND_V2_GET = import.meta.env.VITE_APP_BACKEND_V2_GET_URL;
-const BACKEND_V2_POST = import.meta.env.VITE_APP_BACKEND_V2_POST_URL;
+const BACKEND_V2_BASE_URL = import.meta.env.VITE_APP_API_URL;
+const BACKEND_V2_GET = `${BACKEND_V2_BASE_URL}/boards/`;
+const BACKEND_V2_POST = `${BACKEND_V2_BASE_URL}/boards`;
 
 const generateRoomId = async () => {
   const buffer = new Uint8Array(ROOM_ID_BYTES);
@@ -317,7 +318,7 @@ export const exportToBackend = async (
       const url = new URL(window.location.href);
       // We need to store the key (and less importantly the id) as hash instead
       // of queryParam in order to never send it to the server
-      url.hash = `json=${json.id},${encryptionKey}`;
+      url.hash = `json=${json.publicId},${encryptionKey}`;
       const urlString = url.toString();
 
       await saveFilesToFirebase({
