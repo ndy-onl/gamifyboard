@@ -40,7 +40,19 @@ FROM nginx:alpine
 COPY --from=builder /app/excalidraw-app/build /usr/share/nginx/html
 
 # Copy the custom Nginx configuration
-RUN echo "server {\n  listen 80;\n  server_name localhost;\n\n  root /usr/share/nginx/html;\n  index index.html;\n\n  location / {\n    try_files $uri /index.html;\n  }\n}" > /etc/nginx/conf.d/default.conf
+RUN cat > /etc/nginx/conf.d/default.conf <<EOF
+server {
+  listen 80;
+  server_name localhost;
+
+  root /usr/share/nginx/html;
+  index index.html;
+
+  location / {
+    try_files \$uri /index.html;
+  }
+}
+EOF
 
 # Expose port 80 for the web server
 EXPOSE 80
