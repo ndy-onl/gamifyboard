@@ -13,6 +13,8 @@ import { isInvisiblySmallElement } from "@excalidraw/element";
 import { isInitializedImageElement } from "@excalidraw/element";
 import { t } from "@excalidraw/excalidraw/i18n";
 import { bytesToHexString } from "@excalidraw/common";
+import { appJotaiStore } from "../app-jotai";
+import { authAtom } from "../state/authAtoms";
 
 import type { UserIdleState } from "@excalidraw/common";
 import type { ImportedDataState } from "@excalidraw/excalidraw/data/types";
@@ -309,8 +311,17 @@ export const exportToBackend = async (
       maxBytes: FILE_UPLOAD_MAX_BYTES,
     });
 
+    const auth = appJotaiStore.get(authAtom);
+    const headers: HeadersInit = {
+      "Content-Type": "application/octet-stream", // Or whatever content type your backend expects
+    };
+    if (auth?.accessToken) {
+      headers.Authorization = `Bearer ${auth.accessToken}`;
+    }
+
     const response = await fetch(BACKEND_V2_POST, {
       method: "POST",
+      headers,
       body: payload.buffer,
     });
     const json = await response.json();
