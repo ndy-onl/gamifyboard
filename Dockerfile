@@ -19,6 +19,7 @@ COPY .eslintrc.json .
 COPY tsconfig.json .
 COPY .env.development .
 COPY .env.production .
+COPY nginx.conf .
 COPY packages packages
 COPY scripts scripts
 COPY public public
