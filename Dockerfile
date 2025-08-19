@@ -38,6 +38,9 @@ FROM nginx:alpine
 # Copy the built files from the builder stage
 COPY --from=builder /app/excalidraw-app/build /usr/share/nginx/html
 
+# Copy the custom Nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Expose port 80 for the web server
 EXPOSE 80
 
