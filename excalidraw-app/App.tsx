@@ -1,4 +1,4 @@
-import "isomorphic-webcrypto";
+
 import {
   Excalidraw,
   LiveCollaborationTrigger,

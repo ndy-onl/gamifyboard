@@ -1,4 +1,7 @@
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
+if (typeof window !== 'undefined') {
+  import('isomorphic-webcrypto');
+}
 import { copyTextToSystemClipboard } from "@excalidraw/excalidraw/clipboard";
 import { Dialog } from "@excalidraw/excalidraw/components/Dialog";
 import { FilledButton } from "@excalidraw/excalidraw/components/FilledButton";
