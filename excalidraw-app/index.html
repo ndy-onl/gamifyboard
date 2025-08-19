@@ -103,11 +103,9 @@
     <!------------------------------------------------------------------------->
     <!-- Production mode configuration -->
     <script type="module">
-      // Development mode: Set asset path
-      if (import.meta.env.DEV) {
-        window.EXCALIDRAW_ASSET_PATH = window.origin;
-      }
-      
+      // Set asset path for both development and production
+      window.EXCALIDRAW_ASSET_PATH = "/";
+
       // Production mode: Excalidraw+ redirect logic (if needed)
       if (import.meta.env.PROD) {
         // Redirect Excalidraw+ users which have auto-redirect enabled.
