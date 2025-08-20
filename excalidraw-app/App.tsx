@@ -463,7 +463,6 @@ const initializeScene = async (opts: {
   console.log("[App.tsx] initializeScene: No specific board to load, returning local scene.");
   return { scene, isExternalScene: false };
 };
-};
 
 const renderTopRightUI = ({
   isMobile,
