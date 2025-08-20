@@ -2,8 +2,12 @@ import axios from 'axios';
 import { appJotaiStore } from '../app-jotai';
 import { authAtom } from '../state/authAtoms';
 
+const baseURL = import.meta.env.DEV
+  ? 'https://api.alpha.gamifyboard.com' // Use hardcoded alpha URL for local dev
+  : import.meta.env.VITE_APP_API_URL; // Use build-time variable for production
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_APP_API_URL,
+  baseURL: baseURL,
   withCredentials: true, // Ensures cookies (like httpOnly refresh token) are sent
 });
 
