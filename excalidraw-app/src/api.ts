@@ -13,7 +13,7 @@ export const refreshToken = () => {
 };
 
 export const createBoard = (name, data) => {
-  return apiClient.post('/boards', { name, data });
+  return apiClient.post('/boards', { name, board_data: data });
 };
 
 export const getBoards = () => {
