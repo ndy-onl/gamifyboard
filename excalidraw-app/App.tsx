@@ -448,7 +448,7 @@ const initializeScene = async (opts: {
         isExternalScene,
       };
     }
-  } else if (id && opts.token) {
+  } else if (id) {
     try {
       const response = await getBoard(id, opts.token);
       const board = response.data;
