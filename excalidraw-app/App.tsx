@@ -448,25 +448,45 @@ const initializeScene = async (opts: {
         isExternalScene,
       };
     }
+  } else if (id && opts.token) {
+    try {
+      const response = await getBoard(id, opts.token);
+      const board = response.data;
+      if (board && board.board_data) {
+        const loadedAppState = {
+          ...(board.board_data.appState || {}),
+          showWelcomeScreen: false,
+          openDialog: null,
+        };
+        scene = {
+          ...scene,
+          elements: board.board_data.elements || [],
+          appState: restoreAppState(loadedAppState, scene.appState),
+          files: board.board_data.files || {},
+        };
+        if (opts.excalidrawAPI && board.name) {
+          opts.excalidrawAPI.updateScene({ appState: { name: board.name } });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load board from backend via URL", error);
+    }
   } else if (opts.selectedBoardId && opts.token) {
     try {
       const response = await getBoard(opts.selectedBoardId, opts.token);
       const board = response.data; // The actual board object from backend
-      if (board && board.data && board.data.elements && board.data.appState) {
+      if (board && board.board_data) {
         const loadedAppState = {
-          ...board.data.appState,
+          ...(board.board_data.appState || {}),
           showWelcomeScreen: false,
           openDialog: null, // Prevent any dialog from opening on load
-          collaborators: new Map(
-            Object.entries(board.data.appState.collaborators || {}),
-          ),
         };
 
         scene = {
           ...scene,
-          elements: board.data.elements,
+          elements: board.board_data.elements || [],
           appState: restoreAppState(loadedAppState, scene.appState),
-          files: board.data.files || {},
+          files: board.board_data.files || {},
         };
       }
     } catch (error) {
