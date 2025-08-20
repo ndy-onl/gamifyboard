@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
 import { getInstance } from '../collaboration/GamifyCollaboration';
 import { authStatusAtom } from '../state/authAtoms';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { collabAPIAtom, activeRoomLinkAtom } from '../collab/Collab';
+import { CollabAPI } from '../collab/Collab';
 
 export const useCollaboration = (
   excalidrawAPI: ExcalidrawImperativeAPI | null,
@@ -13,38 +14,53 @@ export const useCollaboration = (
   const { isLoggedIn, accessToken } = useAtomValue(authStatusAtom);
   const setCollabAPI = useSetAtom(collabAPIAtom);
   const setActiveRoomLink = useSetAtom(activeRoomLinkAtom);
+  const collabAPIRef = useRef<CollabAPI | null>(null);
 
   useEffect(() => {
-    if (isLoggedIn && accessToken && excalidrawAPI && boardId) {
-      const BACKEND_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:3334";
-      const collabAPI = getInstance(BACKEND_URL, accessToken);
-      setCollabAPI(collabAPI);
+    const setupCollaboration = async () => {
+      if (isLoggedIn && accessToken && excalidrawAPI && boardId) {
+        const BACKEND_URL = import.meta.env.DEV
+          ? 'https://api.alpha.gamifyboard.com'
+          : import.meta.env.VITE_APP_API_URL;
 
-      collabAPI.joinBoard(boardId);
+        try {
+          const collabAPI = await getInstance(BACKEND_URL, accessToken);
+          collabAPIRef.current = collabAPI;
+          setCollabAPI(collabAPI);
 
-      const onBoardUpdate = (data: { elements: any; }) => {
-        excalidrawAPI.updateScene({
-          elements: data.elements,
-        });
-      };
+          collabAPI.joinBoard(boardId);
 
-      collabAPI.onBoardUpdate(onBoardUpdate);
-      setIsCollaborating(true);
-      setActiveRoomLink(window.location.href);
+          const onBoardUpdate = (data: { elements: any }) => {
+            excalidrawAPI.updateScene({
+              elements: data.elements,
+            });
+          };
 
-      return () => {
-        collabAPI.close();
+          collabAPI.onBoardUpdate(onBoardUpdate);
+          setIsCollaborating(true);
+          setActiveRoomLink(window.location.href);
+        } catch (error) {
+          console.error("Failed to initialize collaboration", error);
+        }
+      }
+    };
+
+    setupCollaboration();
+
+    return () => {
+      if (collabAPIRef.current) {
+        collabAPIRef.current.close();
+        collabAPIRef.current = null;
         setIsCollaborating(false);
         setCollabAPI(null);
         setActiveRoomLink("");
-      };
-    }
+      }
+    };
   }, [isLoggedIn, accessToken, excalidrawAPI, boardId, setCollabAPI, setActiveRoomLink]);
 
   const updateBoard = useCallback((elements: readonly any[]) => {
-    const collabAPI = getInstance("", "");
-    if (boardId && collabAPI.isCollaborating()) {
-      collabAPI.updateBoard(boardId, { elements });
+    if (boardId && collabAPIRef.current?.isCollaborating()) {
+      collabAPIRef.current.updateBoard(boardId, { elements });
     }
   }, [boardId]);
 

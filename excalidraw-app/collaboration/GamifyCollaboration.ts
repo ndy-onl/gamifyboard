@@ -15,25 +15,32 @@ const onBoardUpdated = (boardData: { elements: readonly ExcalidrawElement[] }) =
   }
 };
 
-const init = (backendUrl: string, token: string) => {
+const init = (backendUrl: string, token: string): Promise<Socket> => {
   if (socket) {
-    return;
+    return Promise.resolve(socket);
   }
 
-  socket = io(backendUrl, {
-    auth: {
-      token,
-    },
-  });
+  return new Promise((resolve, reject) => {
+    socket = io(backendUrl, {
+      auth: {
+        token,
+      },
+    });
 
-  socket.on("connect", () => {
-    console.log("Connected to collaboration server");
-  });
+    socket.on("connect", () => {
+      console.log("Connected to collaboration server");
+      socket?.on("boardUpdated", onBoardUpdated);
+      resolve(socket!);
+    });
 
-  socket.on("boardUpdated", onBoardUpdated);
+    socket.on("disconnect", () => {
+      console.log("Disconnected from collaboration server");
+    });
 
-  socket.on("disconnect", () => {
-    console.log("Disconnected from collaboration server");
+    socket.on("connect_error", (err) => {
+      console.error("Connection to collaboration server failed:", err);
+      reject(err);
+    });
   });
 };
 
@@ -61,45 +68,50 @@ const close = () => {
   if (socket) {
     socket.disconnect();
     socket = null;
+    instance = null; // Reset instance on close
   }
 };
 
-export const getInstance = (backendUrl: string, token: string): CollabAPI => {
-  if (!instance) {
-    init(backendUrl, token);
-    instance = {
-      isCollaborating: () => !!socket,
-      startCollaboration: (boardId: string | null) => {
-        if (boardId) {
-          joinBoard(boardId);
-        }
-      },
-      stopCollaboration: () => {
-        close();
-      },
-      setUsername: (username: string) => {
-        // Not implemented
-      },
-      getUsername: () => {
-        // Not implemented
-        return "";
-      },
-      onBoardUpdate: (callback: (data: any) => void) => {
-        onBoardUpdateCallback = callback;
-      },
-      updateBoard: (boardId: string, data: any) => {
-        updateBoard(boardId, data);
-      },
-      joinBoard: (boardId: string) => {
-        joinBoard(boardId);
-      },
-      close: () => {
-        close();
-      },
-      setCollabError: (error: string) => {
-        console.error(error);
-      },
-    };
+export const getInstance = async (backendUrl: string, token: string): Promise<CollabAPI> => {
+  if (instance) {
+    return instance;
   }
+
+  await init(backendUrl, token);
+
+  instance = {
+    isCollaborating: () => !!socket && socket.connected,
+    startCollaboration: (boardId: string | null) => {
+      if (boardId) {
+        joinBoard(boardId);
+      }
+    },
+    stopCollaboration: () => {
+      close();
+    },
+    setUsername: (username: string) => {
+      // Not implemented
+    },
+    getUsername: () => {
+      // Not implemented
+      return "";
+    },
+    onBoardUpdate: (callback: (data: any) => void) => {
+      onBoardUpdateCallback = callback;
+    },
+    updateBoard: (boardId: string, data: any) => {
+      updateBoard(boardId, data);
+    },
+    joinBoard: (boardId: string) => {
+      joinBoard(boardId);
+    },
+    close: () => {
+      close();
+    },
+    setCollabError: (error: string) => {
+      console.error(error);
+    },
+  };
+
   return instance;
 };
