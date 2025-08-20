@@ -17,9 +17,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   console.log('Service Worker registration would happen here in production');
 }
 root.render(
-  <StrictMode>
-    <Provider>
-      <ExcalidrawApp />
-    </Provider>
-  </StrictMode>,
+  <Provider>
+    <ExcalidrawApp />
+  </Provider>,
 );
