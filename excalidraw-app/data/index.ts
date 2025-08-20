@@ -283,72 +283,34 @@ type ExportToBackendResult =
   | { url: null; errorMessage: string }
   | { url: string; errorMessage: null };
 
+import { createBoard } from "../src/api";
+
 export const exportToBackend = async (
   elements: readonly ExcalidrawElement[],
   appState: Partial<AppState>,
   files: BinaryFiles,
 ): Promise<ExportToBackendResult> => {
-  const encryptionKey = await generateEncryptionKey("string");
-
-  const payload = await compressData(
-    new TextEncoder().encode(
-      serializeAsJSON(elements, appState, files, "database"),
-    ),
-    { encryptionKey },
-  );
+  const boardName = appState.name || "Untitled";
 
   try {
-    const filesMap = new Map<FileId, BinaryFileData>();
-    for (const element of elements) {
-      if (isInitializedImageElement(element) && files[element.fileId]) {
-        filesMap.set(element.fileId, files[element.fileId]);
-      }
-    }
-
-    const filesToUpload = await encodeFilesForUpload({
-      files: filesMap,
-      encryptionKey,
-      maxBytes: FILE_UPLOAD_MAX_BYTES,
+    const response = await createBoard(boardName, {
+      elements,
+      appState,
+      files,
     });
 
-    const auth = appJotaiStore.get(authAtom);
-    const headers: HeadersInit = {
-      "Content-Type": "application/octet-stream", // Or whatever content type your backend expects
-    };
-    if (auth?.accessToken) {
-      headers.Authorization = `Bearer ${auth.accessToken}`;
-    }
-
-    const response = await fetch(BACKEND_V2_POST, {
-      method: "POST",
-      headers,
-      body: payload.buffer,
-    });
-    const json = await response.json();
-    if (json.id) {
+    if (response.data && response.data.id) {
       const url = new URL(window.location.href);
-      // We need to store the key (and less importantly the id) as hash instead
-      // of queryParam in order to never send it to the server
-      url.hash = `json=${json.publicId},${encryptionKey}`;
-      const urlString = url.toString();
-
-      await saveFilesToFirebase({
-        prefix: `/files/shareLinks/${json.id}`,
-        files: filesToUpload,
-      });
-
-      return { url: urlString, errorMessage: null };
-    } else if (json.error_class === "RequestTooLargeError") {
-      return {
-        url: null,
-        errorMessage: t("alerts.couldNotCreateShareableLinkTooBig"),
-      };
+      // Construct a shareable link using the board's public ID
+      url.searchParams.set("id", response.data.id);
+      return { url: url.toString(), errorMessage: null };
     }
 
     return { url: null, errorMessage: t("alerts.couldNotCreateShareableLink") };
   } catch (error: any) {
     console.error(error);
-
-    return { url: null, errorMessage: t("alerts.couldNotCreateShareableLink") };
+    const errorMessage =
+      error.response?.data?.message || t("alerts.couldNotCreateShareableLink");
+    return { url: null, errorMessage };
   }
 };

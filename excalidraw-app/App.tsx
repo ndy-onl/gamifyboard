@@ -570,7 +570,8 @@ const ExcalidrawWrapper = ({
       const appState = excalidrawAPI.getAppState();
       const files = excalidrawAPI.getFiles();
       const name = excalidrawAPI.getName() || "Untitled";
-      await createBoard(name, { elements, appState, files });
+      // Temporarily remove files from the payload to isolate the issue
+      await createBoard(name, { elements, appState /* files */ });
       excalidrawAPI.setToast({ message: "Board saved successfully!" });
     } catch (error: any) {
       excalidrawAPI.setToast({ message: "Failed to save board.", color: "danger" });
