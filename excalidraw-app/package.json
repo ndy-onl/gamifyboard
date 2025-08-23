@@ -37,7 +37,11 @@
     "react-dom": "19.0.0",
     "socket.io-client": "4.7.2",
     "axios": "^1.6.8",
-    "vite-plugin-html": "3.2.2"
+    "vite-plugin-html": "3.2.2",
+    "yjs": "^13.6.14",
+    "y-websocket": "^1.5.3",
+    "y-excalidraw": "latest",
+    "microdiff": "^1.0.0"
   },
   "prettier": "@excalidraw/prettier-config",
   "scripts": {
@@ -53,6 +57,8 @@
     "lint": "eslint src --ext .ts,.tsx --fix"
   },
   "devDependencies": {
+    "vite": "5.4.19",
+    "vitest": "2.0.5",
     "vite-plugin-sitemap": "0.7.1"
   }
 }

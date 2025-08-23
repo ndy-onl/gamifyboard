@@ -9,8 +9,12 @@ vi.mock("src/api", () => ({
   registerUser: vi.fn().mockResolvedValue({ data: { token: "test-token" } }),
   getBoards: vi.fn().mockResolvedValue({ data: [] }),
   deleteBoard: vi.fn().mockResolvedValue({ data: { success: true } }),
-  getProfile: vi.fn().mockResolvedValue({ data: { email: "test@example.com" } }),
-  refreshToken: vi.fn().mockResolvedValue({ data: { token: "refreshed-token" } }),
+  getProfile: vi
+    .fn()
+    .mockResolvedValue({ data: { email: "test@example.com" } }),
+  refreshToken: vi
+    .fn()
+    .mockResolvedValue({ data: { token: "refreshed-token" } }),
 }));
 
 // Mock axios as well for safety

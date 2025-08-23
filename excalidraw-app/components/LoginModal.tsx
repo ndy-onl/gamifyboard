@@ -1,22 +1,23 @@
-import React, { useState } from 'react';
-import { loginUser } from '../src/api';
+import React, { useState } from "react";
 
-const LoginModal = ({ onClose, onSwitchToRegister }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+import { useSetAtom } from "../app-jotai";
+import { loginActionAtom } from "../state/authAtoms";
 
-  const handleSubmit = async (e) => {
+const LoginModal = ({ onClose, onSwitchToRegister }: { onClose: () => void; onSwitchToRegister: () => void; }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const setLoginAction = useSetAtom(loginActionAtom);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError('');
+    setError("");
     try {
-      const response = await loginUser(email, password);
-      // TODO: Handle successful login (e.g., save tokens, close modal, update UI)
-      console.log('Login successful:', response.data);
+      await setLoginAction({ email, password });
       onClose();
-    } catch (err) {
-      setError('Login failed. Please check your credentials.');
-      console.error('Login error:', err);
+    } catch (err: any) {
+      setError("Login failed. Please check your credentials.");
+      console.error("Login error:", err);
     }
   };
 
@@ -42,6 +43,17 @@ const LoginModal = ({ onClose, onSwitchToRegister }) => {
           />
           {error && <p className="error">{error}</p>}
           <button type="submit">Login</button>
+          <p className="Modal__forgot-password">
+            <a
+              href={`${
+                import.meta.env.VITE_APP_MAIN_DOMAIN_URL
+              }/reset-password`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Passwort vergessen?
+            </a>
+          </p>
           <p className="Modal__switch">
             Noch kein Account?{" "}
             <span className="Modal__switch-link" onClick={onSwitchToRegister}>

@@ -1,5 +1,4 @@
 import { waitFor, act } from "@testing-library/react";
-import { render } from "./test-utils";
 
 import React from "react";
 
@@ -12,6 +11,8 @@ import type {
 } from "@excalidraw/element/types";
 
 import ExcalidrawApp from "../App";
+
+import { render } from "./test-utils";
 
 const createDefaultElementProps = (
   overrides?: Omit<Partial<ExcalidrawRectangleElement>, "type">,
@@ -48,7 +49,7 @@ const createDefaultElementProps = (
 describe("Counter Functions", () => {
   it("should convert a rectangle to a counter and allow manual counting", async () => {
     act(() => {
-      render(<ExcalidrawApp />);
+      render(<ExcalidrawApp onLoginClick={() => {}} />);
     });
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -118,7 +119,7 @@ describe("Counter Functions", () => {
 
   it("should automatically count cards in a zone", async () => {
     act(() => {
-      render(<ExcalidrawApp />);
+      render(<ExcalidrawApp onLoginClick={() => {}} />);
     });
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -168,7 +169,7 @@ describe("Counter Functions", () => {
     });
 
     act(() => {
-      checkGameState(excalidrawAPI.getSceneElements());
+      checkGameState(excalidrawAPI, excalidrawAPI.getSceneElements());
     });
 
     await waitFor(() => {
@@ -190,7 +191,7 @@ describe("Counter Functions", () => {
     });
 
     act(() => {
-      checkGameState(excalidrawAPI.getSceneElements());
+      checkGameState(excalidrawAPI, excalidrawAPI.getSceneElements());
     });
 
     await waitFor(() => {

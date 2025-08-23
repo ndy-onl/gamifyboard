@@ -1,10 +1,14 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
-import { getInstance } from '../collaboration/GamifyCollaboration';
-import { authStatusAtom } from '../state/authAtoms';
-import { useAtomValue, useSetAtom } from 'jotai';
-import { collabAPIAtom, activeRoomLinkAtom } from '../collab/Collab';
-import { CollabAPI } from '../collab/Collab';
+import { useEffect, useState, useCallback, useRef } from "react";
+
+import { useAtomValue, useSetAtom } from "jotai";
+
+import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+
+import { getInstance } from "../collaboration/GamifyCollaboration";
+import { authStatusAtom } from "../state/authAtoms";
+import { collabAPIAtom, activeRoomLinkAtom } from "../collab/Collab";
+
+import type { CollabAPI } from "../collab/Collab";
 
 export const useCollaboration = (
   excalidrawAPI: ExcalidrawImperativeAPI | null,
@@ -20,7 +24,7 @@ export const useCollaboration = (
     const setupCollaboration = async () => {
       if (isLoggedIn && accessToken && excalidrawAPI && boardId) {
         const BACKEND_URL = import.meta.env.DEV
-          ? 'https://api.alpha.gamifyboard.com'
+          ? "https://api.alpha.gamifyboard.com"
           : import.meta.env.VITE_APP_API_URL;
 
         try {
@@ -56,13 +60,23 @@ export const useCollaboration = (
         setActiveRoomLink("");
       }
     };
-  }, [isLoggedIn, accessToken, excalidrawAPI, boardId, setCollabAPI, setActiveRoomLink]);
+  }, [
+    isLoggedIn,
+    accessToken,
+    excalidrawAPI,
+    boardId,
+    setCollabAPI,
+    setActiveRoomLink,
+  ]);
 
-  const updateBoard = useCallback((elements: readonly any[]) => {
-    if (boardId && collabAPIRef.current?.isCollaborating()) {
-      collabAPIRef.current.updateBoard(boardId, { elements });
-    }
-  }, [boardId]);
+  const updateBoard = useCallback(
+    (elements: readonly any[]) => {
+      if (boardId && collabAPIRef.current?.isCollaborating()) {
+        collabAPIRef.current.updateBoard(boardId, { elements });
+      }
+    },
+    [boardId],
+  );
 
   return { isCollaborating, updateBoard };
 };

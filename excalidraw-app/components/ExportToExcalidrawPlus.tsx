@@ -36,6 +36,10 @@ export const exportToExcalidrawPlus = async (
 ) => {
   const storage = await loadFirebaseStorage();
 
+  if (!storage) {
+    throw new Error("Firebase storage is not available.");
+  }
+
   const id = `${nanoid(12)}`;
 
   const encryptionKey = (await generateEncryptionKey())!;

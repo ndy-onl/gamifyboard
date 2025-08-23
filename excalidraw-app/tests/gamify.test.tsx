@@ -1,15 +1,16 @@
 import React from "react";
 import { waitFor, act } from "@testing-library/react";
-import { render } from "./test-utils";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import ExcalidrawApp from "../App";
 
+import { render } from "./test-utils";
+
 describe("Gamify Functions", () => {
   it("should allow creating a zone and moving a card into it", async () => {
     act(() => {
-      render(<ExcalidrawApp />);
+      render(<ExcalidrawApp onLoginClick={() => {}} />);
     });
 
     // Use waitFor to poll for the single handle object on the window
@@ -68,7 +69,7 @@ describe("Gamify Functions", () => {
 
     // 5. Trigger game state check and wait for the result
     act(() => {
-      checkGameState(excalidrawAPI.getSceneElements());
+      checkGameState(excalidrawAPI, excalidrawAPI.getSceneElements());
     });
 
     await waitFor(

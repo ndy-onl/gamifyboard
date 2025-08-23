@@ -1,17 +1,16 @@
-import axios from 'axios';
-import { appJotaiStore } from '../app-jotai';
-import { authAtom } from '../state/authAtoms';
+import axios from "axios";
+
+import { appJotaiStore } from "../app-jotai";
+import { authAtom } from "../state/authAtoms";
 
 const baseURL = import.meta.env.DEV
-  ? 'https://api.alpha.gamifyboard.com' // Use hardcoded alpha URL for local dev
+  ? "https://api.alpha.gamifyboard.com" // Use hardcoded alpha URL for local dev
   : import.meta.env.VITE_APP_API_URL; // Use build-time variable for production
 
 const apiClient = axios.create({
-  baseURL: baseURL,
+  baseURL,
   withCredentials: true, // Ensures cookies (like httpOnly refresh token) are sent
 });
-
-
 
 // Request interceptor to add the access token to every request
 apiClient.interceptors.request.use(
@@ -27,7 +26,7 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor to handle 401 errors and refresh the token
@@ -37,13 +36,18 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== '/auth/login' && originalRequest.url !== '/auth/register') {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      originalRequest.url !== "/auth/login" &&
+      originalRequest.url !== "/auth/register"
+    ) {
       originalRequest._retry = true;
       try {
         // The httpOnly cookie is sent automatically by the browser
-        const { data } = await apiClient.post('/auth/refresh');
+        const { data } = await apiClient.post("/auth/refresh");
         const { user, accessToken } = data;
-        
+
         // Update the global state with the new token and user data
         appJotaiStore.set(authAtom, { user, accessToken });
 
@@ -51,14 +55,14 @@ apiClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
+        console.error("Token refresh failed:", refreshError);
         // If refresh fails, clear the auth state and reject
         appJotaiStore.set(authAtom, { user: null, accessToken: null });
         return Promise.reject(refreshError);
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default apiClient;

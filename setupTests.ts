@@ -9,6 +9,22 @@ import polyfill from "./packages/excalidraw/polyfill";
 import { yellow } from "./packages/excalidraw/tests/helpers/colorize";
 import { testPolyfills } from "./packages/excalidraw/tests/helpers/polyfills";
 
+vi.mock("axios", () => ({
+  default: {
+    create: vi.fn(() => ({
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      patch: vi.fn(),
+      delete: vi.fn(),
+      interceptors: {
+        request: { use: vi.fn(), eject: vi.fn() },
+        response: { use: vi.fn(), eject: vi.fn() },
+      },
+    })),
+  },
+}));
+
 // mock for pep.js not working with setPointerCapture()
 HTMLElement.prototype.setPointerCapture = vi.fn();
 

@@ -29,9 +29,10 @@
       "@excalidraw/math/*": ["./packages/math/src/*"],
       "@excalidraw/utils": ["./packages/utils/src/index.ts"],
       "@excalidraw/utils/*": ["./packages/utils/src/*"],
-      "src/*": ["./src/*"]
+      "src/*": ["./src/*"],
+      "@/*": ["./excalidraw-app/*"]
     }
   },
-  "include": ["packages", "excalidraw-app"],
+  "include": ["packages", "excalidraw-app", "src"],
   "exclude": ["examples", "dist", "types", "tests"]
 }

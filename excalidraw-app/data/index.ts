@@ -13,8 +13,6 @@ import { isInvisiblySmallElement } from "@excalidraw/element";
 import { isInitializedImageElement } from "@excalidraw/element";
 import { t } from "@excalidraw/excalidraw/i18n";
 import { bytesToHexString } from "@excalidraw/common";
-import { appJotaiStore } from "../app-jotai";
-import { authAtom } from "../state/authAtoms";
 
 import type { UserIdleState } from "@excalidraw/common";
 import type { ImportedDataState } from "@excalidraw/excalidraw/data/types";
@@ -32,14 +30,19 @@ import type {
 } from "@excalidraw/excalidraw/types";
 import type { MakeBrand } from "@excalidraw/common/utility-types";
 
+import { authAtom } from "../state/authAtoms";
+import { appJotaiStore } from "../app-jotai";
+
 import {
   DELETED_ELEMENT_TIMEOUT,
   FILE_UPLOAD_MAX_BYTES,
   ROOM_ID_BYTES,
 } from "../app_constants";
 
-import { encodeFilesForUpload } from "./FileManager";
+import { createBoard } from "../src/api";
+
 import { saveFilesToFirebase } from "./firebase";
+import { encodeFilesForUpload } from "./FileManager";
 
 import type { WS_SUBTYPES } from "../app_constants";
 
@@ -282,8 +285,6 @@ export const loadScene = async (
 type ExportToBackendResult =
   | { url: null; errorMessage: string }
   | { url: string; errorMessage: null };
-
-import { createBoard } from "../src/api";
 
 export const exportToBackend = async (
   elements: readonly ExcalidrawElement[],

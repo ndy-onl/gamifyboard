@@ -1,22 +1,40 @@
-import React, { useState } from 'react';
-import { registerUser } from '../src/api';
+import React, { useState } from "react";
 
-const RegisterModal = ({ onClose }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+import { registerUser } from "../src/api";
 
-  const handleSubmit = async (e) => {
+const RegisterModal = ({ onClose }: { onClose: () => void; }) => {
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [error, setError] = useState("");
+
+  const VITE_APP_MAIN_DOMAIN_URL = import.meta.env.VITE_APP_MAIN_DOMAIN_URL;
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError('');
+    setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (!termsAccepted || !privacyAccepted) {
+      setError("You must accept the Terms and Conditions and Privacy Policy.");
+      return;
+    }
+
     try {
-      const response = await registerUser(email, password);
+      const response = await registerUser(username, email, password);
       // TODO: Handle successful registration (e.g., show message, close modal, maybe login)
-      console.log('Registration successful:', response.data);
+      console.log("Registration successful:", response.data);
       onClose();
-    } catch (err) {
-      setError('Registration failed. Please try again.');
-      console.error('Registration error:', err);
+    } catch (err: any) {
+      setError("Registration failed. Please try again.");
+      console.error("Registration error:", err);
     }
   };
 
@@ -26,6 +44,13 @@ const RegisterModal = ({ onClose }) => {
       <div className="Modal__content">
         <h2>Register</h2>
         <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
           <input
             type="email"
             placeholder="Email"
@@ -40,6 +65,51 @@ const RegisterModal = ({ onClose }) => {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+          />
+          <div className="checkbox-container">
+            <input
+              type="checkbox"
+              id="terms"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              required
+            />
+            <label htmlFor="terms">
+              I accept the{" "}
+              <a
+                href={`${VITE_APP_MAIN_DOMAIN_URL}/terms`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Terms and Conditions
+              </a>
+            </label>
+          </div>
+          <div className="checkbox-container">
+            <input
+              type="checkbox"
+              id="privacy"
+              checked={privacyAccepted}
+              onChange={(e) => setPrivacyAccepted(e.target.checked)}
+              required
+            />
+            <label htmlFor="privacy">
+              I accept the{" "}
+              <a
+                href={`${VITE_APP_MAIN_DOMAIN_URL}/privacy`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Privacy Policy
+              </a>
+            </label>
+          </div>
           {error && <p className="error">{error}</p>}
           <button type="submit">Register</button>
         </form>

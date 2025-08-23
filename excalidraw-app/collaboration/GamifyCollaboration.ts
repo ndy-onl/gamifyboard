@@ -1,15 +1,23 @@
-import { io, Socket } from "socket.io-client";
+import { io } from "socket.io-client";
+
 import type { ExcalidrawElement } from "@excalidraw/element/types";
-import { CollabAPI } from "../collab/Collab";
+
+import type { Socket } from "socket.io-client";
+
+import type { CollabAPI } from "../collab/Collab";
 
 let socket: Socket | null = null;
 let instance: CollabAPI | null = null;
 
-type BoardUpdateCallback = (boardData: { elements: readonly ExcalidrawElement[] }) => void;
+type BoardUpdateCallback = (boardData: {
+  elements: readonly ExcalidrawElement[];
+}) => void;
 
 let onBoardUpdateCallback: BoardUpdateCallback | null = null;
 
-const onBoardUpdated = (boardData: { elements: readonly ExcalidrawElement[] }) => {
+const onBoardUpdated = (boardData: {
+  elements: readonly ExcalidrawElement[];
+}) => {
   if (onBoardUpdateCallback) {
     onBoardUpdateCallback(boardData);
   }
@@ -52,7 +60,10 @@ const joinBoard = (boardId: string) => {
   socket.emit("joinBoard", boardId);
 };
 
-const updateBoard = (boardId: string, boardData: { elements: readonly ExcalidrawElement[] }) => {
+const updateBoard = (
+  boardId: string,
+  boardData: { elements: readonly ExcalidrawElement[] },
+) => {
   if (!socket) {
     console.error("Socket not initialized");
     return;
@@ -72,7 +83,10 @@ const close = () => {
   }
 };
 
-export const getInstance = async (backendUrl: string, token: string): Promise<CollabAPI> => {
+export const getInstance = async (
+  backendUrl: string,
+  token: string,
+): Promise<CollabAPI> => {
   if (instance) {
     return instance;
   }
