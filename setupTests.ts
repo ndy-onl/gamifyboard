@@ -5,6 +5,8 @@ import "vitest-canvas-mock";
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 
+vi.mock('y-websocket/dist/style.css', () => ({}));
+
 import polyfill from "./packages/excalidraw/polyfill";
 import { yellow } from "./packages/excalidraw/tests/helpers/colorize";
 import { testPolyfills } from "./packages/excalidraw/tests/helpers/polyfills";
