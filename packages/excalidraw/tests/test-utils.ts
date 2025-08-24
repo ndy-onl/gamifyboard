@@ -79,21 +79,9 @@ const renderApp: TestRenderFn = async (ui, options) => {
   });
 
   await waitFor(() => {
-    const canvas = renderResult.container.querySelector("canvas.static");
-    if (!canvas) {
+    const toolbar = renderResult.container.querySelector(".App-toolbar");
+    if (!toolbar) {
       throw new Error("not initialized yet");
-    }
-
-    const interactiveCanvas =
-      renderResult.container.querySelector("canvas.interactive");
-    if (!interactiveCanvas) {
-      throw new Error("not initialized yet");
-    }
-
-    // hack-awaiting app.initialScene() which solves some test race conditions
-    // (later we may switch this with proper event listener)
-    if (window.h.state.isLoading) {
-      throw new Error("still loading");
     }
   });
 

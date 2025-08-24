@@ -1,3 +1,4 @@
+
 import {
   Excalidraw,
   LiveCollaborationTrigger,
@@ -341,16 +342,13 @@ const ExcalidrawWrapper = ({
     providerRef.current = provider;
 
     const onRemoteChanges = () => {
-      console.log("[YJS] Remote changes received. Applying to Excalidraw.");
       isApplyingRemoteChangesRef.current = true;
       const remoteElements = yjsToExcalidraw(yElements);
-      console.log("[YJS] Transformed remote elements:", JSON.stringify(remoteElements, null, 2));
       lastKnownElementsRef.current = remoteElements;
       excalidrawAPI.updateScene({
         elements: remoteElements,
         captureUpdate: false,
       });
-      console.log("[YJS] excalidrawAPI.updateScene called.");
       setTimeout(() => {
         isApplyingRemoteChangesRef.current = false;
       }, 0);
