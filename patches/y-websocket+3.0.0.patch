@@ -1,0 +1,12 @@
+--- a/package.json
++++ b/package.json
+@@ -29,7 +29,8 @@
+       "require": "./dist/y-websocket.cjs",
+       "types": "./dist/src/y-websocket.d.ts",
+       "default": "./src/y-websocket.js"
+-    }
++    },
++    "./dist/style.css": "./dist/style.css"
+   },
+   "repository": {
+     "type": "git",

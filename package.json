@@ -22,6 +22,7 @@
     "@vitest/ui": "2.0.5",
     "chai": "4.3.6",
     "dotenv": "16.0.1",
+    "dotenv-cli": "10.0.0",
     "eslint-config-prettier": "8.5.0",
     "eslint-config-react-app": "7.0.1",
     "eslint-plugin-import": "2.31.0",
@@ -50,6 +51,7 @@
   "homepage": ".",
   "prettier": "@excalidraw/prettier-config",
   "scripts": {
+    "prepare-auth": "export $(grep -v '^#' .env | xargs) && git config --global url.\"https://x-access-token:${GITHUB_PAT}@github.com/\".insteadOf \"https://github.com/\"",
     "build-node": "node ./scripts/build-node.js",
     "build:app:docker": "yarn --cwd ./excalidraw-app build:app:docker",
     "build:app": "yarn --cwd ./excalidraw-app build:app",
@@ -80,6 +82,7 @@
     "locales-coverage": "node scripts/build-locales-coverage.js",
     "locales-coverage:description": "node scripts/locales-coverage-description.js",
     "prepare": "husky install",
+    "postinstall": "patch-package",
     "prettier": "prettier \"**/*.{css,scss,json,md,html,yml}\" --ignore-path=.eslintignore",
     "release": "node scripts/release.js",
     "release:test": "node scripts/release.js --tag=test",
@@ -93,6 +96,9 @@
     "strip-ansi": "6.0.1"
   },
   "dependencies": {
-    "isomorphic-webcrypto": "^2.3.8"
+    "@ndy-onl/y-excalidraw": "github:ndy-onl/y-excalidraw",
+    "isomorphic-webcrypto": "^2.3.8",
+    "y-websocket": "3.0.0",
+    "yjs": "13.6.27"
   }
 }
