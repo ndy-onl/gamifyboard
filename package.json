@@ -31,6 +31,7 @@
     "husky": "7.0.4",
     "jsdom": "22.1.0",
     "lint-staged": "12.3.7",
+    "patch-package": "8.0.0",
     "pepjs": "0.5.3",
     "prettier": "2.6.2",
     "rewire": "6.0.0",
@@ -82,7 +83,8 @@
     "locales-coverage": "node scripts/build-locales-coverage.js",
     "locales-coverage:description": "node scripts/locales-coverage-description.js",
     "prepare": "husky install",
-    "postinstall": "patch-package",
+    "apply-patches": "patch -p1 -d node_modules/y-websocket < patches/y-websocket+3.0.0.patch",
+    
     "prettier": "prettier \"**/*.{css,scss,json,md,html,yml}\" --ignore-path=.eslintignore",
     "release": "node scripts/release.js",
     "release:test": "node scripts/release.js --tag=test",
