@@ -31,3 +31,12 @@ export const updateBoard = (id, name, data) => {
 export const deleteBoard = (id) => {
   return apiClient.delete(`/boards/${id}`);
 };
+
+export const loginUser = async (email, password) => {
+  // Der Interceptor kümmert sich um das Token-Handling.
+  return apiClient.post('/auth/login', { email, password });
+};
+
+export const logoutUser = () => {
+  return apiClient.post('/auth/logout');
+};

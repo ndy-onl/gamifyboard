@@ -93,6 +93,9 @@
     "strip-ansi": "6.0.1"
   },
   "dependencies": {
-    "isomorphic-webcrypto": "^2.3.8"
+    "isomorphic-webcrypto": "^2.3.8",
+    "@ndy-onl/y-excalidraw": "github:ndy-onl/y-excalidraw",
+    "y-socket.io": "^1.1.0",
+    "yjs": "^13.6.0"
   }
 }

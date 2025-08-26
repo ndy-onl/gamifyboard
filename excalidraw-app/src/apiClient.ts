@@ -1,21 +1,22 @@
-import axios from 'axios';
-import { appJotaiStore } from '../app-jotai';
-import { authAtom } from '../state/authAtoms';
+import axios from "axios";
 
+import { appJotaiStore } from "../app-jotai";
+import { authAtom } from "../state/authAtoms";
+
+// Use hardcoded alpha URL for local dev, and build-time variable for production
 const baseURL = import.meta.env.DEV
-  ? 'https://api.alpha.gamifyboard.com' // Use hardcoded alpha URL for local dev
-  : import.meta.env.VITE_APP_API_URL; // Use build-time variable for production
+  ? "https://api.alpha.gamifyboard.com"
+  : import.meta.env.VITE_APP_API_URL;
 
 const apiClient = axios.create({
-  baseURL: baseURL,
+  baseURL,
   withCredentials: true, // Ensures cookies (like httpOnly refresh token) are sent
 });
-
-
 
 // Request interceptor to add the access token to every request
 apiClient.interceptors.request.use(
   (config) => {
+    // Do not add auth header for skipped routes
     if (config.skipAuth) {
       return config;
     }
@@ -27,7 +28,7 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor to handle 401 errors and refresh the token
@@ -37,28 +38,35 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== '/auth/login' && originalRequest.url !== '/auth/register') {
-      originalRequest._retry = true;
+    // Check for 401, ensure it's not a retry, and not for login/register routes
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      originalRequest.url !== "/auth/login" &&
+      originalRequest.url !== "/auth/register"
+    ) {
+      originalRequest._retry = true; // Mark as retried
       try {
-        // The httpOnly cookie is sent automatically by the browser
-        const { data } = await apiClient.post('/auth/refresh');
+        // The httpOnly refresh token cookie is sent automatically by the browser
+        const { data } = await apiClient.post("/auth/refresh");
         const { user, accessToken } = data;
-        
+
         // Update the global state with the new token and user data
         appJotaiStore.set(authAtom, { user, accessToken });
 
-        // Update the header for the original request and retry
+        // Update the header for the original request and retry it
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        // If refresh fails, clear the auth state and reject
-        appJotaiStore.set(authAtom, { user: null, accessToken: null });
+        console.error("Token refresh failed:", refreshError);
+        // If refresh fails, clear the auth state and reject the promise
+        appJotaiStore.set(authAtom, null);
         return Promise.reject(refreshError);
       }
     }
+    // For all other errors, just reject
     return Promise.reject(error);
-  }
+  },
 );
 
 export default apiClient;

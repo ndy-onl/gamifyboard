@@ -302,7 +302,7 @@ export const exportToBackend = async (
     if (response.data && response.data.id) {
       const url = new URL(window.location.href);
       // Construct a shareable link using the board's public ID
-      url.searchParams.set("id", response.data.id);
+      url.searchParams.set("id", response.data.publicId);
       return { url: url.toString(), errorMessage: null };
     }
 

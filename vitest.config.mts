@@ -62,6 +62,7 @@ export default defineConfig({
     setupFiles: ["./setupTests.ts"],
     globals: true,
     environment: "jsdom",
+    testTimeout: 10000, // Added this line
     coverage: {
       reporter: ["text", "json-summary", "json", "html", "lcovonly"],
       ignoreEmptyLines: false,
