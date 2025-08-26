@@ -1,105 +1,110 @@
-import { io, Socket } from "socket.io-client";
-import type { ExcalidrawElement } from "@excalidraw/element/types";
-import { CollabAPI } from "../collab/Collab";
+    import * as Y from "yjs";
+    import { io, Socket } from "socket.io-client";
+    import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from "y-protocols/awareness";
+    import { ExcalidrawBinding } from "@ndy-onl/y-excalidraw";
+    import { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
-let socket: Socket | null = null;
-let instance: CollabAPI | null = null;
+    // Definiert die möglichen Zustände unserer Verbindung für eine saubere UI-Integration
+    export type CollaborationStatus = "connecting" | "connected" | "disconnected" | "error:auth" | "error:connection";
 
-type BoardUpdateCallback = (boardData: { elements: readonly ExcalidrawElement[] }) => void;
+    export class GamifyCollaboration {
+      private ydoc: Y.Doc;
+      private socket: Socket | null = null;
+      private binding: ExcalidrawBinding | null = null;
+      private awareness: Awareness;
 
-let onBoardUpdateCallback: BoardUpdateCallback | null = null;
+      private backendUrl: string;
+      private token: string;
+      private excalidrawAPI: ExcalidrawImperativeAPI;
 
-const onBoardUpdated = (boardData: { elements: readonly ExcalidrawElement[] }) => {
-  if (onBoardUpdateCallback) {
-    onBoardUpdateCallback(boardData);
-  }
-};
+      public onStatusChange: ((status: CollaborationStatus) => void) | null = null;
 
-const init = (backendUrl: string, token: string) => {
-  if (socket) {
-    return;
-  }
+      constructor(
+        backendUrl: string,
+        token: string,
+        excalidrawAPI: ExcalidrawImperativeAPI
+      ) {
+        this.backendUrl = backendUrl;
+        this.token = token;
+        this.excalidrawAPI = excalidrawAPI;
+        this.ydoc = new Y.Doc();
+        this.awareness = new Awareness(this.ydoc);
+      }
 
-  socket = io(backendUrl, {
-    auth: {
-      token,
-    },
-  });
+      public start = (boardId: string) => {
+        const wsUrl = import.meta.env.VITE_APP_WS_URL || this.backendUrl;
+        this.onStatusChange?.('connecting');
 
-  socket.on("connect", () => {
-    console.log("Connected to collaboration server");
-  });
+        this.socket = io(wsUrl, {
+          auth: { token: this.token },
+        });
 
-  socket.on("boardUpdated", onBoardUpdated);
+        this.socket.on("connect", () => {
+          this.onStatusChange?.('connected');
+          console.log("Socket connected, joining board...");
+          this.socket?.emit("yjs:join", boardId);
+        });
 
-  socket.on("disconnect", () => {
-    console.log("Disconnected from collaboration server");
-  });
-};
+        this.socket.on("disconnect", () => {
+          this.onStatusChange?.('disconnected');
+          console.log("Socket disconnected.");
+        });
 
-const joinBoard = (boardId: string) => {
-  if (!socket) {
-    console.error("Socket not initialized");
-    return;
-  }
-  socket.emit("joinBoard", boardId);
-};
+        this.socket.on("connect_error", (err: Error) => {
+            console.error("Connection Error:", err.message);
+            if (err.message.includes("authentication error")) {
+                this.socket?.disconnect();
+                this.onStatusChange?.('error:auth');
+            } else {
+                this.onStatusChange?.('error:connection');
+            }
+        });
 
-const updateBoard = (boardId: string, boardData: { elements: readonly ExcalidrawElement[] }) => {
-  if (!socket) {
-    console.error("Socket not initialized");
-    return;
-  }
-  socket.emit("updateBoard", { boardId, boardData });
-};
+        // Sync Document State
+        this.socket.on("yjs:sync", (initialState: Uint8Array) => {
+          Y.applyUpdate(this.ydoc, new Uint8Array(initialState), this);
+          this.binding = new ExcalidrawBinding(
+            this.ydoc.getArray("elements"),
+            this.ydoc.getMap("assets"),
+            this.excalidrawAPI,
+            this.awareness
+          );
+        });
 
-const onBoardUpdate = (callback: BoardUpdateCallback) => {
-  onBoardUpdateCallback = callback;
-};
+        this.socket.on("yjs:update", (update: Uint8Array) => {
+          Y.applyUpdate(this.ydoc, new Uint8Array(update), this);
+        });
 
-const close = () => {
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
-};
+        this.ydoc.on("update", (update: Uint8Array, origin: any) => {
+          if (origin !== this) {
+            this.socket?.emit("yjs:update", update);
+          }
+        });
 
-export const getInstance = (backendUrl: string, token: string): CollabAPI => {
-  if (!instance) {
-    init(backendUrl, token);
-    instance = {
-      isCollaborating: () => !!socket,
-      startCollaboration: (boardId: string | null) => {
-        if (boardId) {
-          joinBoard(boardId);
-        }
-      },
-      stopCollaboration: () => {
-        close();
-      },
-      setUsername: (username: string) => {
-        // Not implemented
-      },
-      getUsername: () => {
-        // Not implemented
-        return "";
-      },
-      onBoardUpdate: (callback: (data: any) => void) => {
-        onBoardUpdateCallback = callback;
-      },
-      updateBoard: (boardId: string, data: any) => {
-        updateBoard(boardId, data);
-      },
-      joinBoard: (boardId: string) => {
-        joinBoard(boardId);
-      },
-      close: () => {
-        close();
-      },
-      setCollabError: (error: string) => {
-        console.error(error);
-      },
-    };
-  }
-  return instance;
-};
+        // Sync Awareness State
+        this.socket.on("yjs:awareness", (update: Uint8Array) => {
+            applyAwarenessUpdate(this.awareness, new Uint8Array(update), this);
+        });
+
+        this.awareness.on('update', (changes: any, origin: any) => {
+            if (origin === 'local') {
+                const awarenessUpdate = encodeAwarenessUpdate(this.awareness, [this.awareness.clientID]);
+                this.socket?.emit("yjs:awareness", awarenessUpdate);
+            }
+        });
+      };
+
+      // Wird von der Excalidraw UI aufgerufen, um Mauszeiger-Positionen zu teilen
+      public onPointerUpdate = (payload: any) => {
+        this.awareness.setLocalStateField("pointer", payload.pointer);
+        this.awareness.setLocalStateField("button", payload.button);
+      }
+
+      public close = () => {
+        this.socket?.disconnect();
+        this.binding?.destroy();
+        this.awareness.destroy();
+        this.ydoc.destroy();
+        console.log("Collaboration instance closed.");
+      };
+    }

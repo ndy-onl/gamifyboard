@@ -1,39 +1,40 @@
-import { test, expect, vi } from "vitest";
-import { renderHook } from "@testing-library/react";
-import { useCollaboration } from "../hooks/useCollaboration";
-import { SocketIOProvider } from "y-socket.io";
-import * as Y from "yjs";
+import { renderHook, waitFor } from '@testing-library/react';
+    import { useCollaboration } from '../hooks/useCollaboration';
+    import { GamifyCollaboration } from '../collaboration/GamifyCollaboration';
+    import { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
 
-vi.mock('y-socket.io', () => ({
-  SocketIOProvider: vi.fn().mockImplementation((url, boardId, ydoc, { auth }) => ({
-    on: vi.fn(),
-    off: vi.fn(),
-    disconnect: vi.fn(),
-    doc: ydoc,
-    awareness: {
-      on: vi.fn(),
-      off: vi.fn(),
-      setLocalStateField: vi.fn(),
-    },
-    destroy: vi.fn(), // Mock the destroy method
-  })),
-}));
+    // Mocken der GamifyCollaboration Klasse, um Netzwerkaufrufe zu verhindern
+    // und die Methoden zu überwachen.
+    jest.mock('../collaboration/GamifyCollaboration');
 
-vi.mock('jotai', async (importOriginal) => {
-  const original = await importOriginal();
-  return {
-    ...original,
-    useAtomValue: vi.fn(() => ({
-      accessToken: 'fake-token-for-test',
-      user: { username: 'Test User' },
-    })),
-  };
-});
+    const mockExcalidrawAPI = {
+      onPointerUpdate: jest.fn(),
+      // Fügen Sie hier weitere benötigte Mock-Methoden der Excalidraw-API hinzu
+    } as unknown as ExcalidrawImperativeAPI;
 
-test("useCollaboration sollte Provider und Binding-Klasse korrekt initialisieren", () => {
-  const boardId = "test-board-id";
-  const { result } = renderHook(() => useCollaboration(boardId));
+    test('sollte eine Kollaborations-Instanz erstellen und starten, wenn boardId und accessToken bereitgestellt werden', async () => {
+      // Arrange
+      const initialProps = {
+        excalidrawAPI: mockExcalidrawAPI,
+        boardId: 'board-123',
+      };
 
-  expect(SocketIOProvider).toHaveBeenCalled();
-  expect(result.current).toBeInstanceOf(SocketIOProvider);
-});
+      // Mocken des authStatusAtom, um einen gültigen Token bereitzustellen
+      // (Dies muss an Ihre Jotai-Implementierung angepasst werden)
+      const accessToken = 'test-token';
+      // Annahme: Sie haben eine Möglichkeit, Jotai-Atome im Test zu überschreiben.
+      // Wenn nicht, muss dies entsprechend angepasst werden.
+
+      const { result } = renderHook(() => useCollaboration(initialProps.excalidrawAPI, initialProps.boardId));
+
+      // Assert
+      // Warten, bis der Effekt ausgeführt wurde und die Instanz erstellt ist.
+      await waitFor(() => {
+        // Überprüfen, ob der Konstruktor der Klasse aufgerufen wurde.
+        expect(GamifyCollaboration).toHaveBeenCalledTimes(1);
+      });
+
+      // Überprüfen, ob die start-Methode auf der Instanz aufgerufen wurde.
+      const mockInstance = (GamifyCollaboration as jest.Mock).mock.instances[0];
+      expect(mockInstance.start).toHaveBeenCalledWith('board-123');
+    });

@@ -363,148 +363,122 @@ const shareableLinkConfirmDialog = {
   color: "danger",
 } as const;
 
+// REC-05: Create a helper to reduce code duplication
+const createErrorScene = (errorMessage: string) => {
+  return { scene: { appState: { errorMessage } }, isExternalScene: false };
+};
+
 const initializeScene = async (opts: {
   excalidrawAPI: ExcalidrawImperativeAPI;
   selectedBoardId: string | null;
   token: string | null;
 }): Promise<
   { scene: ExcalidrawInitialDataState | null } & (
-    | { isExternalScene: true; id: string; key: string }
+    | { isExternalScene: true; id: string | null; key: string | null }
     | { isExternalScene: false; id?: null; key?: null }
   )
 > => {
-  const searchParams = new URLSearchParams(window.location.search);
-  const id = searchParams.get("id");
-  const jsonBackendMatch = window.location.hash.match(
-    /^#json=([a-zA-Z0-9_-]+),([a-zA-Z0-9_-]+)$/,
-  );
-  const externalUrlMatch = window.location.hash.match(/^#url=(.*)$/);
+    const { excalidrawAPI, selectedBoardId, token } = opts;
 
-  const localDataState = importFromLocalStorage();
+    const searchParams = new URLSearchParams(window.location.search);
+    const id = searchParams.get("id");
+    const jsonBackendMatch = window.location.hash.match(
+      /^#json=([a-zA-Z0-9_-]+),([a-zA-Z0-9_-]+)$/,
+    );
+    const externalUrlMatch = window.location.hash.match(/^#url=(.*)$/);
 
-  let scene: RestoredDataState & {
-    scrollToContent?: boolean;
-  } = await loadScene(null, null, localDataState);
+    // Highest priority: Handle collaboration link with an ID.
+    if (id) {
+      try {
+        const response = await getBoard(id, token);
+        const board = response.data;
+        if (board && board.board_data) {
+          const loadedAppState = {
+            ...(board.board_data.appState || {}),
+            showWelcomeScreen: false,
+            openDialog: null,
+          };
+          const scene = {
+            elements: board.board_data.elements || [],
+            appState: restoreAppState(loadedAppState, null),
+            files: board.board_data.files || {},
+            scrollToContent: true,
+          };
+          if (excalidrawAPI && board.name) {
+            excalidrawAPI.updateScene({ appState: { name: board.name } });
+          }
+          return { scene, isExternalScene: true, id: id, key: null };
+        }
+        // This case should ideally not be reached if getBoard returns valid data
+        return createErrorScene("Board data is invalid.");
 
-  let roomLinkData = getCollaborationLinkData(window.location.href);
-  const isExternalScene = !!(id || jsonBackendMatch || roomLinkData);
-  if (isExternalScene) {
-    if (
-      // don't prompt if scene is empty
-      !scene.elements.length ||
-      // don't prompt for collab scenes because we don't override local storage
-      roomLinkData ||
-      // otherwise, prompt whether user wants to override current scene
-      (await openConfirmModal(shareableLinkConfirmDialog))
-    ) {
-      if (jsonBackendMatch) {
-        scene = await loadScene(
-          jsonBackendMatch[1],
-          jsonBackendMatch[2],
-          localDataState,
-        );
+      } catch (error: any) {
+        console.error("Failed to load board from backend via URL", error);
+
+        // REC-02: Granular error handling
+        const status = error.response?.status;
+        if (status === 404) {
+          return createErrorScene("The board you are looking for does not exist or has been deleted.");
+        }
+        if (status === 403) {
+          return createErrorScene("You do not have permission to view this board.");
+        }
+        return createErrorScene("Could not load the board. Please check your connection or try again later.");
       }
-      scene.scrollToContent = true;
-      if (!roomLinkData) {
-        window.history.replaceState({}, APP_NAME, window.location.origin);
-      }
-    } else {
-      // https://github.com/excalidraw/excalidraw/issues/1919
-      if (document.hidden) {
-        return new Promise((resolve, reject) => {
-          window.addEventListener(
-            "focus",
-            () => initializeScene(opts).then(resolve).catch(reject),
-            {
-              once: true,
-            },
-          );
-        });
-      }
-
-      roomLinkData = null;
-      window.history.replaceState({}, APP_NAME, window.location.origin);
     }
-  } else if (externalUrlMatch) {
-    window.history.replaceState({}, APP_NAME, window.location.origin);
 
-    const url = externalUrlMatch[1];
-    try {
-      const request = await fetch(window.decodeURIComponent(url));
-      const data = await loadFromBlob(await request.blob(), null, null);
+    // --- Fallback logic for non-collaboration scenes ---
+
+    const localDataState = importFromLocalStorage();
+    let scene: RestoredDataState & { scrollToContent?: boolean } = await loadScene(
+      null,
+      null,
+      localDataState,
+    );
+
+    let roomLinkData = getCollaborationLinkData(window.location.href);
+    const isExternalScene = !!(jsonBackendMatch || externalUrlMatch || roomLinkData);
+
+    if (isExternalScene) {
       if (
         !scene.elements.length ||
+        roomLinkData ||
         (await openConfirmModal(shareableLinkConfirmDialog))
       ) {
-        return { scene: data, isExternalScene };
-      }
-    } catch (error: any) {
-      return {
-        scene: {
-          appState: {
-            errorMessage: t("alerts.invalidSceneUrl"),
-          },
-        },
-        isExternalScene,
-      };
-    }
-  } else if (id) {
-    try {
-      const response = await getBoard(id, opts.token);
-      const board = response.data;
-      if (board && board.board_data) {
-        const loadedAppState = {
-          ...(board.board_data.appState || {}),
-          showWelcomeScreen: false,
-          openDialog: null,
-        };
-        scene = {
-          ...scene,
-          elements: board.board_data.elements || [],
-          appState: restoreAppState(loadedAppState, scene.appState),
-          files: board.board_data.files || {},
-        };
-        if (opts.excalidrawAPI && board.name) {
-          opts.excalidrawAPI.updateScene({ appState: { name: board.name } });
+        if (jsonBackendMatch) {
+          scene = await loadScene(
+            jsonBackendMatch[1],
+            jsonBackendMatch[2],
+            localDataState,
+          );
+        } else if (externalUrlMatch) {
+          // REC-03: Security risk - this part needs a separate security audit.
+          // For now, we proceed with the existing logic.
+          const url = window.decodeURIComponent(externalUrlMatch[1]);
+          try {
+            const request = await fetch(url);
+            const data = await loadFromBlob(await request.blob(), null, null);
+            scene = data;
+          } catch (error: any) {
+            return createErrorScene(t("alerts.invalidSceneUrl"));
+          }
         }
-      }
-    } catch (error) {
-      console.error("Failed to load board from backend via URL", error);
-    }
-  } else if (opts.selectedBoardId && opts.token) {
-    try {
-      const response = await getBoard(opts.selectedBoardId, opts.token);
-      const board = response.data; // The actual board object from backend
-      if (board && board.board_data) {
-        const loadedAppState = {
-          ...(board.board_data.appState || {}),
-          showWelcomeScreen: false,
-          openDialog: null, // Prevent any dialog from opening on load
-        };
-
-        scene = {
-          ...scene,
-          elements: board.board_data.elements || [],
-          appState: restoreAppState(loadedAppState, scene.appState),
-          files: board.board_data.files || {},
-        };
-      }
-    } catch (error) {
-      console.error("Failed to load board from backend", error);
-    }
-  }
-
-   else if (scene) {
-    return isExternalScene && jsonBackendMatch
-      ? {
-          scene,
-          isExternalScene,
-          id: jsonBackendMatch[1],
-          key: jsonBackendMatch[2],
+        scene.scrollToContent = true;
+        if (!roomLinkData) {
+          window.history.replaceState({}, APP_NAME, window.location.origin);
         }
-      : { scene, isExternalScene: false };
-  }
-  return { scene: null, isExternalScene: false };
+        return {
+            scene,
+            isExternalScene: true,
+            id: jsonBackendMatch ? jsonBackendMatch[1] : null,
+            key: jsonBackendMatch ? jsonBackendMatch[2] : null
+        };
+      } else {
+        window.history.replaceState({}, APP_NAME, window.location.origin);
+      }
+    }
+
+    return { scene, isExternalScene: false };
 };
 
 const renderTopRightUI = ({
@@ -564,6 +538,7 @@ const ExcalidrawWrapper = ({
   onLoginSuccess: () => void;
   onLogoutSuccess: () => void;
 }) => {
+  const isInitializedRef = useRef(false);
   const [isBoardListDialogOpen, setIsBoardListDialogOpen] = useState(false);
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
 
@@ -661,7 +636,7 @@ const ExcalidrawWrapper = ({
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
 
-  const { isCollaborating, updateBoard } = useCollaboration(
+  const { collaborationStatus } = useCollaboration(
     excalidrawAPI,
     selectedBoardId,
   );
@@ -694,6 +669,11 @@ const ExcalidrawWrapper = ({
   const [, forceRefresh] = useState(false);
 
   useEffect(() => {
+    // REC-01: Idempotency guard
+    if (isInitializedRef.current) {
+      return;
+    }
+    isInitializedRef.current = true;
     if (!excalidrawAPI) {
       return;
     }
@@ -748,8 +728,6 @@ const ExcalidrawWrapper = ({
     appState: AppState,
     files: BinaryFiles,
   ) => {
-    updateBoard(elements);
-
     // old collab logic removed
 
     // this check is redundant, but since this is a hot path, it's best
@@ -1047,7 +1025,7 @@ const ExcalidrawWrapper = ({
             handleLogout,
             onLoginClick,
             excalidrawAPI,
-            isCollaborating,
+            isCollaborating: collaborationStatus === 'connected',
           });
         }}
         onLinkOpen={(element, event) => {

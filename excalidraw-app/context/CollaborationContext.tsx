@@ -2,8 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { SocketIOProvider } from "y-socket.io";
 import * as Y from "yjs";
 
-// HINWEIS: Die URL sollte später aus einer .env-Datei kommen.
-const WEBSOCKET_URL = import.meta.env.VITE_APP_WS_URL || "ws://localhost:1234";
+const WEBSOCKET_URL =
+  import.meta.env.VITE_APP_WS_URL || "wss://api.alpha.gamifyboard.com";
 
 interface CollaborationContextType {
   doc: Y.Doc;
@@ -21,9 +21,8 @@ export const CollaborationProvider: React.FC<{ children: React.ReactNode }> = ({
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const roomName = "default-room";
-    const newProvider = new SocketIOProvider(WEBSOCKET_URL, roomName, doc, {
-      autoConnect: true,
+    const newProvider = new SocketIOProvider(WEBSOCKET_URL, "", doc, {
+      autoConnect: false, // SEHR WICHTIG
     });
 
     const onStatus = ({ status }: { status: string }) => {
@@ -34,7 +33,7 @@ export const CollaborationProvider: React.FC<{ children: React.ReactNode }> = ({
     newProvider.on("status", onStatus);
     setProvider(newProvider);
 
-    console.log("Yjs provider created for room:", roomName);
+    console.log("Yjs provider created but not connected yet.");
 
     return () => {
       console.log("Destroying Yjs provider.");
