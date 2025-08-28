@@ -397,6 +397,7 @@ const initializeScene = async (opts: {
             ...(board.board_data.appState || {}),
             showWelcomeScreen: false,
             openDialog: null,
+            isLoading: false,
           };
           const scene = {
             elements: board.board_data.elements || [],
@@ -478,6 +479,13 @@ const initializeScene = async (opts: {
       }
     }
 
+    if (!isExternalScene && scene.appState.isLoading) {
+      scene = {
+        ...scene,
+        appState: { ...scene.appState, isLoading: false },
+      };
+    }
+
     return { scene, isExternalScene: false };
 };
 
@@ -539,8 +547,9 @@ const ExcalidrawWrapper = ({
   onLogoutSuccess: () => void;
 }) => {
   const isInitializedRef = useRef(false);
-  const [isBoardListDialogOpen, setIsBoardListDialogOpen] = useState(false);
+  const [isBoardListDialogOpen, setIsBoardListDialogOpen] = useState(true);
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
+  console.log("[ExcalidrawWrapper] selectedBoardId (on render):", selectedBoardId); // NEU: Log hinzufügen
 
   const onLoadBoard = (boardId: string) => {
     setSelectedBoardId(boardId);
@@ -615,13 +624,7 @@ const ExcalidrawWrapper = ({
   // initial state
   // ---------------------------------------------------------------------------
 
-  const initialStatePromiseRef = useRef<{
-    promise: ResolvablePromise<ExcalidrawInitialDataState | null>;
-  }>({ promise: null! });
-  if (!initialStatePromiseRef.current.promise) {
-    initialStatePromiseRef.current.promise =
-      resolvablePromise<ExcalidrawInitialDataState | null>();
-  }
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const debugCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -636,7 +639,7 @@ const ExcalidrawWrapper = ({
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
 
-  const { collaborationStatus } = useCollaboration(
+  const { collaborationStatus, onPointerUpdate } = useCollaboration(
     excalidrawAPI,
     selectedBoardId,
   );
@@ -669,34 +672,14 @@ const ExcalidrawWrapper = ({
   const [, forceRefresh] = useState(false);
 
   useEffect(() => {
-    // REC-01: Idempotency guard
-    if (isInitializedRef.current) {
+    // This effect is now primarily for initializing the collaboration connection.
+    // The actual scene update is handled by the Yjs binding.
+    if (!excalidrawAPI || isInitialized) {
       return;
     }
-    isInitializedRef.current = true;
-    if (!excalidrawAPI) {
-      return;
-    }
-
-    initializeScene({
-      excalidrawAPI,
-      selectedBoardId,
-      token: accessToken,
-    }).then(async (data) => {
-      if (isInitialLoadRef.current) {
-        initialStatePromiseRef.current.promise.resolve(data.scene);
-        isInitialLoadRef.current = false;
-      } else {
-        if (data.scene) {
-          excalidrawAPI.updateScene({
-            ...data.scene,
-            ...restore(data.scene, null, null, { repairBindings: true }),
-            captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-          });
-        }
-      }
-    });
-  }, [excalidrawAPI, selectedBoardId, accessToken]);
+    // We only set this to true once, to prevent re-initialization.
+    setIsInitialized(true);
+  }, [excalidrawAPI, isInitialized]);
 
   useEffect(() => {
     const unloadHandler = (event: BeforeUnloadEvent) => {
@@ -962,13 +945,14 @@ const ExcalidrawWrapper = ({
             setSelectedElement(null);
           }
         }}
+        onPointerUpdate={onPointerUpdate}
         onPointerUp={() => {
           // Trigger the check after user interaction
           if (excalidrawAPI) {
             checkGameState(excalidrawAPI, excalidrawAPI.getSceneElements());
           }
         }}
-        initialData={initialStatePromiseRef.current.promise}
+        
         UIOptions={{
           canvasActions: {
             toggleTheme: true,

@@ -1,11 +1,10 @@
-    import * as Y from "yjs";
+import * as Y from "yjs";
     import { io, Socket } from "socket.io-client";
     import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from "y-protocols/awareness";
     import { ExcalidrawBinding } from "@ndy-onl/y-excalidraw";
     import { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
-    // Definiert die möglichen Zustände unserer Verbindung für eine saubere UI-Integration
-    export type CollaborationStatus = "connecting" | "connected" | "disconnected" | "error:auth" | "error:connection";
+    export type CollaborationStatus = "connecting" | "connected" | "disconnected";
 
     export class GamifyCollaboration {
       private ydoc: Y.Doc;
@@ -33,15 +32,13 @@
 
       public start = (boardId: string) => {
         const wsUrl = import.meta.env.VITE_APP_WS_URL || this.backendUrl;
-        this.onStatusChange?.('connecting');
-
         this.socket = io(wsUrl, {
           auth: { token: this.token },
         });
 
         this.socket.on("connect", () => {
           this.onStatusChange?.('connected');
-          console.log("Socket connected, joining board...");
+          console.log("Socket connected, joining board via custom event 'yjs:join'...");
           this.socket?.emit("yjs:join", boardId);
         });
 
@@ -50,19 +47,12 @@
           console.log("Socket disconnected.");
         });
 
-        this.socket.on("connect_error", (err: Error) => {
-            console.error("Connection Error:", err.message);
-            if (err.message.includes("authentication error")) {
-                this.socket?.disconnect();
-                this.onStatusChange?.('error:auth');
-            } else {
-                this.onStatusChange?.('error:connection');
-            }
-        });
-
-        // Sync Document State
+        // Step 1: Server sends the initial state via custom event 'yjs:sync'
         this.socket.on("yjs:sync", (initialState: Uint8Array) => {
+          console.log("Received initial sync from server.");
           Y.applyUpdate(this.ydoc, new Uint8Array(initialState), this);
+
+          // Step 2: Once synced, create the binding to Excalidraw
           this.binding = new ExcalidrawBinding(
             this.ydoc.getArray("elements"),
             this.ydoc.getMap("assets"),
@@ -71,30 +61,41 @@
           );
         });
 
-        this.socket.on("yjs:update", (update: Uint8Array) => {
-          Y.applyUpdate(this.ydoc, new Uint8Array(update), this);
+        // Step 3: Listen for further document updates from the server
+        this.socket.on("yjs:update", (message: { traceId: string, payload: Uint8Array }) => {
+          const update = new Uint8Array(message.payload); // NEU: Payload extrahieren
+          console.log(`[CLIENT] [${message.traceId}] Received document update from server. Size: ${update.byteLength} bytes.`); // NEU: Trace-ID loggen
+          Y.applyUpdate(this.ydoc, update, this);
         });
 
+        // Step 4: Listen for local document changes and send them to the server
         this.ydoc.on("update", (update: Uint8Array, origin: any) => {
-          if (origin !== this) {
-            this.socket?.emit("yjs:update", update);
+          if (origin !== this) { // 'this' is the origin for remote changes
+            const traceId = Math.random().toString(36).substring(2, 15); // NEU: Trace-ID generieren
+            console.log(`[CLIENT] [${traceId}] Sending document update to server. Size: ${update.byteLength} bytes.`);
+            this.socket?.emit("yjs:update", { traceId: traceId, payload: update }); // NEU: Objekt senden
           }
         });
 
-        // Sync Awareness State
-        this.socket.on("yjs:awareness", (update: Uint8Array) => {
-            applyAwarenessUpdate(this.awareness, new Uint8Array(update), this);
+        // --- AWARENESS PROTOCOL ---
+        // Listen for awareness updates from the server
+        this.socket.on("yjs:awareness", (message: { traceId: string, payload: Uint8Array }) => {
+            const update = new Uint8Array(message.payload); // NEU: Payload extrahieren
+            console.log(`[CLIENT] [${message.traceId}] Received awareness update from server.`); // NEU: Trace-ID loggen
+            applyAwarenessUpdate(this.awareness, update, this);
         });
 
+        // Listen for local awareness changes and send them to the server
         this.awareness.on('update', (changes: any, origin: any) => {
             if (origin === 'local') {
                 const awarenessUpdate = encodeAwarenessUpdate(this.awareness, [this.awareness.clientID]);
-                this.socket?.emit("yjs:awareness", awarenessUpdate);
+                const traceId = Math.random().toString(36).substring(2, 15); // NEU: Trace-ID generieren
+                console.log(`[CLIENT] [${traceId}] Sending awareness update to server.`);
+                this.socket?.emit("yjs:awareness", { traceId: traceId, payload: awarenessUpdate }); // NEU: Objekt senden
             }
         });
       };
 
-      // Wird von der Excalidraw UI aufgerufen, um Mauszeiger-Positionen zu teilen
       public onPointerUpdate = (payload: any) => {
         this.awareness.setLocalStateField("pointer", payload.pointer);
         this.awareness.setLocalStateField("button", payload.button);
