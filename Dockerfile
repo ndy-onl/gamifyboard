@@ -8,7 +8,7 @@ ARG VITE_APP_API_URL
 ENV VITE_APP_API_URL=$VITE_APP_API_URL
 
 # Install git
-RUN apk add --no-cache git
+RUN apk add --no-cache git openssh-client
 
 # Copy package.json and yarn.lock from root
 COPY package.json yarn.lock ./
