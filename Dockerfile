@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.4
+
 FROM node:18-alpine as builder
 
 WORKDIR /app
@@ -9,6 +11,9 @@ ENV VITE_APP_API_URL=$VITE_APP_API_URL
 
 # Install git
 RUN apk add --no-cache git openssh-client
+
+# Create .ssh directory and add github.com to known_hosts
+RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 # Copy package.json and yarn.lock from root
 COPY package.json yarn.lock ./
@@ -27,12 +32,7 @@ COPY scripts scripts
 COPY public public
 
 # Install dependencies in the root and then in excalidraw-app, and run build
-RUN yarn install --frozen-lockfile && \
-    yarn build:packages && \
-    cd excalidraw-app && \
-    yarn install --frozen-lockfile && \
-    VITE_APP_GIT_SHA=$SOURCE_COMMIT VITE_APP_ENABLE_TRACKING=false VITE_APP_ENABLE_ESLINT=false VITE_APP_API_URL=$VITE_APP_API_URL yarn build:app && \
-    yarn build:version
+RUN --mount=type=ssh yarn install --frozen-lockfile &&     yarn build:packages &&     cd excalidraw-app &&     yarn install --frozen-lockfile &&     VITE_APP_GIT_SHA=$SOURCE_COMMIT VITE_APP_ENABLE_TRACKING=false VITE_APP_ENABLE_ESLINT=false VITE_APP_API_URL=$VITE_APP_API_URL yarn build:app &&     yarn build:version
 
 # Stage 2: Serve the application with Nginx
 FROM nginx:alpine
