@@ -47,18 +47,21 @@ import * as Y from "yjs";
           console.log("Socket disconnected.");
         });
 
-        // Step 1: Server sends the initial state via custom event 'yjs:sync'
         this.socket.on("yjs:sync", (initialState: Uint8Array) => {
           console.log("Received initial sync from server.");
-          Y.applyUpdate(this.ydoc, new Uint8Array(initialState), this);
 
-          // Step 2: Once synced, create the binding to Excalidraw
-          this.binding = new ExcalidrawBinding(
-            this.ydoc.getArray("elements"),
-            this.ydoc.getMap("assets"),
-            this.excalidrawAPI,
-            this.awareness
-          );
+          // Step 1: Create the binding to Excalidraw FIRST, if it doesn't exist
+          if (!this.binding) {
+            this.binding = new ExcalidrawBinding(
+              this.ydoc.getArray("elements"),
+              this.ydoc.getMap("assets"),
+              this.excalidrawAPI,
+              this.awareness
+            );
+          }
+
+          // Step 2: Then apply the update from the server
+          Y.applyUpdate(this.ydoc, new Uint8Array(initialState), this);
         });
 
         // Step 3: Listen for further document updates from the server

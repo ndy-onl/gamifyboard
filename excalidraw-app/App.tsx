@@ -547,7 +547,7 @@ const ExcalidrawWrapper = ({
   onLogoutSuccess: () => void;
 }) => {
   const isInitializedRef = useRef(false);
-  const [isBoardListDialogOpen, setIsBoardListDialogOpen] = useState(true);
+  const [isBoardListDialogOpen, setIsBoardListDialogOpen] = useState(false);
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
   console.log("[ExcalidrawWrapper] selectedBoardId (on render):", selectedBoardId); // NEU: Log hinzufügen
 
@@ -669,6 +669,15 @@ const ExcalidrawWrapper = ({
     migrationAdapter: LibraryLocalStorageMigrationAdapter,
   });
 
+  useEffect(() => {
+    // This effect runs once on mount to handle loading from a URL.
+    const searchParams = new URLSearchParams(window.location.search);
+    const id = searchParams.get("id");
+    if (id) {
+      setSelectedBoardId(id);
+    }
+  }, []); // Empty dependency array ensures it runs only once.
+
   const [, forceRefresh] = useState(false);
 
   useEffect(() => {
@@ -760,43 +769,39 @@ const ExcalidrawWrapper = ({
     null,
   );
 
-  const onExportToBackend = async (
-    exportedElements: readonly NonDeletedExcalidrawElement[],
+  const onShareAndCollaborate = async (
+    elements: readonly NonDeletedExcalidrawElement[],
     appState: Partial<AppState>,
     files: BinaryFiles,
   ) => {
-    if (exportedElements.length === 0) {
+    const boardName = appState.name || "Untitled";
+    if (elements.length === 0) {
       throw new Error(t("alerts.cannotExportEmptyCanvas"));
     }
     try {
-      const { url, errorMessage } = await exportToBackend(
-        exportedElements,
-        {
-          ...appState,
-          viewBackgroundColor: appState.exportBackground
-            ? appState.viewBackgroundColor
-            : getDefaultAppState().viewBackgroundColor,
-        },
-        files,
-      );
+      // 1. Create a new board in the backend with the current scene data
+      const response = await createBoard(boardName, { elements, appState, files });
+      const newBoard = response.data;
 
-      if (errorMessage) {
-        throw new Error(errorMessage);
+      if (!newBoard || !newBoard.id) {
+        throw new Error("Failed to create a new board or receive a board ID.");
       }
 
-      if (url) {
-        setLatestShareableLink(url);
-      }
+      // 2. Create the shareable link
+      const url = `${window.location.origin}${window.location.pathname}?id=${newBoard.id}`;
+      setLatestShareableLink(url);
+
+      // 3. Set the current session to use the new board ID for collaboration
+      setSelectedBoardId(newBoard.id);
+
+      // 4. (Optional) Update the URL in the browser bar without reloading
+      window.history.pushState({}, "", url);
+
     } catch (error: any) {
-      if (error.name !== "AbortError") {
-        const { width, height } = appState;
-        console.error(error, {
-          width,
-          height,
-          devicePixelRatio: window.devicePixelRatio,
-        });
-        throw new Error(error.message);
-      }
+      console.error("Failed to share and collaborate:", error);
+      // Optionally, set an error message to display in the UI
+      // setErrorMessage(error.message);
+      throw new Error("Failed to create a shareable link. Please try again.");
     }
   };
 
@@ -958,7 +963,7 @@ const ExcalidrawWrapper = ({
             toggleTheme: true,
             saveToActiveFile: false,
             export: {
-              onExportToBackend,
+              onExportToBackend: onShareAndCollaborate,
               renderCustomUI: (elements, appState, files) => {
                 if (!excalidrawAPI) {
                   return null;
@@ -1076,7 +1081,7 @@ const ExcalidrawWrapper = ({
 
         <TTDDialogTrigger />
         {shareDialogState.isOpen && (
-          <ShareDialog onExportToBackend={onExportToBackend} excalidrawAPI={excalidrawAPI} />
+          <ShareDialog onExportToBackend={onShareAndCollaborate} excalidrawAPI={excalidrawAPI} />
         )}
         
         {latestShareableLink && (
