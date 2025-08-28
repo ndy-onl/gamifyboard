@@ -566,9 +566,14 @@ const ExcalidrawWrapper = ({
 
       if (board && board.board_data) {
         // 3. Restore the scene with the fetched data
+        const restoredAppState = restoreAppState(board.board_data.appState || {}, null);
+        // Ensure collaborators is a valid Map, as the backend might return null.
+        if (!(restoredAppState.collaborators instanceof Map)) {
+          restoredAppState.collaborators = new Map();
+        }
         const scene = {
           elements: board.board_data.elements || [],
-          appState: restoreAppState(board.board_data.appState || {}, null),
+          appState: restoredAppState,
           files: board.board_data.files || {},
           scrollToContent: true,
         };
