@@ -12,8 +12,8 @@ export const refreshToken = () => {
   return apiClient.post('/auth/refresh');
 };
 
-export const createBoard = (name, data) => {
-  return apiClient.post('/boards', { name, board_data: data });
+export const createBoard = (name, boardData, yjsData) => {
+  return apiClient.post('/boards', { name, board_data: boardData, yjs_data: yjsData });
 };
 
 export const getBoards = () => {

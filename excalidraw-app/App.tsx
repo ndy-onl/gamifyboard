@@ -162,6 +162,7 @@ import { ToolButton } from "@excalidraw/excalidraw/components/ToolButton";
 import { saveAs } from "@excalidraw/excalidraw/components/icons";
 import { createBoard } from "./src/api";
 import { useCollaboration } from "./hooks/useCollaboration";
+import * as Y from "yjs";
 
 const SaveToProDialog = ({
   excalidrawAPI,
@@ -831,31 +832,39 @@ const ExcalidrawWrapper = ({
       throw new Error(t("alerts.cannotExportEmptyCanvas"));
     }
     try {
-      // 1. Create a new board in the backend with the current scene data
-      const response = await createBoard(boardName, { elements, appState, files });
+      // 1. Generate yjs_data from the current scene elements
+      const tempYDoc = new Y.Doc();
+      const yElements = tempYDoc.getArray("elements");
+      // Deep copy elements to avoid potential mutations of the original state
+      yElements.insert(0, JSON.parse(JSON.stringify(elements)));
+      const yjsData = Y.encodeStateAsUpdate(tempYDoc);
+      // Convert Uint8Array to a plain array of numbers for JSON serialization
+      const yjsDataAsArray = Array.from(yjsData);
+
+      // 2. Create a new board in the backend with both data formats
+      const boardData = { elements, appState, files };
+      const response = await createBoard(boardName, boardData, yjsDataAsArray);
       const newBoard = response.data;
 
       if (!newBoard || !newBoard.id) {
         throw new Error("Failed to create a new board or receive a board ID.");
       }
 
-      // 2. Create the shareable link
+      // 3. Create the shareable link
       const url = `${window.location.origin}${window.location.pathname}?id=${newBoard.id}`;
       setLatestShareableLink(url);
 
-      // 3. Set the current session to use the new board ID for collaboration
+      // 4. Set the current session to use the new board ID for collaboration
       setSelectedBoardId(newBoard.id);
 
-      // 4. (Optional) Update the URL in the browser bar without reloading
+      // 5. Update the URL in the browser bar without reloading
       window.history.pushState({}, "", url);
 
-      // 5. Immediately update the scene to prevent a flicker/blank screen
-      excalidrawAPI.updateScene({ elements, appState, files });
+      // Clean up temporary Yjs doc
+      tempYDoc.destroy();
 
     } catch (error: any) {
       console.error("Failed to share and collaborate:", error);
-      // Optionally, set an error message to display in the UI
-      // setErrorMessage(error.message);
       throw new Error("Failed to create a shareable link. Please try again.");
     }
   };
