@@ -549,11 +549,39 @@ const ExcalidrawWrapper = ({
   const isInitializedRef = useRef(false);
   const [isBoardListDialogOpen, setIsBoardListDialogOpen] = useState(false);
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
-  console.log("[ExcalidrawWrapper] selectedBoardId (on render):", selectedBoardId); // NEU: Log hinzufügen
 
-  const onLoadBoard = (boardId: string) => {
-    setSelectedBoardId(boardId);
-    setIsBoardListDialogOpen(false);
+  const onLoadBoard = async (boardId: string) => {
+    if (!excalidrawAPI) {
+      console.error("Excalidraw API not available.");
+      setErrorMessage("Excalidraw API not available. Cannot load board.");
+      return;
+    }
+    try {
+      // 1. End any active collaboration session by resetting the boardId
+      setSelectedBoardId(null);
+
+      // 2. Fetch the private board data from the REST API
+      const response = await getBoard(boardId);
+      const board = response.data;
+
+      if (board && board.board_data) {
+        // 3. Restore the scene with the fetched data
+        const scene = {
+          elements: board.board_data.elements || [],
+          appState: restoreAppState(board.board_data.appState || {}, null),
+          files: board.board_data.files || {},
+          scrollToContent: true,
+        };
+        excalidrawAPI.updateScene(scene);
+        excalidrawAPI.setToast({ message: `Loaded board: ${board.name}` });
+      } else {
+        throw new Error("Board data is invalid or empty.");
+      }
+      setIsBoardListDialogOpen(false); // Close the dialog on success
+    } catch (error: any) {
+      console.error("Failed to load board:", error);
+      setErrorMessage(`Error loading board: ${error.message}`);
+    }
   };
 
   const handleLoadFromFile = () => {
@@ -587,7 +615,6 @@ const ExcalidrawWrapper = ({
     useState<NonDeletedExcalidrawElement | null>(null);
   const { isLoggedIn, user, accessToken } = useAtomValue(authStatusAtom); // NEU: authStatusAtom verwenden
   const setLogoutAction = useSetAtom(logoutActionAtom); // NEU: setLogoutAction verwenden
-  console.log("Auth Access Token:", accessToken); // Neuen accessToken verwenden
 
   const handleLogout = async () => {
     await setLogoutAction(onLogoutSuccess); // handleLogoutSuccess HIER HINZUFÜGEN
@@ -681,13 +708,33 @@ const ExcalidrawWrapper = ({
   const [, forceRefresh] = useState(false);
 
   useEffect(() => {
-    // This effect is now primarily for initializing the collaboration connection.
-    // The actual scene update is handled by the Yjs binding.
     if (!excalidrawAPI || isInitialized) {
       return;
     }
-    // We only set this to true once, to prevent re-initialization.
-    setIsInitialized(true);
+
+    const initialize = async () => {
+      // Check if a board is being loaded from URL. If so, do nothing here.
+      // The collaboration hook will handle it.
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.has("id")) {
+        setIsInitialized(true);
+        return;
+      }
+
+      // If not loading from URL, load from local storage.
+      const localDataState = importFromLocalStorage();
+      const scene = await loadScene(null, null, localDataState);
+
+      // Ensure isLoading is false after loading from local storage
+      if (scene.appState?.isLoading) {
+        scene.appState.isLoading = false;
+      }
+
+      excalidrawAPI.updateScene(scene);
+      setIsInitialized(true);
+    };
+
+    initialize();
   }, [excalidrawAPI, isInitialized]);
 
   useEffect(() => {
@@ -796,6 +843,9 @@ const ExcalidrawWrapper = ({
 
       // 4. (Optional) Update the URL in the browser bar without reloading
       window.history.pushState({}, "", url);
+
+      // 5. Immediately update the scene to prevent a flicker/blank screen
+      excalidrawAPI.updateScene({ elements, appState, files });
 
     } catch (error: any) {
       console.error("Failed to share and collaborate:", error);

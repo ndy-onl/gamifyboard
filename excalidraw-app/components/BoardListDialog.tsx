@@ -32,7 +32,9 @@ export const BoardListDialog = ({
     if (window.confirm("Are you sure you want to delete this board?")) {
       try {
         await deleteBoard(boardId);
-        fetchBoards(); // Refresh the board list
+        // Optimistic UI update: remove the board from the local state
+        // without needing to re-fetch the entire list.
+        setBoards((prevBoards) => prevBoards.filter((board) => board.id !== boardId));
       } catch (err: any) {
         setError(err.message);
       }
