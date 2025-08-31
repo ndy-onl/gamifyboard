@@ -1,71 +1,74 @@
-import { renderHook, waitFor } from '@testing-library/react';
-    import { vi } from 'vitest';
-    import { useCollaboration } from '../hooks/useCollaboration';
-    import { GamifyCollaboration } from '../collaboration/GamifyCollaboration';
-    import { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
-    import { useAtomValue } from 'jotai';
-    
+import { renderHook, waitFor } from "@testing-library/react";
+import { vi } from "vitest";
+import { useAtomValue } from "jotai";
+import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import { useCollaboration } from "../hooks/useCollaboration";
+import { GamifyCollaboration } from "../collaboration/GamifyCollaboration";
 
-    // Mocken der GamifyCollaboration Klasse, um Netzwerkaufrufe zu verhindern
-    // und die Methoden zu überwachen.
-    jest.mock(
-      '../collaboration/GamifyCollaboration', () => {
-        // Mocken Sie die Klasse selbst als Jest-Funktion
-        const MockGamifyCollaboration = vi.fn().mockImplementation(() => {
-          // Mocken Sie hier alle Methoden, die im Hook aufgerufen werden
-          return {
-            onStatusChange: vi.fn(),
-            start: vi.fn(),
-            close: vi.fn(),
-            onPointerUpdate: vi.fn(),
-            // Fügen Sie hier weitere Methoden hinzu, die im Hook verwendet werden
-            // z.B. setExcalidrawAPI: vi.fn(), falls es eine solche Methode gibt
-          };
-        });
-        return { GamifyCollaboration: MockGamifyCollaboration };
-      });
+// Mock the entire module containing the class
+vi.mock("../collaboration/GamifyCollaboration");
 
-    vi.mock('jotai', async () => { // Added async
-      // Behalte die Original-Jotai-Funktionen, falls andere verwendet werden
-      const originalModule = await vi.importActual('jotai'); // Changed jest.requireActual to vi.importActual and added await
-      return {
-        __esModule: true, // Wichtig für ES Modules
-        ...originalModule, // Exportiere alle anderen Original-Exporte
-        useAtomValue: vi.fn(), // Changed jest.fn() to vi.fn()
-      };
+// Mock jotai's useAtomValue
+vi.mock("jotai", async () => {
+  const original = await vi.importActual("jotai");
+  return {
+    ...original,
+    useAtomValue: vi.fn(),
+  };
+});
+
+const mockExcalidrawAPI = {} as unknown as ExcalidrawImperativeAPI;
+
+describe("useCollaboration Hook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("should not connect if user is not logged in", () => {
+    // Arrange: Simulate a logged-out user
+    vi.mocked(useAtomValue).mockReturnValue({
+      isLoggedIn: false,
+      accessToken: null,
     });
 
-    const mockExcalidrawAPI = {
-      onPointerUpdate: jest.fn(),
-      // Fügen Sie hier weitere benötigte Mock-Methoden der Excalidraw-API hinzu
-    } as unknown as ExcalidrawImperativeAPI;
+    // Act
+    renderHook(() => useCollaboration(mockExcalidrawAPI, "board-123"));
 
-    test('sollte eine Kollaborations-Instanz erstellen und starten, wenn boardId und accessToken bereitgestellt werden', async () => {
-      // Arrange
-      // Setze den Mock-Wert für useAtomValue
-      vi.mocked(useAtomValue).mockReturnValue({
-        isLoggedIn: true,
-        user: { id: 'test-user', email: 'test@example.com' },
-        accessToken: 'mock-access-token', // Ein gültiger Mock-Token
-      });
+    // Assert
+    expect(GamifyCollaboration).not.toHaveBeenCalled();
+  });
 
-      const initialProps = {
-        excalidrawAPI: mockExcalidrawAPI,
-        boardId: 'board-123',
-      };
-
-      const { result } = renderHook(() => useCollaboration(initialProps.excalidrawAPI, initialProps.boardId));
-
-      // Assert
-      // Warten, bis der Effekt ausgeführt wurde und die Instanz erstellt ist.
-      await waitFor(() => {
-        // Überprüfen, ob der Konstruktor der Klasse aufgerufen wurde.
-        console.log("Type of GamifyCollaboration:", typeof GamifyCollaboration);
-        console.log("Is GamifyCollaboration a mock function?", jest.isMockFunction(GamifyCollaboration));
-        expect(GamifyCollaboration).toHaveBeenCalledTimes(1);
-      });
-
-      // Überprüfen, ob die start-Methode auf der Instanz aufgerufen wurde.
-      const mockInstance = (GamifyCollaboration as jest.Mock).mock.instances[0];
-      expect(mockInstance.start).toHaveBeenCalledWith('board-123');
+  test("should connect and update status if user is logged in", async () => {
+    // Arrange: Simulate a logged-in user
+    vi.mocked(useAtomValue).mockReturnValue({
+      isLoggedIn: true,
+      accessToken: "mock-access-token",
     });
+
+    // Arrange: Mock the class implementation to simulate the hook's behavior
+    const mockStart = vi.fn();
+    const mockInstance = {
+      start: mockStart,
+      close: vi.fn(),
+      onStatusChange: () => {},
+    };
+    vi.mocked(GamifyCollaboration).mockImplementation(() => mockInstance as any);
+
+    // Make the mock `start` function trigger the `onStatusChange` that the hook will set.
+    mockStart.mockImplementation(() => {
+      mockInstance.onStatusChange("connected");
+    });
+
+    // Act
+    const { result } = renderHook(() =>
+      useCollaboration(mockExcalidrawAPI, "board-123"),
+    );
+
+    // Assert
+    await waitFor(() => {
+      expect(result.current.collaborationStatus).toBe("connected");
+    });
+    expect(GamifyCollaboration).toHaveBeenCalledTimes(1);
+    expect(mockStart).toHaveBeenCalledWith("board-123");
+  });
+});

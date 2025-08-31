@@ -3,9 +3,10 @@ import {
   mockBoundingClientRect,
   restoreOriginalGetBoundingClientRect,
 } from "@excalidraw/excalidraw/tests/test-utils";
-import { render } from "./test-utils";
 
 import ExcalidrawApp from "../App";
+
+import { render } from "./test-utils";
 
 describe("Test MobileMenu", () => {
   const { h } = window;

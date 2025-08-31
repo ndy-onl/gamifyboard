@@ -1,22 +1,23 @@
-import React, { useState } from 'react';
-import { registerUser } from '../src/api';
+import React, { useState } from "react";
+
+import { registerUser } from "../src/api";
 
 const RegisterModal = ({ onClose }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     try {
       const response = await registerUser(email, password);
       // TODO: Handle successful registration (e.g., show message, close modal, maybe login)
-      console.log('Registration successful:', response.data);
+      console.log("Registration successful:", response.data);
       onClose();
     } catch (err) {
-      setError('Registration failed. Please try again.');
-      console.error('Registration error:', err);
+      setError("Registration failed. Please try again.");
+      console.error("Registration error:", err);
     }
   };
 

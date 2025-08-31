@@ -1,14 +1,9 @@
 // This file has been intentionally left blank to disable the legacy Firebase integration.
 // All functions are defined as empty shells to prevent import errors in other parts of the application.
 
-import type {
-  ExcalidrawElement,
-  FileId,
-} from "@excalidraw/element/types";
-import type {
-  AppState,
-  BinaryFileData,
-} from "@excalidraw/excalidraw/types";
+import type { ExcalidrawElement, FileId } from "@excalidraw/element/types";
+import type { AppState, BinaryFileData } from "@excalidraw/excalidraw/types";
+
 import type { SyncableExcalidrawElement } from ".";
 import type Portal from "../collab/Portal";
 import type { Socket } from "socket.io-client";
@@ -32,7 +27,7 @@ export const saveFilesToFirebase = async ({
   files: { id: FileId; buffer: Uint8Array }[];
 }) => {
   // Return empty arrays as no files are saved
-  return { savedFiles: [], erroredFiles: files.map(f => f.id) };
+  return { savedFiles: [], erroredFiles: files.map((f) => f.id) };
 };
 
 export const saveToFirebase = async (
@@ -57,5 +52,8 @@ export const loadFilesFromFirebase = async (
   filesIds: readonly FileId[],
 ) => {
   // Return empty arrays as no files can be loaded
-  return { loadedFiles: [], erroredFiles: new Map(filesIds.map(id => [id, true])) };
+  return {
+    loadedFiles: [],
+    erroredFiles: new Map(filesIds.map((id) => [id, true])),
+  };
 };

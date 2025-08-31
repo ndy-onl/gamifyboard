@@ -1,5 +1,4 @@
 import { waitFor, act } from "@testing-library/react";
-import { render } from "./test-utils";
 
 import React from "react";
 
@@ -12,6 +11,8 @@ import type {
 } from "@excalidraw/element/types";
 
 import ExcalidrawApp from "../App";
+
+import { render } from "./test-utils";
 
 const createDefaultElementProps = (
   overrides?: Omit<Partial<ExcalidrawRectangleElement>, "type">,

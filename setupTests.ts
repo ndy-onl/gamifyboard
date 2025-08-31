@@ -126,3 +126,29 @@ console.error = (...args) => {
     _consoleError(...args);
   }
 };
+
+// Mock fetch for the new public board endpoint
+const mockFetch = vi.spyOn(window, 'fetch');
+mockFetch.mockImplementation((url, config) => {
+  if (typeof url === 'string' && url.includes('/api/boards/public/')) {
+    const publicId = url.split('/').pop();
+    const mockBoardData = {
+      id: `board-${publicId}`,
+      publicId: publicId,
+      name: 'Mocked Board',
+      board_data: {
+        elements: [],
+        appState: { isLoading: false },
+        files: {},
+      },
+    };
+    return Promise.resolve(new Response(JSON.stringify(mockBoardData), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+  }
+  
+  // Fallback for any other fetch calls to avoid real network requests in tests
+  console.warn(`Unhandled fetch call in tests: ${url}`);
+  return Promise.resolve(new Response(null, { status: 404, statusText: 'Not Found' }));
+});

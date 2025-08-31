@@ -1,10 +1,11 @@
 import React from "react";
 import { waitFor, act } from "@testing-library/react";
-import { render } from "./test-utils";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 
 import ExcalidrawApp from "../App";
+
+import { render } from "./test-utils";
 
 describe("Gamify Functions", () => {
   it("should allow creating a zone and moving a card into it", async () => {

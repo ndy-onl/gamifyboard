@@ -1,23 +1,27 @@
-import apiClient from './apiClient';
+import apiClient from "./apiClient";
 
 export const registerUser = (username, email, password) => {
-  return apiClient.post('/auth/register', { username, email, password });
+  return apiClient.post("/auth/register", { username, email, password });
 };
 
 export const getProfile = () => {
-  return apiClient.get('/auth/profile');
+  return apiClient.get("/auth/profile");
 };
 
 export const refreshToken = () => {
-  return apiClient.post('/auth/refresh');
+  return apiClient.post("/auth/refresh");
 };
 
 export const createBoard = (name, boardData, yjsData) => {
-  return apiClient.post('/boards', { name, board_data: boardData, yjs_data: yjsData });
+  return apiClient.post("/boards", {
+    name,
+    board_data: boardData,
+    yjs_data: yjsData,
+  });
 };
 
 export const getBoards = () => {
-  return apiClient.get('/boards');
+  return apiClient.get("/boards");
 };
 
 export const getBoard = (id) => {
@@ -34,9 +38,9 @@ export const deleteBoard = (id) => {
 
 export const loginUser = async (email, password) => {
   // Der Interceptor kümmert sich um das Token-Handling.
-  return apiClient.post('/auth/login', { email, password });
+  return apiClient.post("/auth/login", { email, password });
 };
 
 export const logoutUser = () => {
-  return apiClient.post('/auth/logout');
+  return apiClient.post("/auth/logout");
 };

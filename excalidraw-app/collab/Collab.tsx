@@ -1,4 +1,5 @@
 import { atom } from "jotai";
+
 import type { Socket } from "socket.io-client";
 
 export interface CollabAPI {

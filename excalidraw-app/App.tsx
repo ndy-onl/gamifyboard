@@ -1,4 +1,3 @@
-
 import {
   Excalidraw,
   LiveCollaborationTrigger,
@@ -78,7 +77,7 @@ import type {
   UIAppState,
 } from "@excalidraw/excalidraw/types";
 import type { ResolutionType } from "@excalidraw/common/utility-types";
-import type { ResolvablePromise }  from "@excalidraw/common/utils";
+import type { ResolvablePromise } from "@excalidraw/common/utils";
 
 import { GamifyBoardIcon } from "./components/GamifyBoardIcon";
 
@@ -142,26 +141,31 @@ import { AIComponents } from "./components/AI";
 import { ExcalidrawPlusIframeExport } from "./ExcalidrawPlusIframeExport";
 import { PropertiesSidebar } from "./components/PropertiesSidebar";
 import { GamifyToolbar } from "./components/GamifyToolbar";
-import AuthPanel from './components/AuthPanel';
-import LoginModal from './components/LoginModal';
-import RegisterModal from './components/RegisterModal';
-import './components/Modal.scss';
+import AuthPanel from "./components/AuthPanel";
+import LoginModal from "./components/LoginModal";
+import RegisterModal from "./components/RegisterModal";
+import "./components/Modal.scss";
 
 import "./index.scss";
 
-
-
-import Auth from './components/Auth';
-import BoardList from './components/BoardList';
-import { getBoard, getProfile } from './src/api'; // logoutUser wird jetzt von logoutActionAtom behandelt
-import { authStatusAtom, loginActionAtom, logoutActionAtom } from "./state/authAtoms"; // Neue Importe
+import Auth from "./components/Auth";
+import BoardList from "./components/BoardList";
+import { getBoard, getProfile } from "./src/api"; // logoutUser wird jetzt von logoutActionAtom behandelt
+import {
+  authStatusAtom,
+  loginActionAtom,
+  logoutActionAtom,
+} from "./state/authAtoms"; // Neue Importe
 import { BoardListDialog } from "./components/BoardListDialog";
+
 import { actionLoadScene } from "@excalidraw/excalidraw/actions";
 import { Card } from "@excalidraw/excalidraw/components/Card";
 import { ToolButton } from "@excalidraw/excalidraw/components/ToolButton";
 import { saveAs } from "@excalidraw/excalidraw/components/icons";
+
 import { createBoard } from "./src/api";
 import { useCollaboration } from "./hooks/useCollaboration";
+
 import * as Y from "yjs";
 
 const SaveToProDialog = ({
@@ -379,115 +383,127 @@ const initializeScene = async (opts: {
     | { isExternalScene: false; id?: null; key?: null }
   )
 > => {
-    const { excalidrawAPI, selectedBoardId, token } = opts;
+  const { excalidrawAPI, selectedBoardId, token } = opts;
 
-    const searchParams = new URLSearchParams(window.location.search);
-    const id = searchParams.get("id");
-    const jsonBackendMatch = window.location.hash.match(
-      /^#json=([a-zA-Z0-9_-]+),([a-zA-Z0-9_-]+)$/,
-    );
-    const externalUrlMatch = window.location.hash.match(/^#url=(.*)$/);
+  const searchParams = new URLSearchParams(window.location.search);
+  const id = searchParams.get("id");
+  const jsonBackendMatch = window.location.hash.match(
+    /^#json=([a-zA-Z0-9_-]+),([a-zA-Z0-9_-]+)$/,
+  );
+  const externalUrlMatch = window.location.hash.match(/^#url=(.*)$/);
 
-    // Highest priority: Handle collaboration link with an ID.
-    if (id) {
-      try {
-        const response = await getBoard(id, token);
-        const board = response.data;
-        if (board && board.board_data) {
-          const loadedAppState = {
-            ...(board.board_data.appState || {}),
-            showWelcomeScreen: false,
-            openDialog: null,
-            isLoading: false,
-          };
-          const scene = {
-            elements: board.board_data.elements || [],
-            appState: restoreAppState(loadedAppState, null),
-            files: board.board_data.files || {},
-            scrollToContent: true,
-          };
-          if (excalidrawAPI && board.name) {
-            excalidrawAPI.updateScene({ appState: { name: board.name } });
-          }
-          return { scene, isExternalScene: true, id: id, key: null };
-        }
-        // This case should ideally not be reached if getBoard returns valid data
-        return createErrorScene("Board data is invalid.");
+  // Highest priority: Handle collaboration link with an ID.
+  if (id) {
+    try {
+      // Use the new public endpoint which doesn't require authentication
+      const response = await fetch(
+        `${import.meta.env.VITE_APP_API_URL}/api/boards/public/${id}`,
+      );
 
-      } catch (error: any) {
-        console.error("Failed to load board from backend via URL", error);
-
-        // REC-02: Granular error handling
-        const status = error.response?.status;
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: response.statusText }));
+        const status = response.status;
         if (status === 404) {
-          return createErrorScene("The board you are looking for does not exist or has been deleted.");
-        }
-        if (status === 403) {
-          return createErrorScene("You do not have permission to view this board.");
-        }
-        return createErrorScene("Could not load the board. Please check your connection or try again later.");
-      }
-    }
-
-    // --- Fallback logic for non-collaboration scenes ---
-
-    const localDataState = importFromLocalStorage();
-    let scene: RestoredDataState & { scrollToContent?: boolean } = await loadScene(
-      null,
-      null,
-      localDataState,
-    );
-
-    let roomLinkData = getCollaborationLinkData(window.location.href);
-    const isExternalScene = !!(jsonBackendMatch || externalUrlMatch || roomLinkData);
-
-    if (isExternalScene) {
-      if (
-        !scene.elements.length ||
-        roomLinkData ||
-        (await openConfirmModal(shareableLinkConfirmDialog))
-      ) {
-        if (jsonBackendMatch) {
-          scene = await loadScene(
-            jsonBackendMatch[1],
-            jsonBackendMatch[2],
-            localDataState,
+          return createErrorScene(
+            "The board you are looking for does not exist or has been deleted.",
           );
-        } else if (externalUrlMatch) {
-          // REC-03: Security risk - this part needs a separate security audit.
-          // For now, we proceed with the existing logic.
-          const url = window.decodeURIComponent(externalUrlMatch[1]);
-          try {
-            const request = await fetch(url);
-            const data = await loadFromBlob(await request.blob(), null, null);
-            scene = data;
-          } catch (error: any) {
-            return createErrorScene(t("alerts.invalidSceneUrl"));
-          }
         }
-        scene.scrollToContent = true;
-        if (!roomLinkData) {
-          window.history.replaceState({}, APP_NAME, window.location.origin);
-        }
-        return {
-            scene,
-            isExternalScene: true,
-            id: jsonBackendMatch ? jsonBackendMatch[1] : null,
-            key: jsonBackendMatch ? jsonBackendMatch[2] : null
+        throw new Error(
+          errorData.message || `Failed to fetch board with status: ${status}`,
+        );
+      }
+
+      const board = await response.json();
+
+      if (board && board.board_data) {
+        const loadedAppState = {
+          ...(board.board_data.appState || {}),
+          showWelcomeScreen: false,
+          openDialog: null,
+          isLoading: false,
         };
-      } else {
+        const scene = {
+          elements: board.board_data.elements || [],
+          appState: restoreAppState(loadedAppState, null),
+          files: board.board_data.files || {},
+          scrollToContent: true,
+        };
+        if (excalidrawAPI && board.name) {
+          excalidrawAPI.updateScene({ appState: { name: board.name } });
+        }
+        return { scene, isExternalScene: true, id, key: null };
+      }
+      return createErrorScene("Board data is invalid.");
+    } catch (error: any) {
+      console.error("Failed to load board from public endpoint", error);
+      return createErrorScene(
+        error.message ||
+          "Could not load the board. Please check your connection or try again later.",
+      );
+    }
+  }
+
+  // --- Fallback logic for non-collaboration scenes ---
+
+  const localDataState = importFromLocalStorage();
+  let scene: RestoredDataState & { scrollToContent?: boolean } =
+    await loadScene(null, null, localDataState);
+
+  const roomLinkData = getCollaborationLinkData(window.location.href);
+  const isExternalScene = !!(
+    jsonBackendMatch ||
+    externalUrlMatch ||
+    roomLinkData
+  );
+
+  if (isExternalScene) {
+    if (
+      !scene.elements.length ||
+      roomLinkData ||
+      (await openConfirmModal(shareableLinkConfirmDialog))
+    ) {
+      if (jsonBackendMatch) {
+        scene = await loadScene(
+          jsonBackendMatch[1],
+          jsonBackendMatch[2],
+          localDataState,
+        );
+      } else if (externalUrlMatch) {
+        // REC-03: Security risk - this part needs a separate security audit.
+        // For now, we proceed with the existing logic.
+        const url = window.decodeURIComponent(externalUrlMatch[1]);
+        try {
+          const request = await fetch(url);
+          const data = await loadFromBlob(await request.blob(), null, null);
+          scene = data;
+        } catch (error: any) {
+          return createErrorScene(t("alerts.invalidSceneUrl"));
+        }
+      }
+      scene.scrollToContent = true;
+      if (!roomLinkData) {
         window.history.replaceState({}, APP_NAME, window.location.origin);
       }
-    }
-
-    if (!isExternalScene && scene.appState.isLoading) {
-      scene = {
-        ...scene,
-        appState: { ...scene.appState, isLoading: false },
+      return {
+        scene,
+        isExternalScene: true,
+        id: jsonBackendMatch ? jsonBackendMatch[1] : null,
+        key: jsonBackendMatch ? jsonBackendMatch[2] : null,
       };
     }
+    window.history.replaceState({}, APP_NAME, window.location.origin);
+  }
 
-    return { scene, isExternalScene: false };
+  if (!isExternalScene && scene.appState.isLoading) {
+    scene = {
+      ...scene,
+      appState: { ...scene.appState, isLoading: false },
+    };
+  }
+
+  return { scene, isExternalScene: false };
 };
 
 const renderTopRightUI = ({
@@ -514,11 +530,19 @@ const renderTopRightUI = ({
       </button>
       <div style={{ display: "flex", gap: "10px" }}>
         {isLoggedIn || loggedInUiState ? (
-          <button className="excalidraw-button collab-button" onClick={handleLogout} style={{ padding: "8px 16px", width: "54px" }}>
+          <button
+            className="excalidraw-button collab-button"
+            onClick={handleLogout}
+            style={{ padding: "8px 16px", width: "54px" }}
+          >
             Logout
           </button>
         ) : (
-          <button className="excalidraw-button collab-button" onClick={onLoginClick} style={{ padding: "8px 16px", width: "54px" }}>
+          <button
+            className="excalidraw-button collab-button"
+            onClick={onLoginClick}
+            style={{ padding: "8px 16px", width: "54px" }}
+          >
             Login
           </button>
         )}
@@ -527,8 +551,6 @@ const renderTopRightUI = ({
     </div>
   );
 };
-
-
 
 const ExcalidrawWrapper = ({
   setExcalidrawAPI,
@@ -567,7 +589,10 @@ const ExcalidrawWrapper = ({
 
       if (board && board.board_data) {
         // 3. Restore the scene with the fetched data
-        const restoredAppState = restoreAppState(board.board_data.appState || {}, null);
+        const restoredAppState = restoreAppState(
+          board.board_data.appState || {},
+          null,
+        );
         // Ensure collaborators is a valid Map, as the backend might return null.
         if (!(restoredAppState.collaborators instanceof Map)) {
           restoredAppState.collaborators = new Map();
@@ -612,7 +637,10 @@ const ExcalidrawWrapper = ({
       await createBoard(name, { elements, appState /* files */ });
       excalidrawAPI.setToast({ message: "Board saved successfully!" });
     } catch (error: any) {
-      excalidrawAPI.setToast({ message: "Failed to save board.", color: "danger" });
+      excalidrawAPI.setToast({
+        message: "Failed to save board.",
+        color: "danger",
+      });
       console.error(error);
     }
   };
@@ -633,7 +661,10 @@ const ExcalidrawWrapper = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (authPanelRef.current && !authPanelRef.current.contains(event.target as Node)) {
+      if (
+        authPanelRef.current &&
+        !authPanelRef.current.contains(event.target as Node)
+      ) {
         if (authPanelView) {
           setAuthPanelView(null);
         }
@@ -645,8 +676,6 @@ const ExcalidrawWrapper = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [authPanelView, setAuthPanelView]);
-
-  
 
   const { editorTheme, appTheme, setAppTheme } = useHandleAppTheme();
 
@@ -862,7 +891,6 @@ const ExcalidrawWrapper = ({
 
       // Clean up temporary Yjs doc
       tempYDoc.destroy();
-
     } catch (error: any) {
       console.error("Failed to share and collaborate:", error);
       throw new Error("Failed to create a shareable link. Please try again.");
@@ -930,8 +958,6 @@ const ExcalidrawWrapper = ({
     );
   };
 
-  
-
   // onCollabDialogOpen removed
 
   // browsers generally prevent infinite self-embedding, there are
@@ -991,10 +1017,7 @@ const ExcalidrawWrapper = ({
   };
 
   return (
-    <div
-      style={{ height: "100%" }}
-      className="excalidraw-app"
-    >
+    <div style={{ height: "100%" }} className="excalidraw-app">
       <Excalidraw
         excalidrawAPI={excalidrawRefCallback}
         onChange={(elements, appState, files) => {
@@ -1021,7 +1044,6 @@ const ExcalidrawWrapper = ({
             checkGameState(excalidrawAPI, excalidrawAPI.getSceneElements());
           }
         }}
-        
         UIOptions={{
           canvasActions: {
             toggleTheme: true,
@@ -1078,7 +1100,7 @@ const ExcalidrawWrapper = ({
             handleLogout,
             onLoginClick,
             excalidrawAPI,
-            isCollaborating: collaborationStatus === 'connected',
+            isCollaborating: collaborationStatus === "connected",
           });
         }}
         onLinkOpen={(element, event) => {
@@ -1102,7 +1124,7 @@ const ExcalidrawWrapper = ({
             onLoginSuccess={onLoginSuccess}
           />
         )}
-                {isBoardListDialogOpen && (
+        {isBoardListDialogOpen && (
           <BoardListDialog
             onClose={() => setIsBoardListDialogOpen(false)}
             onLoadBoard={onLoadBoard}
@@ -1117,9 +1139,7 @@ const ExcalidrawWrapper = ({
           onOpenBoardListDialog={() => setIsBoardListDialogOpen(true)}
           onSaveToCloud={handleSaveToCloud}
         />
-        <AppWelcomeScreen
-          isCollabEnabled={!isCollabDisabled}
-        />
+        <AppWelcomeScreen isCollabEnabled={!isCollabDisabled} />
         <OverwriteConfirmDialog>
           <OverwriteConfirmDialog.Actions.ExportToImage />
           <OverwriteConfirmDialog.Actions.SaveToDisk />
@@ -1145,9 +1165,12 @@ const ExcalidrawWrapper = ({
 
         <TTDDialogTrigger />
         {shareDialogState.isOpen && (
-          <ShareDialog onExportToBackend={onShareAndCollaborate} excalidrawAPI={excalidrawAPI} />
+          <ShareDialog
+            onExportToBackend={onShareAndCollaborate}
+            excalidrawAPI={excalidrawAPI}
+          />
         )}
-        
+
         {latestShareableLink && (
           <ShareableLinkDialog
             link={latestShareableLink}
@@ -1155,9 +1178,6 @@ const ExcalidrawWrapper = ({
             setErrorMessage={setErrorMessage}
           />
         )}
-        
-
-        
 
         {errorMessage && (
           <ErrorDialog onClose={() => setErrorMessage("")}>
@@ -1257,67 +1277,72 @@ export type AppRef = {
   checkGameState: (elements: readonly any[]) => void;
 };
 
-const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props, ref) => {
-  const [excalidrawAPI, _setExcalidrawAPI] =
-    useState<ExcalidrawImperativeAPI | null>(null);
+const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void }>(
+  (_props, ref) => {
+    const [excalidrawAPI, _setExcalidrawAPI] =
+      useState<ExcalidrawImperativeAPI | null>(null);
 
-  const [authPanelView, setAuthPanelView] = useState<"login" | "register" | null>(null);
+    const [authPanelView, setAuthPanelView] = useState<
+      "login" | "register" | null
+    >(null);
 
-  const [wrapperKey, setWrapperKey] = useState(0); // NEW: State to force ExcalidrawWrapper re-render
+    const [wrapperKey, setWrapperKey] = useState(0); // NEW: State to force ExcalidrawWrapper re-render
 
-  const handleLoginSuccess = useCallback(() => { // In ExcalidrawApp-Scope definiert
-    setWrapperKey(prev => prev + 1);
-  }, []);
+    const handleLoginSuccess = useCallback(() => {
+      // In ExcalidrawApp-Scope definiert
+      setWrapperKey((prev) => prev + 1);
+    }, []);
 
-  const handleLogoutSuccessInApp = useCallback(() => {
-    setWrapperKey(prev => prev + 1);
-  }, []);
+    const handleLogoutSuccessInApp = useCallback(() => {
+      setWrapperKey((prev) => prev + 1);
+    }, []);
 
-  const setExcalidrawAPI = useCallback((api: ExcalidrawImperativeAPI) => {
-    _setExcalidrawAPI(api);
-  }, []);
+    const setExcalidrawAPI = useCallback((api: ExcalidrawImperativeAPI) => {
+      _setExcalidrawAPI(api);
+    }, []);
 
-  useImperativeHandle(ref, () => ({
-    excalidrawAPI,
-    checkGameState: (elements: readonly any[]) =>
-      excalidrawAPI && checkGameState(excalidrawAPI, elements),
-  }));
+    useImperativeHandle(ref, () => ({
+      excalidrawAPI,
+      checkGameState: (elements: readonly any[]) =>
+        excalidrawAPI && checkGameState(excalidrawAPI, elements),
+    }));
 
-  useEffect(() => {
-    if (process.env.NODE_ENV === "test") {
-      if (excalidrawAPI) {
-        (window as any).ExcalidrawAPI = excalidrawAPI;
-        (window as any).ExcalidrawHandle = {
-          excalidrawAPI,
-          checkGameState: (elements: readonly any[] | null) =>
-            checkGameState(excalidrawAPI, elements),
-        };
+    useEffect(() => {
+      if (process.env.NODE_ENV === "test") {
+        if (excalidrawAPI) {
+          (window as any).ExcalidrawAPI = excalidrawAPI;
+          (window as any).ExcalidrawHandle = {
+            excalidrawAPI,
+            checkGameState: (elements: readonly any[] | null) =>
+              checkGameState(excalidrawAPI, elements),
+          };
+        }
       }
+    }, [excalidrawAPI]);
+
+    const isCloudExportWindow =
+      window.location.pathname === "/excalidraw-plus-export";
+    if (isCloudExportWindow) {
+      return <ExcalidrawPlusIframeExport />;
     }
-  }, [excalidrawAPI]);
 
-  const isCloudExportWindow =
-    window.location.pathname === "/excalidraw-plus-export";
-  if (isCloudExportWindow) {
-    return <ExcalidrawPlusIframeExport />;
-  }
-
-  return (
-    <TopErrorBoundary>
-      <Provider store={appJotaiStore}>
-        <ExcalidrawWrapper
-          key={wrapperKey} // NEW: Apply key to force re-render
-          setExcalidrawAPI={setExcalidrawAPI}
-          onExcalidrawAPISet={setExcalidrawAPI}
-          onLoginClick={() => setAuthPanelView("login")}
-          authPanelView={authPanelView}
-          setAuthPanelView={setAuthPanelView}
-          onLoginSuccess={handleLoginSuccess} // Keep this
-          onLogoutSuccess={handleLogoutSuccessInApp} // NEW: Pass logout success handler
-        />
-      </Provider>
-    </TopErrorBoundary>
-  );
-});
+    return (
+      <TopErrorBoundary>
+        <Provider store={appJotaiStore}>
+          <ExcalidrawWrapper
+            key={wrapperKey} // NEW: Apply key to force re-render
+            setExcalidrawAPI={setExcalidrawAPI}
+            onExcalidrawAPISet={setExcalidrawAPI}
+            onLoginClick={() => setAuthPanelView("login")}
+            authPanelView={authPanelView}
+            setAuthPanelView={setAuthPanelView}
+            onLoginSuccess={handleLoginSuccess} // Keep this
+            onLogoutSuccess={handleLogoutSuccessInApp} // NEW: Pass logout success handler
+          />
+        </Provider>
+      </TopErrorBoundary>
+    );
+  },
+);
 
 export default ExcalidrawApp;

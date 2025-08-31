@@ -1,10 +1,11 @@
-import { atom } from 'jotai';
-import { atomWithStorage } from 'jotai/utils';
-import { loginUser, logoutUser as apiLogout } from '../src/api';
+import { atom } from "jotai";
+import { atomWithStorage } from "jotai/utils";
+
+import { loginUser, logoutUser as apiLogout } from "../src/api";
 
 interface AuthState {
   accessToken: string;
-  user: { id: string; email: string; };
+  user: { id: string; email: string };
 }
 
 interface Credentials {
@@ -12,7 +13,7 @@ interface Credentials {
   password: string;
 }
 
-export const authAtom = atomWithStorage<AuthState | null>('auth-session', null);
+export const authAtom = atomWithStorage<AuthState | null>("auth-session", null);
 
 export const authStatusAtom = atom((get) => {
   const auth = get(authAtom);
@@ -35,18 +36,21 @@ export const loginActionAtom = atom(
       set(authAtom, null);
       throw error;
     }
-  }
+  },
 );
 
-export const logoutActionAtom = atom(null, async (get, set, onLogoutSuccess?: () => void) => {
-  try {
-    await apiLogout();
-  } catch (error) {
-    console.error("Logout auf dem Backend fehlgeschlagen:", error);
-  } finally {
-    set(authAtom, null);
-    if (onLogoutSuccess) {
-      onLogoutSuccess();
+export const logoutActionAtom = atom(
+  null,
+  async (get, set, onLogoutSuccess?: () => void) => {
+    try {
+      await apiLogout();
+    } catch (error) {
+      console.error("Logout auf dem Backend fehlgeschlagen:", error);
+    } finally {
+      set(authAtom, null);
+      if (onLogoutSuccess) {
+        onLogoutSuccess();
+      }
     }
-  }
-});
+  },
+);

@@ -1,7 +1,4 @@
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
-if (typeof window !== 'undefined') {
-  import('isomorphic-webcrypto');
-}
 import { copyTextToSystemClipboard } from "@excalidraw/excalidraw/clipboard";
 import { Dialog } from "@excalidraw/excalidraw/components/Dialog";
 import { FilledButton } from "@excalidraw/excalidraw/components/FilledButton";
@@ -27,6 +24,11 @@ import { activeRoomLinkAtom, collabAPIAtom } from "../collab/Collab";
 import "./ShareDialog.scss";
 
 import type { CollabAPI } from "../collab/Collab";
+
+import { createBoard } from "../src/api";
+if (typeof window !== "undefined") {
+  import("isomorphic-webcrypto");
+}
 
 type OnExportToBackend = () => void;
 type ShareDialogType = "share" | "collaborationOnly";
@@ -178,8 +180,6 @@ const ActiveRoomDialog = ({
     </>
   );
 };
-
-import { createBoard } from "../src/api";
 
 const ShareDialogPicker = (props: ShareDialogProps) => {
   const { t } = useI18n();

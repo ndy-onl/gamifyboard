@@ -1,22 +1,23 @@
-import React, { useState } from 'react';
-import { loginUser } from '../src/api';
+import React, { useState } from "react";
+
+import { loginUser } from "../src/api";
 
 const LoginModal = ({ onClose, onSwitchToRegister }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     try {
       const response = await loginUser(email, password);
       // TODO: Handle successful login (e.g., save tokens, close modal, update UI)
-      console.log('Login successful:', response.data);
+      console.log("Login successful:", response.data);
       onClose();
     } catch (err) {
-      setError('Login failed. Please check your credentials.');
-      console.error('Login error:', err);
+      setError("Login failed. Please check your credentials.");
+      console.error("Login error:", err);
     }
   };
 

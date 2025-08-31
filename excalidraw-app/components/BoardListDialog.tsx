@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Dialog } from "@excalidraw/excalidraw/components/Dialog";
-import { getBoards, deleteBoard } from "../src/api";
+
 import { ToolButton } from "@excalidraw/excalidraw/components/ToolButton";
+
+import { getBoards, deleteBoard } from "../src/api";
 
 export const BoardListDialog = ({
   onClose,
@@ -34,7 +36,9 @@ export const BoardListDialog = ({
         await deleteBoard(boardId);
         // Optimistic UI update: remove the board from the local state
         // without needing to re-fetch the entire list.
-        setBoards((prevBoards) => prevBoards.filter((board) => board.id !== boardId));
+        setBoards((prevBoards) =>
+          prevBoards.filter((board) => board.id !== boardId),
+        );
       } catch (err: any) {
         setError(err.message);
       }
@@ -44,7 +48,6 @@ export const BoardListDialog = ({
   return (
     <Dialog onCloseRequest={onClose} title="Open">
       <div className="ExportDialog-cards">
-        
         <div className="Card color-pink">
           <h2>Load from GamifyBoard Pro</h2>
           <div className="board-list">
