@@ -93,7 +93,7 @@
     "strip-ansi": "6.0.1"
   },
   "dependencies": {
-    "@ndy-onl/y-excalidraw": "file:./packages/y-excalidraw",
+    "@ndy-onl/y-excalidraw": "git+https://github.com/ndy-onl/y-excalidraw.git",
     "isomorphic-webcrypto": "^2.3.8"
   }
 }
