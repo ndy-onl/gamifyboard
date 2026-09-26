@@ -19,20 +19,25 @@ export const useCollaboration = (
   const providerRef = useRef<SocketIOProvider | null>(null);
 
   useEffect(() => {
-    if (isLoggedIn && accessToken && excalidrawAPI && boardId) {
+    if (excalidrawAPI && boardId) {
       const BACKEND_URL = import.meta.env.DEV
         ? 'https://api.alpha.gamifyboard.com'
         : import.meta.env.VITE_APP_API_URL;
 
       const ydoc = new Y.Doc();
       
+      const authPayload: any = {};
+      if (accessToken) {
+        authPayload.token = accessToken;
+      }
+
       const provider = new SocketIOProvider(
         BACKEND_URL, 
         boardId, 
         ydoc, 
         {
           autoConnect: true,
-          auth: { token: accessToken }
+          auth: authPayload
         }
       );
 

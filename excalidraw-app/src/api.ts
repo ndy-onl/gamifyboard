@@ -18,7 +18,8 @@ export const createBoard = (name, data) => {
   try {
     const ydoc = new Y.Doc();
     const yElements = ydoc.getArray('elements');
-    const mappedElements = data.map(el => {
+    const elementsToMap = data && data.elements ? data.elements : (Array.isArray(data) ? data : []);
+    const mappedElements = elementsToMap.map(el => {
       const ymap = new Y.Map();
       for (const key in el) {
         ymap.set(key, el[key]);
@@ -42,6 +43,10 @@ export const getBoards = () => {
 
 export const getBoard = (id) => {
   return apiClient.get(`/boards/${id}`);
+};
+
+export const getPublicBoard = (id) => {
+  return apiClient.get(`/boards/public/${id}`);
 };
 
 export const updateBoard = (id, name, data) => {

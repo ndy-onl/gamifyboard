@@ -153,7 +153,7 @@ import "./index.scss";
 
 import Auth from './components/Auth';
 import BoardList from './components/BoardList';
-import { getBoard, getProfile } from './src/api'; // logoutUser wird jetzt von logoutActionAtom behandelt
+import { getBoard, getPublicBoard, getProfile } from './src/api'; // logoutUser wird jetzt von logoutActionAtom behandelt
 import { authStatusAtom, loginActionAtom, logoutActionAtom } from "./state/authAtoms"; // Neue Importe
 import { BoardListDialog } from "./components/BoardListDialog";
 import { actionLoadScene } from "@excalidraw/excalidraw/actions";
@@ -391,7 +391,17 @@ const initializeScene = async (opts: {
     // Highest priority: Handle collaboration link with an ID.
     if (id) {
       try {
-        const response = await getBoard(id, token);
+        let response;
+        try {
+          response = await getBoard(id);
+        } catch (authError: any) {
+          if (authError.response?.status === 401 || authError.response?.status === 403) {
+            response = await getPublicBoard(id);
+          } else {
+            throw authError;
+          }
+        }
+        
         const board = response.data;
         if (board && board.board_data) {
           const loadedAppState = {
@@ -1111,6 +1121,8 @@ const ExcalidrawWrapper = ({
         )}
         <AppMainMenu
           isCollabEnabled={!isCollabDisabled}
+          isCollaborating={isCollaborating}
+          onCollabDialogOpen={() => setShareDialogState({ isOpen: true, type: "share" })}
           theme={appTheme}
           setTheme={(theme) => setAppTheme(theme)}
           refresh={() => forceRefresh((prev) => !prev)}
@@ -1119,6 +1131,8 @@ const ExcalidrawWrapper = ({
         />
         <AppWelcomeScreen
           isCollabEnabled={!isCollabDisabled}
+          isCollaborating={isCollaborating}
+          onCollabDialogOpen={() => setShareDialogState({ isOpen: true, type: "share" })}
         />
         <OverwriteConfirmDialog>
           <OverwriteConfirmDialog.Actions.ExportToImage />
