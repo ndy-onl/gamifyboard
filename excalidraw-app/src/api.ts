@@ -51,3 +51,11 @@ export const updateBoard = (id, name, data) => {
 export const deleteBoard = (id) => {
   return apiClient.delete(`/boards/${id}`);
 };
+
+export const loginUser = async (email, password) => {
+  return apiClient.post('/auth/login', { email, password });
+};
+
+export const logoutUser = () => {
+  return apiClient.post('/auth/logout');
+};
