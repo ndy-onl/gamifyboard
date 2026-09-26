@@ -682,7 +682,7 @@ const ExcalidrawWrapper = ({
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
 
-  const { collaborationStatus, onPointerUpdate } = useCollaboration(
+  const { isCollaborating, updateBoard } = useCollaboration(
     excalidrawAPI,
     selectedBoardId,
   );
@@ -1024,7 +1024,6 @@ const ExcalidrawWrapper = ({
             setSelectedElement(null);
           }
         }}
-        onPointerUpdate={onPointerUpdate}
         onPointerUp={() => {
           // Trigger the check after user interaction
           if (excalidrawAPI) {
@@ -1088,7 +1087,7 @@ const ExcalidrawWrapper = ({
             handleLogout,
             onLoginClick,
             excalidrawAPI,
-            isCollaborating: collaborationStatus === 'connected',
+            isCollaborating,
           });
         }}
         onLinkOpen={(element, event) => {
