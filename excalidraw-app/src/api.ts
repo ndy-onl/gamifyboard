@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import * as Y from 'yjs';
 
 export const registerUser = (username, email, password) => {
   return apiClient.post('/auth/register', { username, email, password });
@@ -13,7 +14,26 @@ export const refreshToken = () => {
 };
 
 export const createBoard = (name, data) => {
-  return apiClient.post('/boards', { name, board_data: data });
+  let yjs_data = undefined;
+  try {
+    const ydoc = new Y.Doc();
+    const yElements = ydoc.getArray('elements');
+    const mappedElements = data.map(el => {
+      const ymap = new Y.Map();
+      for (const key in el) {
+        ymap.set(key, el[key]);
+      }
+      return ymap;
+    });
+    yElements.insert(0, mappedElements);
+    
+    // Convert to Array so it can be JSON serialized
+    yjs_data = Array.from(Y.encodeStateAsUpdate(ydoc));
+  } catch (e) {
+    console.error("Failed to generate initial yjs_data", e);
+  }
+
+  return apiClient.post('/boards', { name, board_data: data, yjs_data });
 };
 
 export const getBoards = () => {

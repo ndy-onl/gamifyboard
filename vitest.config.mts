@@ -59,7 +59,7 @@ export default defineConfig({
     sequence: {
       hooks: "parallel",
     },
-    setupFiles: ["./setupTests.ts"],
+    setupFiles: ["./setupTests.ts", "vitest-canvas-mock"],
     globals: true,
     environment: "jsdom",
     coverage: {
