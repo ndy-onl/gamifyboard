@@ -4,7 +4,6 @@ import { nanoid } from "nanoid";
 
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { Card } from "@excalidraw/excalidraw/components/Card";
-import { ToolButton } from "@excalidraw/excalidraw/components/ToolButton";
 import { MIME_TYPES, getFrame } from "@excalidraw/common";
 import {
   encryptData,
@@ -106,12 +105,12 @@ export const ExportToExcalidrawPlus: React.FC<{
       </div>
       <h2>GamifyBoard</h2>
       <div className="Card-details">{t("exportDialog.link_details")}</div>
-      <ToolButton
+      <button
         className="Card-button"
         type="button"
         title={t("exportDialog.excalidrawplus_button")}
         aria-label={t("exportDialog.excalidrawplus_button")}
-        showAriaLabel={true}
+        
         onClick={async () => {
           try {
             trackEvent("export", "eplus", `ui (${getFrame()})`);

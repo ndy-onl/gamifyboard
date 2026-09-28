@@ -279,3 +279,38 @@ export const exportToBackend = async (
     return { url: null, errorMessage };
   }
 };
+
+import { restoreElements, restoreAppState } from "@excalidraw/excalidraw/data/restore";
+const restore = (savedData, localAppState, localElements, opts) => {
+  return {
+    elements: restoreElements(savedData?.elements || localElements || [], localElements, opts),
+    appState: restoreAppState(savedData?.appState || localAppState || {}, localAppState),
+    files: savedData?.files || {}
+  };
+};
+
+export const loadScene = async (
+  id: string | null,
+  privateKey: string | null,
+  localDataState: ImportedDataState | undefined | null,
+) => {
+  let data;
+  if (id != null && privateKey != null) {
+    data = restore(
+      await importFromBackend(id, privateKey),
+      localDataState?.appState,
+      localDataState?.elements,
+      { repairBindings: true, refreshDimensions: false },
+    );
+  } else {
+    data = restore(localDataState || null, null, null, {
+      repairBindings: true,
+    });
+  }
+
+  return {
+    elements: data.elements,
+    appState: data.appState,
+    files: data.files,
+  };
+};

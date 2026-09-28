@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Dialog } from "@excalidraw/excalidraw/components/Dialog";
 import { getBoards, deleteBoard } from "../src/api";
-import { ToolButton } from "@excalidraw/excalidraw/components/ToolButton";
 
 export const BoardListDialog = ({
   onClose,
@@ -53,22 +52,22 @@ export const BoardListDialog = ({
               <div key={board.id} className="board-list-item">
                 <span>{board.name}</span>
                 <div className="board-list-item-buttons">
-                  <ToolButton
+                  <button
                     type="button"
                     title="Load"
                     aria-label="Load"
                     onClick={() => onLoadBoard(board.id)}
                   >
                     Load
-                  </ToolButton>
-                  <ToolButton
+                  </button>
+                  <button
                     type="button"
                     title="Delete"
                     aria-label="Delete"
                     onClick={() => handleDelete(board.id)}
                   >
                     Delete
-                  </ToolButton>
+                  </button>
                 </div>
               </div>
             ))}

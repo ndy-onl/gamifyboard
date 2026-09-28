@@ -158,7 +158,6 @@ import { authStatusAtom, loginActionAtom, logoutActionAtom } from "./state/authA
 import { BoardListDialog } from "./components/BoardListDialog";
 import { actionLoadScene } from "@excalidraw/excalidraw/actions";
 import { Card } from "@excalidraw/excalidraw/components/Card";
-import { ToolButton } from "@excalidraw/excalidraw/components/ToolButton";
 import { saveAs } from "@excalidraw/excalidraw/components/icons";
 import { createBoard } from "./src/api";
 import { useCollaboration } from "./hooks/useCollaboration";
@@ -203,16 +202,16 @@ const SaveToProDialog = ({
         onChange={(e) => setBoardName(e.target.value)}
         placeholder="Board name"
       />
-      <ToolButton
+      <button
         className="Card-button"
         type="button"
         title="Save to GamifyBoard Pro"
         aria-label="Save to GamifyBoard Pro"
-        showAriaLabel={true}
+        
         onClick={onSave}
       >
         Save
-      </ToolButton>
+      </button>
     </Card>
   );
 };
