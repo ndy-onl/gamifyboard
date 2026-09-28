@@ -484,7 +484,7 @@ const drawElementOnCanvas = (
     case "counter": {
       context.lineJoin = "round";
       context.lineCap = "round";
-      rc.draw(ShapeCache.get(element)!);
+      rc.draw(ShapeCache.get(element, null)!);
       const value = element.customData?.value ?? 0;
       const fontSize = element.height * 0.6;
       context.font = getFontString({
