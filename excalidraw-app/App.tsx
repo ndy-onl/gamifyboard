@@ -1009,7 +1009,7 @@ const ExcalidrawWrapper = ({
     >
       <Excalidraw
         onPointerUpdate={onPointerUpdate}
-        excalidrawAPI={excalidrawRefCallback}
+        onExcalidrawAPI={excalidrawRefCallback}
         onChange={(elements, appState, files) => {
           onChange(elements, appState, files);
           if (
