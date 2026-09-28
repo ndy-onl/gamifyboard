@@ -262,6 +262,7 @@ const checkGameState = (
             return {
               ...el,
               customData: { ...el.customData, value: cardsInZone.length },
+              version: (el.version || 0) + 1,
             };
           }
         }
@@ -291,7 +292,7 @@ const checkGameState = (
 
     if (el.backgroundColor !== newBackgroundColor) {
       needsUpdate = true;
-      return { ...el, backgroundColor: newBackgroundColor };
+      return { ...el, backgroundColor: newBackgroundColor, version: (el.version || 0) + 1 };
     }
     return el;
   });
@@ -682,7 +683,7 @@ const ExcalidrawWrapper = ({
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
 
-  const { isCollaborating, updateBoard } = useCollaboration(
+  const { isCollaborating, updateBoard, onPointerUpdate } = useCollaboration(
     excalidrawAPI,
     selectedBoardId,
   );
@@ -899,6 +900,7 @@ const ExcalidrawWrapper = ({
         ...selectedElement,
         type: "counter" as const,
         customData: { ...newCustomData, value: 0 },
+        version: (selectedElement.version || 0) + 1,
       };
       const newSceneElements = [
         ...sceneElements.slice(0, elementIndex),
@@ -914,7 +916,8 @@ const ExcalidrawWrapper = ({
       ...selectedElement,
       customData: newCustomData,
       strokeStyle: (newCustomData.isZone ? "dashed" : "solid") as any,
-      backgroundColor: selectedElement.backgroundColor, // Behalte die aktuelle Farbe bei, checkGameState kümmert sich darum
+      backgroundColor: selectedElement.backgroundColor,
+      version: (selectedElement.version || 0) + 1,
     };
 
     const newSceneElements = [
@@ -1006,6 +1009,7 @@ const ExcalidrawWrapper = ({
       className="excalidraw-app"
     >
       <Excalidraw
+        onPointerUpdate={onPointerUpdate}
         excalidrawAPI={excalidrawRefCallback}
         onChange={(elements, appState, files) => {
           onChange(elements, appState, files);

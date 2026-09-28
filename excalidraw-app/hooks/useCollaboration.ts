@@ -43,6 +43,11 @@ export const useCollaboration = (
 
       providerRef.current = provider;
 
+      provider.awareness.setLocalStateField("user", {
+        name: isLoggedIn ? "User" : "Guest",
+        color: "#" + Math.floor(Math.random()*16777215).toString(16)
+      });
+
       const yElements = ydoc.getArray<Y.Map<any>>('elements');
       const yAssets = ydoc.getMap<any>('assets');
 
@@ -70,9 +75,15 @@ export const useCollaboration = (
     }
   }, [isLoggedIn, accessToken, excalidrawAPI, boardId, setActiveRoomLink]);
 
+  const onPointerUpdate = useCallback((payload: any) => {
+    if (bindingRef.current) {
+      bindingRef.current.onPointerUpdate(payload);
+    }
+  }, []);
+
   const updateBoard = useCallback((elements: readonly any[]) => {
       // No manual updateBoard necessary. y-excalidraw syncs changes automatically.
   }, []);
 
-  return { isCollaborating, updateBoard };
+  return { isCollaborating, updateBoard, onPointerUpdate };
 };
