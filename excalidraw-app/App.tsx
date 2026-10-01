@@ -878,54 +878,84 @@ const ExcalidrawWrapper = ({
     }
   };
 
-  const handleUpdateElement = (updatedData: any) => {
-    if (!excalidrawAPI || !selectedElement) {
+    const handleUpdateElement = (updatedData: any) => {
+    if (!excalidrawAPI || selectedElements.length === 0) {
       return;
     }
 
     const sceneElements = excalidrawAPI.getSceneElements();
-    const elementIndex = sceneElements.findIndex(
-      (el) => el.id === selectedElement.id,
-    );
-    if (elementIndex === -1) {
-      return;
+    let newSceneElements = [...sceneElements];
+    let updatedSelectedElements: any[] = [];
+    
+    let hasChanges = false;
+
+    for (const selectedElement of selectedElements) {
+        const elementIndex = newSceneElements.findIndex((el) => el.id === selectedElement.id);
+        if (elementIndex === -1) continue;
+
+        const newCustomData = { ...selectedElement.customData, ...updatedData };
+
+        if (newCustomData.isCounter && selectedElement.type !== "counter") {
+          const newElement = {
+            ...selectedElement,
+            type: "counter" as const,
+            customData: { ...newCustomData, value: 0 },
+            version: (selectedElement.version || 0) + 1,
+          };
+          newSceneElements[elementIndex] = newElement as any;
+          updatedSelectedElements.push(newElement as any);
+          hasChanges = true;
+          continue;
+        }
+
+        const updatedElement = {
+          ...selectedElement,
+          customData: newCustomData,
+          strokeStyle: (newCustomData.isZone ? "dashed" : "solid") as any,
+          version: (selectedElement.version || 0) + 1,
+        };
+
+        newSceneElements[elementIndex] = updatedElement as any;
+        updatedSelectedElements.push(updatedElement as any);
+        hasChanges = true;
     }
 
-    const newCustomData = { ...selectedElement.customData, ...updatedData };
-
-    if (newCustomData.isCounter && selectedElement.type !== "counter") {
-      const newElement = {
-        ...selectedElement,
-        type: "counter" as const,
-        customData: { ...newCustomData, value: 0 },
-        version: (selectedElement.version || 0) + 1,
-      };
-      const newSceneElements = [
-        ...sceneElements.slice(0, elementIndex),
-        newElement,
-        ...sceneElements.slice(elementIndex + 1),
-      ];
+    if (hasChanges) {
       excalidrawAPI.updateScene({ elements: newSceneElements });
-      setSelectedElement(newElement as NonDeletedExcalidrawElement);
-      return;
+      setSelectedElements(updatedSelectedElements);
     }
+  };
 
-    const updatedElement = {
-      ...selectedElement,
-      customData: newCustomData,
-      strokeStyle: (newCustomData.isZone ? "dashed" : "solid") as any,
-      backgroundColor: selectedElement.backgroundColor,
-      version: (selectedElement.version || 0) + 1,
-    };
+  const handleAction = (action: string) => {
+    if (!excalidrawAPI || selectedElements.length === 0) return;
+    const sceneElements = excalidrawAPI.getSceneElements();
+    let newSceneElements = [...sceneElements];
+    const element = selectedElements[0];
 
-    const newSceneElements = [
-      ...sceneElements.slice(0, elementIndex),
-      updatedElement,
-      ...sceneElements.slice(elementIndex + 1),
-    ];
-
-    excalidrawAPI.updateScene({ elements: newSceneElements });
-    setSelectedElement(updatedElement as NonDeletedExcalidrawElement);
+    if (action === "startTimer") {
+      const duration = element.customData?.timerDuration || 300;
+      handleUpdateElement({ endTime: Date.now() + duration * 1000, hasFrozen: false });
+    } else if (action === "resetTimer") {
+      handleUpdateElement({ endTime: null, hasFrozen: false });
+      // Unlock all cards
+      newSceneElements = newSceneElements.map(el => {
+        if (el.customData?.isCard) {
+          return { ...el, locked: false, version: (el.version || 0) + 1 };
+        }
+        return el;
+      });
+      excalidrawAPI.updateScene({ elements: newSceneElements });
+    } else if (action === "teleport") {
+      const targetFrameName = element.customData?.targetFrame;
+      if (targetFrameName) {
+        const frame = sceneElements.find(el => el.type === "frame" && el.name === targetFrameName);
+        if (frame) {
+          excalidrawAPI.scrollToContent(frame, { animate: true });
+        } else {
+          excalidrawAPI.setToast({ message: "Frame '" + targetFrameName + "' nicht gefunden!", color: "danger" });
+        }
+      }
+    }
   };
 
   const renderCustomStats = (
