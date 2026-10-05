@@ -950,7 +950,13 @@ const ExcalidrawWrapper = ({
       if (targetFrameName) {
         const frame = sceneElements.find(el => el.type === "frame" && el.name === targetFrameName);
         if (frame) {
-          excalidrawAPI.scrollToContent(frame, { animate: true });
+          if (typeof (excalidrawAPI as any).scrollToContent === "function") {
+            (excalidrawAPI as any).scrollToContent(frame, { animate: true });
+          } else if (typeof excalidrawAPI.setViewport === "function") {
+            excalidrawAPI.setViewport({ target: [frame], fit: "contain", animation: { duration: 300 }, offsets: { ui: true } });
+          } else {
+            console.error("No scroll function found on excalidrawAPI");
+          }
         } else {
           excalidrawAPI.setToast({ message: "Frame '" + targetFrameName + "' nicht gefunden!", color: "danger" });
         }
