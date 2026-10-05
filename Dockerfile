@@ -20,7 +20,7 @@ RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 RUN if [ -n "$GITHUB_TOKEN" ]; then git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"; fi
 
 # Copy package.json and yarn.lock from root
-COPY package.json yarn.lock ./
+COPY package.json yarn.lock patch-y-excalidraw.sh ./
 
 # Copy the excalidraw-app directory
 COPY excalidraw-app excalidraw-app
