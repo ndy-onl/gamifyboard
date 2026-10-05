@@ -513,6 +513,7 @@ const renderTopRightUI = ({
   isCollaborating,
   isEditMode,
   setIsEditMode,
+  setGlobalGameMode,
 }: any) => {
   return (
     <div style={{ display: "flex", gap: "10px" }}>
@@ -1207,6 +1208,7 @@ const ExcalidrawWrapper = ({
             isCollaborating,
             isEditMode,
             setIsEditMode,
+            setGlobalGameMode,
           });
         }}
         onLinkOpen={(element, event) => {
