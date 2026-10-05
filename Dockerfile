@@ -40,6 +40,7 @@ RUN --mount=type=ssh yarn install --frozen-lockfile && \
     yarn build:packages && \
     cd excalidraw-app && \
     yarn install --frozen-lockfile && \
+    cd .. && node ./patch-y-excalidraw.sh && cd excalidraw-app && \
     VITE_APP_GIT_SHA=$SOURCE_COMMIT VITE_APP_ENABLE_TRACKING=false VITE_APP_ENABLE_ESLINT=false VITE_APP_API_URL=$VITE_APP_API_URL yarn build:app && \
     yarn build:version
 

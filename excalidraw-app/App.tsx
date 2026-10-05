@@ -521,16 +521,8 @@ const renderTopRightUI = ({
         <button
           className={`excalidraw-button collab-button ${isEditMode ? '' : 'active'}`}
           onClick={() => {
-            const elements = excalidrawAPI?.getSceneElements() || [];
             const newMode = !isEditMode;
-            
-            const newElements = elements.map(el => ({
-                ...el,
-                customData: { ...el.customData, globalIsEditMode: newMode },
-                version: (el.version || 0) + 1
-            }));
-            
-            excalidrawAPI?.updateScene({ elements: newElements });
+            setGlobalGameMode(newMode);
             setIsEditMode(newMode);
           }}
           style={{ padding: "8px 16px", background: isEditMode ? "transparent" : "#aaffaa", color: isEditMode ? "inherit" : "#000", fontWeight: "bold" }}
@@ -1124,15 +1116,7 @@ const ExcalidrawWrapper = ({
         onChange={(elements, appState, files) => {
           onChange(elements, appState, files);
           
-          if (excalidrawAPI) {
-            const stateElement = excalidrawAPI.getSceneElements().find(el => el.customData?.globalIsEditMode !== undefined);
-            if (stateElement && stateElement.customData?.globalIsEditMode !== undefined) {
-               setIsEditMode(prev => {
-                  if (prev !== stateElement.customData.globalIsEditMode) return stateElement.customData.globalIsEditMode;
-                  return prev;
-               });
-            }
-          }
+
 
           if (
             appState.selectedElementIds &&

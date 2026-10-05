@@ -30,7 +30,9 @@ const newPointer = `        this.onPointerUpdate = (payload) => {
                 this.awareness.setLocalStateField("button", payload.button);
             }
             if (this.api && this.yElements) {
-                const elements = this.api.getSceneElements();
+                // Must use getSceneElementsIncludingDeleted to match what onChange does
+                // otherwise lastKnownElements lengths will flip-flop and break operations!
+                const elements = this.api.getSceneElementsIncludingDeleted();
                 if (!areElementsSame(this.lastKnownElements, elements)) {
                     const res = getDeltaOperationsForElements(this.lastKnownElements, elements);
                     if (res.operations.length > 0) {
@@ -43,6 +45,9 @@ const newPointer = `        this.onPointerUpdate = (payload) => {
 
 if (content.includes(oldPointer)) {
     content = content.replace(oldPointer, newPointer);
+} else {
+    // If it's already patched with getSceneElements(), replace that with getSceneElementsIncludingDeleted()
+    content = content.replace('const elements = this.api.getSceneElements();', 'const elements = this.api.getSceneElementsIncludingDeleted();');
 }
 
 fs.writeFileSync(targetPath, content, 'utf8');

@@ -10,13 +10,17 @@ import { ExcalidrawBinding } from '@ndy-onl/y-excalidraw';
 export const useCollaboration = (
   excalidrawAPI: ExcalidrawImperativeAPI | null,
   boardId: string | null,
+  onGameModeChange?: (isEditMode: boolean) => void
 ) => {
   const [isCollaborating, setIsCollaborating] = useState(false);
   const { isLoggedIn, accessToken } = useAtomValue(authStatusAtom);
   const setActiveRoomLink = useSetAtom(activeRoomLinkAtom);
   
+
   const bindingRef = useRef<ExcalidrawBinding | null>(null);
   const providerRef = useRef<SocketIOProvider | null>(null);
+  const gamifyStateRef = useRef<Y.Map<any> | null>(null);
+
 
   useEffect(() => {
     if (excalidrawAPI && boardId) {
@@ -24,7 +28,19 @@ export const useCollaboration = (
         ? 'https://api.alpha.gamifyboard.com'
         : import.meta.env.VITE_APP_API_URL;
 
+
       const ydoc = new Y.Doc();
+      
+      const gamifyState = ydoc.getMap<any>('gamifyState');
+      gamifyStateRef.current = gamifyState;
+      
+      gamifyState.observe(event => {
+         const mode = gamifyState.get('isEditMode');
+         if (mode !== undefined && onGameModeChange) {
+            onGameModeChange(mode);
+         }
+      });
+
       
       const authPayload: any = {};
       if (accessToken) {
@@ -85,5 +101,13 @@ export const useCollaboration = (
       // No manual updateBoard necessary. y-excalidraw syncs changes automatically.
   }, []);
 
-  return { isCollaborating, updateBoard, onPointerUpdate };
+  
+  const setGlobalGameMode = useCallback((isEditMode: boolean) => {
+    if (gamifyStateRef.current) {
+       gamifyStateRef.current.set('isEditMode', isEditMode);
+    }
+  }, []);
+
+  return { isCollaborating, updateBoard, onPointerUpdate, setGlobalGameMode };
+
 };

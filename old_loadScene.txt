@@ -1,0 +1,69 @@
+248:export const loadScene = async (
+249-  id: string | null,
+250-  privateKey: string | null,
+251-  // Supply local state even if importing from backend to ensure we restore
+252-  // localStorage user settings which we do not persist on server.
+253-  // Non-optional so we don't forget to pass it even if `undefined`.
+254-  localDataState: ImportedDataState | undefined | null,
+255-) => {
+256-  let data;
+257-  if (id != null && privateKey != null) {
+258-    // the private key is used to decrypt the content from the server, take
+259-    // extra care not to leak it
+260-    data = restore(
+261-      await importFromBackend(id, privateKey),
+262-      localDataState?.appState,
+263-      localDataState?.elements,
+264-      { repairBindings: true, refreshDimensions: false },
+265-    );
+266-  } else {
+267-    data = restore(localDataState || null, null, null, {
+268-      repairBindings: true,
+269-    });
+270-  }
+271-
+272-  return {
+273-    elements: data.elements,
+274-    appState: data.appState,
+275-    // note: this will always be empty because we're not storing files
+276-    // in the scene database/localStorage, and instead fetch them async
+277-    // from a different database
+278-    files: data.files,
+279-  };
+280-};
+281-
+282-type ExportToBackendResult =
+283-  | { url: null; errorMessage: string }
+284-  | { url: string; errorMessage: null };
+285-
+286-import { createBoard } from "../src/api";
+287-
+288-export const exportToBackend = async (
+289-  elements: readonly ExcalidrawElement[],
+290-  appState: Partial<AppState>,
+291-  files: BinaryFiles,
+292-): Promise<ExportToBackendResult> => {
+293-  const boardName = appState.name || "Untitled";
+294-
+295-  try {
+296-    const response = await createBoard(boardName, {
+297-      elements,
+298-      appState,
+299-      files,
+300-    });
+301-
+302-    if (response.data && response.data.id) {
+303-      const url = new URL(window.location.href);
+304-      // Construct a shareable link using the board's public ID
+305-      url.searchParams.set("id", response.data.publicId);
+306-      return { url: url.toString(), errorMessage: null };
+307-    }
+308-
+309-    return { url: null, errorMessage: t("alerts.couldNotCreateShareableLink") };
+310-  } catch (error: any) {
+311-    console.error(error);
+312-    const errorMessage =
+313-      error.response?.data?.message || t("alerts.couldNotCreateShareableLink");
+314-    return { url: null, errorMessage };
+315-  }
+316-};
