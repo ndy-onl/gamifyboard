@@ -479,6 +479,26 @@ const drawElementOnCanvas = (
       context.lineCap = "round";
 
       rc.draw(ShapeCache.generateElementShape(element, renderConfig));
+      
+      if (element.customData?.isTimer) {
+        let text = element.customData?.timeText;
+        if (!text) {
+          const duration = element.customData?.timerDuration || 300;
+          const mins = Math.floor(duration / 60).toString().padStart(2, '0');
+          const secs = (duration % 60).toString().padStart(2, '0');
+          text = `${mins}:${secs}`;
+        }
+        const fontSize = element.height * 0.4;
+        context.font = getFontString({
+          fontSize,
+          fontFamily: 1, // Default font family
+        });
+        context.fillStyle = element.strokeColor;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText(text, element.width / 2, element.height / 2);
+      }
+      
       break;
     }
     case "counter": {
