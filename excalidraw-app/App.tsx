@@ -926,18 +926,45 @@ const ExcalidrawWrapper = ({
     }
   };
 
+  const [isEditMode, setIsEditMode] = useState(true);
+
+  const triggerAction = (action: string, targetElement: NonDeletedExcalidrawElement) => {
+    if (!excalidrawAPI) return;
+    const sceneElements = excalidrawAPI.getSceneElements();
+    
+    if (action === "startTimer") {
+      const duration = targetElement.customData?.timerDuration || 300;
+      const newSceneElements = sceneElements.map(el => 
+        el.id === targetElement.id ? { ...el, customData: { ...el.customData, endTime: Date.now() + duration * 1000, hasFrozen: false }, version: (el.version || 0) + 1 } : el
+      );
+      excalidrawAPI.updateScene({ elements: newSceneElements as any });
+    } else if (action === "teleport") {
+      const targetFrameName = targetElement.customData?.targetFrame;
+      if (targetFrameName) {
+        const frame = sceneElements.find(el => el.type === "frame" && el.name === targetFrameName);
+        if (frame) {
+          if (typeof (excalidrawAPI as any).scrollToContent === "function") {
+            (excalidrawAPI as any).scrollToContent(frame, { animate: true });
+          } else if (typeof excalidrawAPI.setViewport === "function") {
+            excalidrawAPI.setViewport({ target: [frame], fit: "contain", animation: { duration: 300 }, offsets: { ui: true } });
+          }
+        } else {
+          excalidrawAPI.setToast({ message: "Frame '" + targetFrameName + "' nicht gefunden!", color: "danger" });
+        }
+      }
+    }
+  };
+
   const handleAction = (action: string) => {
     if (!excalidrawAPI || selectedElements.length === 0) return;
     const sceneElements = excalidrawAPI.getSceneElements();
-    let newSceneElements = [...sceneElements];
     const element = selectedElements[0];
 
     if (action === "startTimer") {
-      const duration = element.customData?.timerDuration || 300;
-      handleUpdateElement({ endTime: Date.now() + duration * 1000, hasFrozen: false });
+      triggerAction("startTimer", element);
     } else if (action === "resetTimer") {
       handleUpdateElement({ endTime: null, hasFrozen: false });
-      // Unlock all cards
+      let newSceneElements = [...sceneElements];
       newSceneElements = newSceneElements.map(el => {
         if (el.customData?.isCard) {
           return { ...el, locked: false, version: (el.version || 0) + 1 };
@@ -946,21 +973,7 @@ const ExcalidrawWrapper = ({
       });
       excalidrawAPI.updateScene({ elements: newSceneElements });
     } else if (action === "teleport") {
-      const targetFrameName = element.customData?.targetFrame;
-      if (targetFrameName) {
-        const frame = sceneElements.find(el => el.type === "frame" && el.name === targetFrameName);
-        if (frame) {
-          if (typeof (excalidrawAPI as any).scrollToContent === "function") {
-            (excalidrawAPI as any).scrollToContent(frame, { animate: true });
-          } else if (typeof excalidrawAPI.setViewport === "function") {
-            excalidrawAPI.setViewport({ target: [frame], fit: "contain", animation: { duration: 300 }, offsets: { ui: true } });
-          } else {
-            console.error("No scroll function found on excalidrawAPI");
-          }
-        } else {
-          excalidrawAPI.setToast({ message: "Frame '" + targetFrameName + "' nicht gefunden!", color: "danger" });
-        }
-      }
+      triggerAction("teleport", element);
     }
   };
 
@@ -1142,7 +1155,7 @@ const ExcalidrawWrapper = ({
           }
         }}
       >
-        {selectedElements.length > 0 && (
+        {isEditMode && selectedElements.length > 0 && (
           <PropertiesSidebar
             elements={selectedElements}
             onUpdate={handleUpdateElement}
