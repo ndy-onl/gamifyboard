@@ -243,12 +243,14 @@ const checkGameState = (
     if (el.type === "counter") {
       const countsType = el.customData?.countsType;
       if (countsType) {
+        const targetZoneName = el.customData?.countsZone;
         const zone = elements.find(
           (zoneEl) =>
             zoneEl.customData?.isZone &&
             (zoneEl.customData.acceptedCardTypes || "")
               .split(",")
-              .includes(countsType),
+              .includes(countsType) &&
+            (!targetZoneName || zoneEl.customData?.zoneName === targetZoneName)
         );
         if (zone) {
           const cardsInZone = cards.filter(

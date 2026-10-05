@@ -140,6 +140,16 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
       {elementType === "counter" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Zählt in Zone (leer = erste gefundene):
+          </label>
+          <input
+            type="text"
+            placeholder="z.B. Spieler1"
+            defaultValue={customData.countsZone || ""}
+            onChange={(e) => onUpdate({ countsZone: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
             {t("propertiesSidebar.counter.countsCardType") || "Zählt Karte:"}
           </label>
           <input
@@ -178,6 +188,16 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
 
       {elementType === "zone" && (
         <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Zonen-Name (für Zähler-Zuweisung):
+          </label>
+          <input
+            type="text"
+            placeholder="z.B. Spieler1"
+            defaultValue={customData.zoneName || ""}
+            onChange={(e) => onUpdate({ zoneName: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
             {t("propertiesSidebar.zone.acceptedCardTypes") || "Akzeptierte Karten:"}
           </label>
