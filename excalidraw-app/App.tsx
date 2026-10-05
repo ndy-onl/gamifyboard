@@ -943,12 +943,42 @@ const ExcalidrawWrapper = ({
     if (!excalidrawAPI) return;
     const sceneElements = excalidrawAPI.getSceneElements();
     
-    if (action === "startTimer") {
-      const duration = targetElement.customData?.timerDuration || 300;
-      const newSceneElements = sceneElements.map(el => 
-        el.id === targetElement.id ? { ...el, customData: { ...el.customData, endTime: Date.now() + duration * 1000, hasFrozen: false }, version: (el.version || 0) + 1 } : el
-      );
-      excalidrawAPI.updateScene({ elements: newSceneElements as any });
+    if (action === "startTimer" || action === "resetTimer") {
+      const targetTimerName = targetElement.customData?.targetTimerName;
+      if (!targetTimerName) return;
+
+      let newSceneElements = [...sceneElements];
+      let found = false;
+
+      newSceneElements = newSceneElements.map(el => {
+        if (el.customData?.isTimerDisplay && el.customData?.timerName === targetTimerName) {
+           found = true;
+           if (action === "startTimer") {
+              const duration = el.customData.timerDuration || 300;
+              return { ...el, customData: { ...el.customData, endTime: Date.now() + duration * 1000, hasFrozen: false }, version: (el.version || 0) + 1 };
+           } else {
+              // reset
+              return { ...el, customData: { ...el.customData, endTime: null, hasFrozen: false, timeText: "" }, version: (el.version || 0) + 1 };
+           }
+        }
+        return el;
+      });
+
+      if (action === "resetTimer" && found) {
+         // Also unlock all cards!
+         newSceneElements = newSceneElements.map(el => {
+           if (el.customData?.isCard) {
+              return { ...el, locked: false, version: (el.version || 0) + 1 };
+           }
+           return el;
+         });
+      }
+
+      if (found) {
+        excalidrawAPI.updateScene({ elements: newSceneElements as any });
+      } else {
+        excalidrawAPI.setToast({ message: "Timer '" + targetTimerName + "' nicht gefunden!", color: "danger" });
+      }
     } else if (action === "teleport") {
       const targetFrameName = targetElement.customData?.targetFrame;
       if (targetFrameName) {
@@ -1074,8 +1104,8 @@ const ExcalidrawWrapper = ({
           if (hitElement && hitElement.customData && !isEditMode) {
              if (hitElement.customData.isTeleporter) {
                 triggerAction("teleport", hitElement as NonDeletedExcalidrawElement);
-             } else if (hitElement.customData.isTimer) {
-                triggerAction("startTimer", hitElement as NonDeletedExcalidrawElement);
+             } else if (hitElement.customData.isTimerButton) {
+                triggerAction(hitElement.customData.timerAction === "reset" ? "resetTimer" : "startTimer", hitElement as NonDeletedExcalidrawElement);
              }
           }
         }}
@@ -1404,7 +1434,7 @@ const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props,
       
       for (let i = 0; i < newElements.length; i++) {
         let el = newElements[i];
-        if (el.customData?.isTimer && el.customData?.endTime) {
+        if (el.customData?.isTimerDisplay && el.customData?.endTime) {
           const remaining = Math.max(0, Math.ceil((el.customData.endTime - Date.now()) / 1000));
           const mins = Math.floor(remaining / 60).toString().padStart(2, '0');
           const secs = (remaining % 60).toString().padStart(2, '0');

@@ -480,7 +480,7 @@ const drawElementOnCanvas = (
 
       rc.draw(ShapeCache.generateElementShape(element, renderConfig));
       
-      if (element.customData?.isTimer) {
+      if (element.customData?.isTimerDisplay) {
         let text = element.customData?.timeText;
         if (!text) {
           const duration = element.customData?.timerDuration || 300;
