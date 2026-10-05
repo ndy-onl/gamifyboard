@@ -506,15 +506,26 @@ const renderTopRightUI = ({
   isCollabDisabled,
   setShareDialogState,
   isLoggedIn,
-  loggedInUiState, // NEU: loggedInUiState akzeptieren
+  loggedInUiState,
   handleLogout,
   onLoginClick,
   excalidrawAPI,
   isCollaborating,
-}) => {
+  isEditMode,
+  setIsEditMode,
+}: any) => {
   return (
     <div style={{ display: "flex", gap: "10px" }}>
       {collabError.message && <CollabError collabError={collabError} />}
+            {setIsEditMode && (
+        <button
+          className={`excalidraw-button collab-button ${isEditMode ? '' : 'active'}`}
+          onClick={() => setIsEditMode(!isEditMode)}
+          style={{ padding: "8px 16px", background: isEditMode ? "transparent" : "#aaffaa", color: isEditMode ? "inherit" : "#000", fontWeight: "bold" }}
+        >
+          {isEditMode ? "Edit Mode" : "Game Mode!"}
+        </button>
+      )}
       <button
         className="excalidraw-button collab-button"
         onClick={() => setShareDialogState({ isOpen: true, type: "share" })}
@@ -1058,6 +1069,16 @@ const ExcalidrawWrapper = ({
       <Excalidraw
         onPointerUpdate={onPointerUpdate}
         onExcalidrawAPI={excalidrawRefCallback}
+        onPointerDown={(activeTool, pointerDownState) => {
+          const hitElement = pointerDownState.hit?.element;
+          if (hitElement && hitElement.customData && !isEditMode) {
+             if (hitElement.customData.isTeleporter) {
+                triggerAction("teleport", hitElement as NonDeletedExcalidrawElement);
+             } else if (hitElement.customData.isTimer) {
+                triggerAction("startTimer", hitElement as NonDeletedExcalidrawElement);
+             }
+          }
+        }}
         onChange={(elements, appState, files) => {
           onChange(elements, appState, files);
           if (
@@ -1146,6 +1167,8 @@ const ExcalidrawWrapper = ({
             onLoginClick,
             excalidrawAPI,
             isCollaborating,
+            isEditMode,
+            setIsEditMode,
           });
         }}
         onLinkOpen={(element, event) => {
