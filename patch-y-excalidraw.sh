@@ -1,24 +1,30 @@
-#!/bin/bash
-echo "Patching y-excalidraw for live dragging..."
+#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
 
-# Remove the 'cursorButton === up' check in onChange
-sed -i 's/state.cursorButton === "up" &&//g' node_modules/@ndy-onl/y-excalidraw/dist/index.js
+console.log("Patching y-excalidraw for live dragging...");
 
-# Inject element syncing into onPointerUpdate
-cat << 'INJECT' > patch.py
-import re
+const targetPath = path.join(__dirname, 'node_modules', '@ndy-onl', 'y-excalidraw', 'dist', 'index.js');
 
-with open('node_modules/@ndy-onl/y-excalidraw/dist/index.js', 'r') as f:
-    content = f.read()
+if (!fs.existsSync(targetPath)) {
+    console.error("Could not find y-excalidraw dist/index.js");
+    process.exit(0); // Exit 0 so we don't break install if it's missing somehow
+}
 
-old_pointer = """        this.onPointerUpdate = (payload) => {
+let content = fs.readFileSync(targetPath, 'utf8');
+
+// Remove the 'cursorButton === up' check in onChange
+content = content.replace(/state\.cursorButton === "up" &&\s*/g, '');
+
+// Inject element syncing into onPointerUpdate
+const oldPointer = `        this.onPointerUpdate = (payload) => {
             if (this.awareness) {
                 this.awareness.setLocalStateField("pointer", payload.pointer);
                 this.awareness.setLocalStateField("button", payload.button);
             }
-        };"""
+        };`;
 
-new_pointer = """        this.onPointerUpdate = (payload) => {
+const newPointer = `        this.onPointerUpdate = (payload) => {
             if (this.awareness) {
                 this.awareness.setLocalStateField("pointer", payload.pointer);
                 this.awareness.setLocalStateField("button", payload.button);
@@ -33,14 +39,11 @@ new_pointer = """        this.onPointerUpdate = (payload) => {
                     }
                 }
             }
-        };"""
+        };`;
 
-if old_pointer in content:
-    content = content.replace(old_pointer, new_pointer)
-    with open('node_modules/@ndy-onl/y-excalidraw/dist/index.js', 'w') as f:
-        f.write(content)
-INJECT
+if (content.includes(oldPointer)) {
+    content = content.replace(oldPointer, newPointer);
+}
 
-python3 patch.py
-rm patch.py
-echo "Done patching."
+fs.writeFileSync(targetPath, content, 'utf8');
+console.log("Done patching.");
