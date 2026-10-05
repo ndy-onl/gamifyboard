@@ -167,8 +167,8 @@
     }
 
     &.compact-sizing {
-      width: var(--mobile-action-button-size);
-      height: var(--mobile-action-button-size);
+      width: var(--mobile-action-button-size, 2rem);
+      height: var(--mobile-action-button-size, 2rem);
     }
 
     &.mobile-border {
