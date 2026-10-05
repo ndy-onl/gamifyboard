@@ -17,3 +17,4 @@
 **/build
 **/dist
 **/node_modules
+!patch-y-excalidraw.sh
