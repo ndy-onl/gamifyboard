@@ -696,9 +696,10 @@ const ExcalidrawWrapper = ({
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
 
-  const { isCollaborating, updateBoard, onPointerUpdate } = useCollaboration(
+  const { isCollaborating, updateBoard, onPointerUpdate, setGlobalGameMode } = useCollaboration(
     excalidrawAPI,
     selectedBoardId,
+    (newMode) => setIsEditMode(newMode)
   );
 
   useEffect(() => {
