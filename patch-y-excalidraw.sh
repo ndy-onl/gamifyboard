@@ -134,4 +134,15 @@ diffContent = diffContent.replace(
 );
 
 fs.writeFileSync(diffPath, diffContent);
+
+indexContent = indexContent.replace(
+    'applyElementOperations(this.yElements, operations, this);',
+    'if (this.yElements.doc) { this.yElements.doc.transact(() => { applyElementOperations(this.yElements, operations, this); }, this); } else { applyElementOperations(this.yElements, operations, this); }'
+);
+indexContent = indexContent.replace(
+    'applyAssetOperations(this.yAssets, assetOperations, this);',
+    'if (this.yAssets && this.yAssets.doc) { this.yAssets.doc.transact(() => { applyAssetOperations(this.yAssets, assetOperations, this); }, this); } else { applyAssetOperations(this.yAssets, assetOperations, this); }'
+);
+fs.writeFileSync(indexPath2, indexContent);
+
 console.log("Logs injected successfully!");
