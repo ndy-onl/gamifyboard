@@ -28,6 +28,13 @@ export const createBoard = (name, data) => {
     });
     yElements.insert(0, mappedElements);
     
+    const yAssets = ydoc.getMap('assets');
+    if (data && data.files) {
+      for (const fileId in data.files) {
+        yAssets.set(fileId, data.files[fileId]);
+      }
+    }
+    
     // Convert to Array so it can be JSON serialized
     yjs_data = Array.from(Y.encodeStateAsUpdate(ydoc));
   } catch (e) {

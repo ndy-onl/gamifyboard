@@ -480,11 +480,13 @@ const initializeScene = async (opts: {
           const scene = {
             elements: board.board_data.elements || [],
             appState: restoreAppState(loadedAppState, null),
-            files: board.board_data.files || {},
             scrollToContent: true,
           };
           if (excalidrawAPI && board.name) {
             excalidrawAPI.updateScene({ appState: { name: board.name } });
+          }
+          if (excalidrawAPI && board.board_data.files && Object.keys(board.board_data.files).length > 0) {
+            excalidrawAPI.addFiles(Object.values(board.board_data.files));
           }
           return { scene, isExternalScene: true, id: id, key: null };
         }
@@ -703,8 +705,7 @@ const ExcalidrawWrapper = ({
       const appState = excalidrawAPI.getAppState();
       const files = excalidrawAPI.getFiles();
       const name = excalidrawAPI.getName() || "Untitled";
-      // Temporarily remove files from the payload to isolate the issue
-      await createBoard(name, { elements, appState /* files */ });
+      await createBoard(name, { elements, appState, files });
       excalidrawAPI.setToast({ message: "Board saved successfully!" });
     } catch (error: any) {
       excalidrawAPI.setToast({ message: "Failed to save board.", color: "danger" });
