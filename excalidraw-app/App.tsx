@@ -261,8 +261,8 @@ const checkGameState = (
     // Wenn das Textelement ODER sein Container (Rechteck) ausgewählt/bearbeitet wird
     if (appState.selectedElementIds[slot.id] || appState.editingElement?.id === slot.id || (slot.containerId && appState.selectedElementIds[slot.containerId])) {
         if (!latestPlayerSlots[slotId]) latestPlayerSlots[slotId] = slot;
-        if (setCursorName && slot.text) {
-           setCursorName(slot.text);
+        if (slot.text && appState.name !== slot.text) {
+           excalidrawAPI.updateScene({ appState: { name: slot.text } });
         }
     }
   });
@@ -1040,7 +1040,7 @@ const ExcalidrawWrapper = ({
       if (action === "resetTimer" && found) {
          // Also unlock all cards!
          newSceneElements = newSceneElements.map(el => {
-           if (el.customData?.isCard) {
+           if (el.customData?.isCard || el.customData?.isPlayerSlot || (el.containerId && newSceneElements.find(c => c.id === el.containerId)?.customData?.isPlayerSlot)) {
               return { ...el, locked: false, version: (el.version || 0) + 1 };
            }
            return el;
@@ -1080,7 +1080,7 @@ const ExcalidrawWrapper = ({
       handleUpdateElement({ endTime: null, hasFrozen: false });
       let newSceneElements = [...sceneElements];
       newSceneElements = newSceneElements.map(el => {
-        if (el.customData?.isCard) {
+        if (el.customData?.isCard || el.customData?.isPlayerSlot || (el.containerId && newSceneElements.find(c => c.id === el.containerId)?.customData?.isPlayerSlot)) {
           return { ...el, locked: false, version: (el.version || 0) + 1 };
         }
         return el;
