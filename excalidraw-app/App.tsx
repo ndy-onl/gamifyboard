@@ -244,12 +244,23 @@ const checkGameState = (
   let latestPlayerSlots: Record<string, any> = {};
   
   // Find currently edited/selected player slots to determine the "source of truth"
-  const playerSlots = elements.filter((el) => el.customData?.isPlayerSlot && el.type === "text" && el.customData?.playerSlotId);
+  const getPlayerSlotId = (el: any) => {
+    if (el.customData?.isPlayerSlot && el.customData?.playerSlotId) return el.customData.playerSlotId;
+    if (el.containerId) {
+      const container = elements.find(c => c.id === el.containerId);
+      if (container?.customData?.isPlayerSlot && container?.customData?.playerSlotId) {
+        return container.customData.playerSlotId;
+      }
+    }
+    return null;
+  };
+
+  const playerSlots = elements.filter((el) => el.type === "text" && getPlayerSlotId(el));
   playerSlots.forEach((slot) => {
-    const slotId = slot.customData.playerSlotId;
-    if (appState.selectedElementIds[slot.id] || appState.editingElement?.id === slot.id) {
+    const slotId = getPlayerSlotId(slot);
+    // Wenn das Textelement ODER sein Container (Rechteck) ausgewählt/bearbeitet wird
+    if (appState.selectedElementIds[slot.id] || appState.editingElement?.id === slot.id || (slot.containerId && appState.selectedElementIds[slot.containerId])) {
         if (!latestPlayerSlots[slotId]) latestPlayerSlots[slotId] = slot;
-        // Update local cursor name if we are the ones editing it!
         if (setCursorName && slot.text) {
            setCursorName(slot.text);
         }
@@ -257,16 +268,19 @@ const checkGameState = (
   });
 
   const updatedElements = elements.map((el) => {
-    if (el.customData?.isPlayerSlot && el.type === "text" && el.customData?.playerSlotId) {
-        const truthSlot = latestPlayerSlots[el.customData.playerSlotId];
-        if (truthSlot && truthSlot.id !== el.id && el.text !== truthSlot.text) {
-            needsUpdate = true;
-            return {
-                ...el,
-                text: truthSlot.text,
-                originalText: truthSlot.text,
-                version: (el.version || 0) + 1,
-            };
+    if (el.type === "text") {
+        const slotId = getPlayerSlotId(el);
+        if (slotId) {
+            const truthSlot = latestPlayerSlots[slotId];
+            if (truthSlot && truthSlot.id !== el.id && el.text !== truthSlot.text) {
+                needsUpdate = true;
+                return {
+                    ...el,
+                    text: truthSlot.text,
+                    originalText: truthSlot.text,
+                    version: (el.version || 0) + 1,
+                };
+            }
         }
     }
 
