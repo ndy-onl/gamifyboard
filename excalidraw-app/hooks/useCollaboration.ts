@@ -110,7 +110,8 @@ export const useCollaboration = (
 
   const setCursorName = useCallback((name: string) => {
     if (providerRef.current) {
-      const user = providerRef.current.awareness.getLocalStateField("user");
+      const state = providerRef.current.awareness.getLocalState();
+      const user = state ? state.user : null;
       if (user && user.name !== name) {
         providerRef.current.awareness.setLocalStateField("user", {
           ...user,
