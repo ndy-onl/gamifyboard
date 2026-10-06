@@ -28,13 +28,14 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
   };
 
   const handleElementTypeChange = (type: string) => {
-    const base = { isCounter: false, isCard: false, isZone: false, isTimerDisplay: false, isTimerButton: false, isTeleporter: false };
+    const base = { isCounter: false, isCard: false, isZone: false, isTimerDisplay: false, isTimerButton: false, isTeleporter: false, isPlayerSlot: false };
     if (type === "counter") onUpdate({ ...base, isCounter: true });
     else if (type === "card") onUpdate({ ...base, isCard: true });
     else if (type === "zone") onUpdate({ ...base, isZone: true });
     else if (type === "timerDisplay") onUpdate({ ...base, isTimerDisplay: true });
     else if (type === "timerButton") onUpdate({ ...base, isTimerButton: true, timerAction: "start" });
     else if (type === "teleporter") onUpdate({ ...base, isTeleporter: true });
+    else if (type === "playerSlot") onUpdate({ ...base, isPlayerSlot: true });
     else onUpdate({ ...base });
   };
 
@@ -44,6 +45,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
     : customData.isTimerDisplay ? "timerDisplay"
     : customData.isTimerButton ? "timerButton"
     : customData.isTeleporter ? "teleporter"
+    : customData.isPlayerSlot ? "playerSlot"
     : "none";
 
   return (
@@ -133,6 +135,18 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               onChange={() => handleElementTypeChange("teleporter")}
             />
             Teleport Button
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="playerSlot"
+              checked={elementType === "playerSlot"}
+              onChange={() => handleElementTypeChange("playerSlot")}
+            />
+            Spieler-Name (Synchronisiert & Cursor)
           </label>
         </div>
       </div>
@@ -310,6 +324,24 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               Teleport Now
             </button>
           </div>
+        </div>
+      )}
+
+      {elementType === "playerSlot" && (
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Slot-ID (z.B. Spieler1):
+          </label>
+          <input
+            type="text"
+            placeholder="Spieler1"
+            defaultValue={customData.playerSlotId || ""}
+            onChange={(e) => onUpdate({ playerSlotId: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <p style={{ fontSize: "12px", color: "#666" }}>
+            Gleiche Slot-IDs werden synchronisiert. Wenn du deinen Namen einträgst, wird er auf dem gesamten Board und deinem Mauszeiger übernommen.
+          </p>
         </div>
       )}
     </div>

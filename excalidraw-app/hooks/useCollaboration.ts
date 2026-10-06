@@ -108,6 +108,18 @@ export const useCollaboration = (
     }
   }, []);
 
-  return { isCollaborating, updateBoard, onPointerUpdate, setGlobalGameMode };
+  const setCursorName = useCallback((name: string) => {
+    if (providerRef.current) {
+      const user = providerRef.current.awareness.getLocalStateField("user");
+      if (user && user.name !== name) {
+        providerRef.current.awareness.setLocalStateField("user", {
+          ...user,
+          name
+        });
+      }
+    }
+  }, []);
+
+  return { isCollaborating, updateBoard, onPointerUpdate, setGlobalGameMode, setCursorName };
 
 };

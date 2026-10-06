@@ -231,6 +231,7 @@ const isIntersecting = (
 const checkGameState = (
   excalidrawAPI: ExcalidrawImperativeAPI,
   elements: readonly any[] | null,
+  setCursorName?: (name: string) => void
 ) => {
   if (!excalidrawAPI || !elements) {
     return;
@@ -239,7 +240,36 @@ const checkGameState = (
   const cards = elements.filter((el) => el.customData?.isCard);
   let needsUpdate = false;
 
+  const appState = excalidrawAPI.getAppState();
+  let latestPlayerSlots: Record<string, any> = {};
+  
+  // Find currently edited/selected player slots to determine the "source of truth"
+  const playerSlots = elements.filter((el) => el.customData?.isPlayerSlot && el.type === "text" && el.customData?.playerSlotId);
+  playerSlots.forEach((slot) => {
+    const slotId = slot.customData.playerSlotId;
+    if (appState.selectedElementIds[slot.id] || appState.editingElement?.id === slot.id) {
+        if (!latestPlayerSlots[slotId]) latestPlayerSlots[slotId] = slot;
+        // Update local cursor name if we are the ones editing it!
+        if (setCursorName && slot.text) {
+           setCursorName(slot.text);
+        }
+    }
+  });
+
   const updatedElements = elements.map((el) => {
+    if (el.customData?.isPlayerSlot && el.type === "text" && el.customData?.playerSlotId) {
+        const truthSlot = latestPlayerSlots[el.customData.playerSlotId];
+        if (truthSlot && truthSlot.id !== el.id && el.text !== truthSlot.text) {
+            needsUpdate = true;
+            return {
+                ...el,
+                text: truthSlot.text,
+                originalText: truthSlot.text,
+                version: (el.version || 0) + 1,
+            };
+        }
+    }
+
     if (el.type === "counter") {
       const sumsZone = el.customData?.sumsCountersForZone;
       if (sumsZone) {
@@ -720,7 +750,7 @@ const ExcalidrawWrapper = ({
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
 
-  const { isCollaborating, updateBoard, onPointerUpdate, setGlobalGameMode } = useCollaboration(
+  const { isCollaborating, updateBoard, onPointerUpdate, setGlobalGameMode, setCursorName } = useCollaboration(
     excalidrawAPI,
     selectedBoardId,
     (newMode) => setIsEditMode(newMode)
@@ -735,7 +765,7 @@ const ExcalidrawWrapper = ({
         (window as any).ExcalidrawHandle = {
           excalidrawAPI,
           checkGameState: (elements: readonly any[] | null) =>
-            checkGameState(excalidrawAPI, elements),
+            checkGameState(excalidrawAPI, elements, setCursorName),
         };
       }
     }
@@ -1168,7 +1198,7 @@ const ExcalidrawWrapper = ({
         onPointerUp={() => {
           // Trigger the check after user interaction
           if (excalidrawAPI) {
-            checkGameState(excalidrawAPI, excalidrawAPI.getSceneElements());
+            checkGameState(excalidrawAPI, excalidrawAPI.getSceneElements(), setCursorName);
           }
         }}
         
@@ -1438,7 +1468,7 @@ const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props,
   useImperativeHandle(ref, () => ({
     excalidrawAPI,
     checkGameState: (elements: readonly any[]) =>
-      excalidrawAPI && checkGameState(excalidrawAPI, elements),
+      excalidrawAPI && checkGameState(excalidrawAPI, elements, setCursorName),
   }));
 
   useEffect(() => {
@@ -1448,7 +1478,7 @@ const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props,
         (window as any).ExcalidrawHandle = {
           excalidrawAPI,
           checkGameState: (elements: readonly any[] | null) =>
-            checkGameState(excalidrawAPI, elements),
+            checkGameState(excalidrawAPI, elements, setCursorName),
         };
       }
     }
