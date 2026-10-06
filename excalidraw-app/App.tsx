@@ -289,7 +289,9 @@ const checkGameState = (
       cardsInZone.every((card) =>
         acceptedTypes.includes(card.customData?.cardType),
       );
-    const newBackgroundColor = isCorrect ? "#aaffaa" : "#ffaaaa";
+    const colorActive = el.customData?.zoneColorActive || "#aaffaa";
+    const colorDefault = el.customData?.zoneColorDefault || "#ffaaaa";
+    const newBackgroundColor = isCorrect ? colorActive : colorDefault;
 
     if (el.backgroundColor !== newBackgroundColor) {
       needsUpdate = true;

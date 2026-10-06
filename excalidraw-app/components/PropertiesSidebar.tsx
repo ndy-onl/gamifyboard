@@ -206,6 +206,26 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
             placeholder={t("propertiesSidebar.zone.placeholder") || "Typ"}
             defaultValue={customData.acceptedCardTypes || ""}
             onChange={(e) => onUpdate({ acceptedCardTypes: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Farbe: Leer / Inaktiv (Hex):
+          </label>
+          <input
+            type="text"
+            placeholder="#ffaaaa"
+            defaultValue={customData.zoneColorDefault || ""}
+            onChange={(e) => onUpdate({ zoneColorDefault: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Farbe: Gefüllt / Aktiv (Hex):
+          </label>
+          <input
+            type="text"
+            placeholder="#aaffaa"
+            defaultValue={customData.zoneColorActive || ""}
+            onChange={(e) => onUpdate({ zoneColorActive: e.target.value })}
             style={{ width: "200px" }}
           />
         </div>
