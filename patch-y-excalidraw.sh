@@ -104,25 +104,21 @@ if (content.includes(oldAddedFiles)) {
     content = content.replace(oldAddedFiles, newAddedFiles);
 }
 fs.writeFileSync(targetPath, content, 'utf8');
-const fs = require('fs');
-const path = require('path');
 
-const indexPath = path.join(__dirname, 'node_modules', '@ndy-onl', 'y-excalidraw', 'dist', 'index.js');
-let content = fs.readFileSync(indexPath, 'utf8');
+const indexPath2 = path.join(__dirname, 'node_modules', '@ndy-onl', 'y-excalidraw', 'dist', 'index.js');
+let indexContent = fs.readFileSync(indexPath2, 'utf8');
 
-// Log when local files change
-content = content.replace(
+indexContent = indexContent.replace(
     'const res = getDeltaOperationsForAssets(this.lastKnownFileIds, files);',
     'const res = getDeltaOperationsForAssets(this.lastKnownFileIds, files);\nconsole.log("[y-excalidraw] LOCAL FILES CHANGE DETECTED:", Object.keys(files || {}).length, "files. Delta operations:", res.operations.length);'
 );
 
-// Log when remote files change
-content = content.replace(
+indexContent = indexContent.replace(
     'const validFiles = Object.values(addedFiles).filter(Boolean);',
     'const validFiles = Object.values(addedFiles).filter(Boolean);\nconsole.log("[y-excalidraw] REMOTE FILES RECEIVED:", validFiles.length, "valid files.");'
 );
 
-fs.writeFileSync(indexPath, content);
+fs.writeFileSync(indexPath2, indexContent);
 
 const diffPath = path.join(__dirname, 'node_modules', '@ndy-onl', 'y-excalidraw', 'dist', 'diff.js');
 let diffContent = fs.readFileSync(diffPath, 'utf8');
@@ -138,4 +134,4 @@ diffContent = diffContent.replace(
 );
 
 fs.writeFileSync(diffPath, diffContent);
-console.log("Logs injected!");
+console.log("Logs injected successfully!");
