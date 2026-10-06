@@ -241,8 +241,27 @@ const checkGameState = (
 
   const updatedElements = elements.map((el) => {
     if (el.type === "counter") {
+      const sumsZone = el.customData?.sumsCountersForZone;
+      if (sumsZone) {
+        const otherCounters = elements.filter(
+          (other) =>
+            other.type === "counter" &&
+            other.id !== el.id &&
+            other.customData?.countsZone === sumsZone
+        );
+        const sum = otherCounters.reduce((acc, curr) => acc + (curr.customData?.value || 0), 0);
+        if (el.customData.value !== sum) {
+          needsUpdate = true;
+          return {
+            ...el,
+            customData: { ...el.customData, value: sum },
+            version: (el.version || 0) + 1,
+          };
+        }
+      }
+
       const countsType = el.customData?.countsType;
-      if (countsType) {
+      if (countsType && !sumsZone) {
         const targetZoneName = el.customData?.countsZone;
         const zone = elements.find(
           (zoneEl) =>

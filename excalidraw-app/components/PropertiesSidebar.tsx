@@ -140,6 +140,17 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
       {elementType === "counter" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Summiert Zähler von Zone (Master-Zähler):
+          </label>
+          <input
+            type="text"
+            placeholder="z.B. Spieler1"
+            defaultValue={customData.sumsCountersForZone || ""}
+            onChange={(e) => onUpdate({ sumsCountersForZone: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem", border: "1px solid #aaaaff" }}
+          />
+          <div style={{ margin: "10px 0", borderBottom: "1px solid #ccc" }} />
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
             Zählt in Zone (leer = erste gefundene):
           </label>
           <input
