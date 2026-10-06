@@ -104,3 +104,38 @@ if (content.includes(oldAddedFiles)) {
     content = content.replace(oldAddedFiles, newAddedFiles);
 }
 fs.writeFileSync(targetPath, content, 'utf8');
+const fs = require('fs');
+const path = require('path');
+
+const indexPath = path.join(__dirname, 'node_modules', '@ndy-onl', 'y-excalidraw', 'dist', 'index.js');
+let content = fs.readFileSync(indexPath, 'utf8');
+
+// Log when local files change
+content = content.replace(
+    'const res = getDeltaOperationsForAssets(this.lastKnownFileIds, files);',
+    'const res = getDeltaOperationsForAssets(this.lastKnownFileIds, files);\nconsole.log("[y-excalidraw] LOCAL FILES CHANGE DETECTED:", Object.keys(files || {}).length, "files. Delta operations:", res.operations.length);'
+);
+
+// Log when remote files change
+content = content.replace(
+    'const validFiles = Object.values(addedFiles).filter(Boolean);',
+    'const validFiles = Object.values(addedFiles).filter(Boolean);\nconsole.log("[y-excalidraw] REMOTE FILES RECEIVED:", validFiles.length, "valid files.");'
+);
+
+fs.writeFileSync(indexPath, content);
+
+const diffPath = path.join(__dirname, 'node_modules', '@ndy-onl', 'y-excalidraw', 'dist', 'diff.js');
+let diffContent = fs.readFileSync(diffPath, 'utf8');
+
+diffContent = diffContent.replace(
+    'export const getDeltaOperationsForAssets = (lastKnownFileIds, files) => {',
+    'export const getDeltaOperationsForAssets = (lastKnownFileIds, files) => {\nconsole.log("[y-excalidraw-diff] Computing asset delta. files:", files ? Object.keys(files) : "null");'
+);
+
+diffContent = diffContent.replace(
+    'operations.push({ type: "append", id: fileId, asset: files[fileId] });',
+    'console.log("[y-excalidraw-diff] Appending asset:", fileId); operations.push({ type: "append", id: fileId, asset: files[fileId] });'
+);
+
+fs.writeFileSync(diffPath, diffContent);
+console.log("Logs injected!");
