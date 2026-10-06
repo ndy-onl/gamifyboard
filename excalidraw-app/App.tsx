@@ -668,10 +668,12 @@ const ExcalidrawWrapper = ({
         const scene = {
           elements: board.board_data.elements || [],
           appState: restoredAppState,
-          files: board.board_data.files || {},
           scrollToContent: true,
         };
         excalidrawAPI.updateScene(scene);
+        if (board.board_data.files && Object.keys(board.board_data.files).length > 0) {
+            excalidrawAPI.addFiles(Object.values(board.board_data.files));
+        }
         excalidrawAPI.setToast({ message: `Loaded board: ${board.name}` });
       } else {
         throw new Error("Board data is invalid or empty.");
@@ -930,6 +932,12 @@ const ExcalidrawWrapper = ({
       const yElements = tempYDoc.getArray("elements");
       // Deep copy elements to avoid potential mutations of the original state
       yElements.insert(0, JSON.parse(JSON.stringify(elements)));
+      const yAssets = tempYDoc.getMap("assets");
+      if (files) {
+        for (const fileId in files) {
+          yAssets.set(fileId, files[fileId]);
+        }
+      }
       const yjsData = Y.encodeStateAsUpdate(tempYDoc);
       // Convert Uint8Array to a plain array of numbers for JSON serialization
       const yjsDataAsArray = Array.from(yjsData);

@@ -96,3 +96,11 @@ if (content.includes(remoteReceiverStr)) {
 
 fs.writeFileSync(targetPath, content, 'utf8');
 console.log("Done patching.");
+
+const oldAddedFiles = `const addedFiles = [...events.keysChanged].map((key) => this.yAssets.get(key));`;
+const newAddedFiles = `const addedFiles = [...events.keysChanged].map((key) => this.yAssets.get(key)).filter(Boolean);`;
+
+if (content.includes(oldAddedFiles)) {
+    content = content.replace(oldAddedFiles, newAddedFiles);
+}
+fs.writeFileSync(targetPath, content, 'utf8');
