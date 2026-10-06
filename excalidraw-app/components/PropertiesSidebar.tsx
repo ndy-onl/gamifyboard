@@ -140,7 +140,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
       {elementType === "counter" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Summiert Zähler von Zone (Master-Zähler):
+            Summiert alle Zähler der Gruppe (Master):
           </label>
           <input
             type="text"
@@ -151,7 +151,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
           />
           <div style={{ margin: "10px 0", borderBottom: "1px solid #ccc" }} />
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Zählt in Zone (leer = erste gefundene):
+            Zähler-Gruppe / Zone (z.B. Spieler1):
           </label>
           <input
             type="text"
