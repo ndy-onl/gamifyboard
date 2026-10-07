@@ -258,9 +258,14 @@ const checkGameState = (
   const playerSlots = elements.filter((el) => el.type === "text" && getPlayerSlotId(el));
   playerSlots.forEach((slot) => {
     const slotId = getPlayerSlotId(slot);
-    // Wenn das Textelement ODER sein Container (Rechteck) ausgewählt/bearbeitet wird
+    
+    // Die 'source of truth' ist immer der Slot mit der höchsten Version (zuletzt bearbeitet)
+    if (!latestPlayerSlots[slotId] || (slot.version || 0) > (latestPlayerSlots[slotId].version || 0)) {
+        latestPlayerSlots[slotId] = slot;
+    }
+
+    // Cursor-Namen updaten, falls dieser Slot gerade ausgewählt/bearbeitet wird
     if (appState.selectedElementIds[slot.id] || appState.editingElement?.id === slot.id || (slot.containerId && appState.selectedElementIds[slot.containerId])) {
-        if (!latestPlayerSlots[slotId]) latestPlayerSlots[slotId] = slot;
         if (setCursorName && slot.text) {
            setCursorName(slot.text);
         }
