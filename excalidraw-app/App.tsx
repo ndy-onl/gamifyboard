@@ -1066,10 +1066,20 @@ const ExcalidrawWrapper = ({
       if (targetFrameName) {
         const frame = sceneElements.find(el => el.type === "frame" && el.name === targetFrameName);
         if (frame) {
-          if (typeof (excalidrawAPI as any).scrollToContent === "function") {
-            (excalidrawAPI as any).scrollToContent(frame, { animate: true });
-          } else if (typeof excalidrawAPI.setViewport === "function") {
-            excalidrawAPI.setViewport({ target: [frame], fit: "contain", animation: { duration: 300 }, offsets: { ui: true } });
+          if (targetElement.customData?.teleportAll) {
+             const newSceneElements = sceneElements.map(el => {
+                if (el.id === frame.id) {
+                   return { ...el, customData: { ...el.customData, globalTeleportTrigger: Date.now() }, version: (el.version || 0) + 1 };
+                }
+                return el;
+             });
+             excalidrawAPI.updateScene({ elements: newSceneElements });
+          } else {
+             if (typeof (excalidrawAPI as any).scrollToContent === "function") {
+               (excalidrawAPI as any).scrollToContent(frame, { animate: true });
+             } else if (typeof excalidrawAPI.setViewport === "function") {
+               excalidrawAPI.setViewport({ target: [frame], fit: "contain", animation: { duration: 300 }, offsets: { ui: true } });
+             }
           }
         } else {
           excalidrawAPI.setToast({ message: "Frame '" + targetFrameName + "' nicht gefunden!", color: "danger" });
@@ -1194,6 +1204,19 @@ const ExcalidrawWrapper = ({
         onChange={(elements, appState, files) => {
           onChange(elements, appState, files);
           
+          const triggeredFrames = elements.filter(el => el.type === "frame" && el.customData?.globalTeleportTrigger);
+          triggeredFrames.forEach(frame => {
+             const triggerTime = frame.customData.globalTeleportTrigger;
+             if (triggerTime > Date.now() - 10000 && (window as any).lastTeleportTrigger !== triggerTime) {
+                (window as any).lastTeleportTrigger = triggerTime;
+                if (typeof (excalidrawAPI as any).scrollToContent === "function") {
+                   (excalidrawAPI as any).scrollToContent(frame, { animate: true });
+                } else if (typeof excalidrawAPI.setViewport === "function") {
+                   excalidrawAPI.setViewport({ target: [frame], fit: "contain", animation: { duration: 300 }, offsets: { ui: true } });
+                }
+             }
+          });
+
           if (appState.editingElement?.id) {
              const el = elements.find(e => e.id === appState.editingElement?.id);
              if (el && el.type === "text" && (el.customData?.isPlayerSlot || (el.containerId && elements.find(c => c.id === el.containerId)?.customData?.isPlayerSlot))) {

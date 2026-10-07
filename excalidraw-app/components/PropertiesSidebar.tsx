@@ -319,6 +319,14 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
             onChange={(e) => onUpdate({ targetFrame: e.target.value })}
             style={{ width: "200px", marginBottom: "0.5rem" }}
           />
+          <label style={{ display: "flex", alignItems: "center", marginBottom: "0.5rem", gap: "5px" }}>
+            <input
+              type="checkbox"
+              defaultChecked={customData.teleportAll || false}
+              onChange={(e) => onUpdate({ teleportAll: e.target.checked })}
+            />
+            Alle Spieler mit-teleportieren
+          </label>
           <div style={{ marginTop: "10px" }}>
             <button onClick={() => onAction && onAction("teleport")} style={{ padding: "5px 10px", cursor: "pointer", background: "#aaaaff", color: "white" }}>
               Teleport Now
