@@ -6,6 +6,10 @@ if (typeof window !== 'undefined') {
   window.HTMLCanvasElement.prototype.getContext = function(contextType: string) {
     if (contextType === '2d') {
       return new (window as any).CanvasRenderingContext2D();
+    }
+    return null;
+  };
+}
 
 import { configure } from "@testing-library/react";
 import { vi } from "vitest";
