@@ -161,7 +161,7 @@ if (this.yAssets && this.yAssets.doc) {
             if (op.type === 'append' && op.asset && op.asset.dataURL && op.asset.dataURL.startsWith('data:')) {
                 const asset = op.asset;
                 const ext = asset.mimeType === 'image/jpeg' ? 'jpg' : asset.mimeType === 'image/svg+xml' ? 'svg' : 'png';
-                fetch('/api/s3/presign?filename=' + asset.id + '.' + ext + '&contentType=' + asset.mimeType)
+                fetch('https://api.alpha.gamifyboard.com/s3/presign?filename=' + asset.id + '.' + ext + '&contentType=' + asset.mimeType)
                 .then(r => r.json())
                 .then(async ({ presignedUrl, publicUrl }) => {
                     console.log("[S3] Uploading image to S3...", publicUrl);
