@@ -1040,7 +1040,7 @@ const ExcalidrawWrapper = ({
               return { ...el, customData: { ...el.customData, endTime: Date.now() + duration * 1000, hasFrozen: false }, version: (el.version || 0) + 1 };
            } else {
               // reset
-              return { ...el, customData: { ...el.customData, endTime: null, hasFrozen: false, timeText: "" }, version: (el.version || 0) + 1 };
+              return { ...el, customData: { ...el.customData, endTime: 0, hasFrozen: false, timeText: "" }, version: (el.version || 0) + 1 };
            }
         }
         return el;
@@ -1086,7 +1086,7 @@ const ExcalidrawWrapper = ({
     if (action === "startTimer") {
       triggerAction("startTimer", element);
     } else if (action === "resetTimer") {
-      handleUpdateElement({ endTime: null, hasFrozen: false });
+      handleUpdateElement({ endTime: 0, hasFrozen: false });
       let newSceneElements = [...sceneElements];
       newSceneElements = newSceneElements.map(el => {
         if (el.customData?.isCard) {
