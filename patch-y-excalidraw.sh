@@ -97,6 +97,8 @@ if (content.includes(remoteReceiverStr)) {
 fs.writeFileSync(targetPath, content, 'utf8');
 console.log("Done patching.");
 
+
+
 const oldAddedFiles = `const addedFiles = [...events.keysChanged].map((key) => this.yAssets.get(key));`;
 const newAddedFiles = `
 const addedFiles = [...events.keysChanged].map((key) => this.yAssets.get(key)).filter(Boolean);
@@ -138,7 +140,37 @@ indexContent = indexContent.replace(
     'const validFiles = Object.values(addedFiles).filter(Boolean);\nconsole.log("[y-excalidraw] REMOTE FILES RECEIVED:", validFiles.length, "valid files.");'
 );
 
+
+const oldInitAssetsStr = `// init assets
+        if (this.yAssets) {
+            this.api.addFiles([...this.yAssets.keys()].map((key) => this.yAssets.get(key)));
+        }`;
+
+const newInitAssetsStr = `// init assets
+        if (this.yAssets) {
+            const initialFiles = [...this.yAssets.keys()].map((key) => this.yAssets.get(key)).filter(Boolean);
+            initialFiles.forEach(file => {
+                if (file.dataURL && file.dataURL.startsWith('http')) {
+                    fetch(file.dataURL)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            this.api.addFiles([{ ...file, dataURL: reader.result }]);
+                        };
+                        reader.readAsDataURL(blob);
+                    }).catch(e => console.error("Failed to fetch initial S3 asset", e));
+                } else if (file.dataURL) {
+                    this.api.addFiles([file]);
+                }
+            });
+        }`;
+
+if (indexContent.includes(oldInitAssetsStr)) {
+    indexContent = indexContent.replace(oldInitAssetsStr, newInitAssetsStr);
+}
 fs.writeFileSync(indexPath2, indexContent);
+
 
 const diffPath = path.join(__dirname, 'node_modules', '@ndy-onl', 'y-excalidraw', 'dist', 'diff.js');
 let diffContent = fs.readFileSync(diffPath, 'utf8');
