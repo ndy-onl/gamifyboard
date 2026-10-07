@@ -1204,6 +1204,24 @@ const ExcalidrawWrapper = ({
         onChange={(elements, appState, files) => {
           onChange(elements, appState, files);
           
+          if (!(window as any).hasInitialTeleported) {
+             const startFrame = elements.find(el => el.type === "frame" && el.customData?.isStartFrame);
+             if (startFrame) {
+                (window as any).hasInitialTeleported = true;
+                setTimeout(() => {
+                   if (typeof (excalidrawAPI as any).scrollToContent === "function") {
+                      (excalidrawAPI as any).scrollToContent(startFrame, { animate: false });
+                   } else if (typeof excalidrawAPI.setViewport === "function") {
+                      excalidrawAPI.setViewport({ target: [startFrame], fit: "contain", offsets: { ui: true } });
+                   }
+                }, 500);
+             } else if ((window as any).initialLoadTime && Date.now() - (window as any).initialLoadTime > 5000) {
+                (window as any).hasInitialTeleported = true;
+             } else if (!(window as any).initialLoadTime && elements.length > 0) {
+                (window as any).initialLoadTime = Date.now();
+             }
+          }
+          
           const triggeredFrames = elements.filter(el => el.type === "frame" && el.customData?.globalTeleportTrigger);
           triggeredFrames.forEach(frame => {
              const triggerTime = frame.customData.globalTeleportTrigger;

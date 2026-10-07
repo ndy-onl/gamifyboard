@@ -352,6 +352,20 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
           </p>
         </div>
       )}
+
+      {element.type === "frame" && (
+        <div style={{ marginBottom: "1rem" }}>
+          <h4 style={{ margin: "10px 0 5px 0" }}>Frame-Einstellungen</h4>
+          <label style={{ display: "flex", alignItems: "center", marginBottom: "0.5rem", gap: "5px" }}>
+            <input
+              type="checkbox"
+              defaultChecked={customData.isStartFrame || false}
+              onChange={(e) => onUpdate({ isStartFrame: e.target.checked })}
+            />
+            Als Start-Ansicht beim Laden festlegen
+          </label>
+        </div>
+      )}
     </div>
   );
 };
