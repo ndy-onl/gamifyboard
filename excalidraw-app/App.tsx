@@ -1228,17 +1228,21 @@ const ExcalidrawWrapper = ({
           }
           
           const triggeredFrames = elements.filter(el => el.type === "frame" && el.customData?.globalTeleportTrigger);
-          triggeredFrames.forEach(frame => {
-             const triggerTime = frame.customData.globalTeleportTrigger;
+          if (triggeredFrames.length > 0) {
+             const latestFrame = triggeredFrames.reduce((prev, current) => {
+                return (prev.customData.globalTeleportTrigger > current.customData.globalTeleportTrigger) ? prev : current;
+             });
+             const triggerTime = latestFrame.customData.globalTeleportTrigger;
+             
              if (triggerTime > Date.now() - 10000 && (window as any).lastTeleportTrigger !== triggerTime) {
                 (window as any).lastTeleportTrigger = triggerTime;
                 if (typeof (excalidrawAPI as any).scrollToContent === "function") {
-                   (excalidrawAPI as any).scrollToContent(frame, { animate: true });
+                   (excalidrawAPI as any).scrollToContent(latestFrame, { animate: true });
                 } else if (typeof excalidrawAPI.setViewport === "function") {
-                   excalidrawAPI.setViewport({ target: [frame], fit: "contain", animation: { duration: 300 }, offsets: { ui: true } });
+                   excalidrawAPI.setViewport({ target: [latestFrame], fit: "contain", animation: { duration: 300 }, offsets: { ui: true } });
                 }
              }
-          });
+          }
 
           if (appState.editingElement?.id) {
              const el = elements.find(e => e.id === appState.editingElement?.id);
