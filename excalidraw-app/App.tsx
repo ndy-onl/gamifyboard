@@ -1046,8 +1046,8 @@ const ExcalidrawWrapper = ({
         return el;
       });
 
-      if (action === "resetTimer" && found) {
-         // Also unlock all cards!
+      if ((action === "resetTimer" || action === "startTimer") && found) {
+         // Unlock all cards on reset and start!
          newSceneElements = newSceneElements.map(el => {
            if (el.customData?.isCard) {
               return { ...el, locked: false, version: (el.version || 0) + 1 };
@@ -1522,30 +1522,26 @@ const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props,
     if (!excalidrawAPI) return;
     const interval = setInterval(() => {
       const elements = excalidrawAPI.getSceneElements();
-      let hasChanges = false;
+      let hasRunningTimer = false;
       let freezeGame = false;
       
       let newElements = [...elements];
+      let needsSceneUpdate = false;
       
       for (let i = 0; i < newElements.length; i++) {
         let el = newElements[i];
         if (el.customData?.isTimerDisplay && el.customData?.endTime) {
           const remaining = Math.max(0, Math.ceil((el.customData.endTime - Date.now()) / 1000));
-          const mins = Math.floor(remaining / 60).toString().padStart(2, '0');
-          const secs = (remaining % 60).toString().padStart(2, '0');
-          const timeText = `${mins}:${secs}`;
           
-          if (el.customData.timeText !== timeText) {
-            el = { ...el, customData: { ...el.customData, timeText }, version: (el.version || 0) + 1 };
-            newElements[i] = el as any;
-            hasChanges = true;
+          if (remaining > 0) {
+            hasRunningTimer = true;
           }
 
           if (remaining === 0 && !el.customData.hasFrozen) {
             freezeGame = true;
             el = { ...el, customData: { ...el.customData, hasFrozen: true }, version: (el.version || 0) + 1 };
             newElements[i] = el as any;
-            hasChanges = true;
+            needsSceneUpdate = true;
           }
         }
       }
@@ -1559,8 +1555,10 @@ const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props,
           return el;
         }) as any;
         excalidrawAPI.updateScene({ elements: newElements });
-      } else if (hasChanges) {
+      } else if (needsSceneUpdate) {
         excalidrawAPI.updateScene({ elements: newElements });
+      } else if (hasRunningTimer) {
+        excalidrawAPI.refresh();
       }
     }, 1000);
     return () => clearInterval(interval);

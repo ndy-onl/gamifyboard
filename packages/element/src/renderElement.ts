@@ -481,8 +481,13 @@ const drawElementOnCanvas = (
       rc.draw(ShapeCache.generateElementShape(element, renderConfig));
       
       if (element.customData?.isTimerDisplay) {
-        let text = element.customData?.timeText;
-        if (!text) {
+        let text = "";
+        if (element.customData?.endTime) {
+          const remaining = Math.max(0, Math.ceil((element.customData.endTime - Date.now()) / 1000));
+          const mins = Math.floor(remaining / 60).toString().padStart(2, '0');
+          const secs = (remaining % 60).toString().padStart(2, '0');
+          text = `${mins}:${secs}`;
+        } else {
           const duration = element.customData?.timerDuration || 300;
           const mins = Math.floor(duration / 60).toString().padStart(2, '0');
           const secs = (duration % 60).toString().padStart(2, '0');
