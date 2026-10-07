@@ -34,9 +34,7 @@ const newPointer = `        this.onPointerUpdate = (payload) => {
                     const res = getDeltaOperationsForElements(this.lastKnownElements, elements);
                     if (res.operations.length > 0) {
                         const updateOps = res.operations.filter(op => op.type === "update");
-                        if (updateOps.length > 0) {
-                            console.log("[y-excalidraw] LIVE DRAG SYNC:", updateOps.length, "elements updating. e.g.", updateOps[0].element.id, "x:", updateOps[0].element.x);
-                        }
+                        
                         this.lastKnownElements = res.lastKnownElements;
                         applyElementOperations(this.yElements, res.operations, this);
                     }
@@ -85,7 +83,7 @@ const newRemoteReceiverStr = `        this._remoteElementsChangeHandler = (event
                 return;
             }
             const elements = yjsToExcalidraw(this.yElements);
-            console.log("[y-excalidraw] REMOTE UPDATE RECEIVED:", elements.length, "elements total.");
+            
             this.lastKnownElements = elements;
             this.api.updateScene({ elements });
         };`;
@@ -100,25 +98,7 @@ console.log("Done patching.");
 
 
 const oldAddedFiles = `const addedFiles = [...events.keysChanged].map((key) => this.yAssets.get(key));`;
-const newAddedFiles = `
-const addedFiles = [...events.keysChanged].map((key) => this.yAssets.get(key)).filter(Boolean);
-addedFiles.forEach(file => {
-    if (file.dataURL && file.dataURL.startsWith('http')) {
-        fetch(file.dataURL)
-        .then(res => res.blob())
-        .then(blob => {
-            const reader = new FileReader();
-            reader.onload = () => {
-                this.api.addFiles([{ ...file, dataURL: reader.result }]);
-            };
-            reader.readAsDataURL(blob);
-        }).catch(e => console.error("Failed to fetch remote S3 asset", e));
-    } else if (file.dataURL) {
-        this.api.addFiles([file]);
-    }
-});
-// Avoid original addFiles call
-`;
+const newAddedFiles = `\nconst addedFiles = [...events.keysChanged].map((key) => this.yAssets.get(key)).filter(Boolean);\naddedFiles.forEach(file => {\n    if (file.dataURL && file.dataURL.startsWith('http')) {\n        console.log('[S3] Remote user added image, downloading from S3:', file.dataURL);\n        fetch(file.dataURL)\n        .then(res => res.blob())\n        .then(blob => {\n            const reader = new FileReader();\n            reader.onload = () => {\n                this.api.addFiles([{ ...file, dataURL: reader.result }]);\n            };\n            reader.readAsDataURL(blob);\n        }).catch(e => console.error('Failed to fetch remote S3 asset', e));\n    } else if (file.dataURL) {\n        this.api.addFiles([file]);\n    }\n});\n`;
 
 if (content.includes(oldAddedFiles)) {
     content = content.replace(oldAddedFiles, newAddedFiles);
@@ -132,12 +112,12 @@ let indexContent = fs.readFileSync(indexPath2, 'utf8');
 
 indexContent = indexContent.replace(
     'const res = getDeltaOperationsForAssets(this.lastKnownFileIds, files);',
-    'const res = getDeltaOperationsForAssets(this.lastKnownFileIds, files);\nconsole.log("[y-excalidraw] LOCAL FILES CHANGE DETECTED:", Object.keys(files || {}).length, "files. Delta operations:", res.operations.length);'
+    'const res = getDeltaOperationsForAssets(this.lastKnownFileIds, files);'
 );
 
 indexContent = indexContent.replace(
     'const validFiles = Object.values(addedFiles).filter(Boolean);',
-    'const validFiles = Object.values(addedFiles).filter(Boolean);\nconsole.log("[y-excalidraw] REMOTE FILES RECEIVED:", validFiles.length, "valid files.");'
+    'const validFiles = Object.values(addedFiles).filter(Boolean);'
 );
 
 
@@ -146,25 +126,7 @@ const oldInitAssetsStr = `// init assets
             this.api.addFiles([...this.yAssets.keys()].map((key) => this.yAssets.get(key)));
         }`;
 
-const newInitAssetsStr = `// init assets
-        if (this.yAssets) {
-            const initialFiles = [...this.yAssets.keys()].map((key) => this.yAssets.get(key)).filter(Boolean);
-            initialFiles.forEach(file => {
-                if (file.dataURL && file.dataURL.startsWith('http')) {
-                    fetch(file.dataURL)
-                    .then(res => res.blob())
-                    .then(blob => {
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                            this.api.addFiles([{ ...file, dataURL: reader.result }]);
-                        };
-                        reader.readAsDataURL(blob);
-                    }).catch(e => console.error("Failed to fetch initial S3 asset", e));
-                } else if (file.dataURL) {
-                    this.api.addFiles([file]);
-                }
-            });
-        }`;
+const newInitAssetsStr = `// init assets\n        if (this.yAssets) {\n            const initialFiles = [...this.yAssets.keys()].map((key) => this.yAssets.get(key)).filter(Boolean);\n            initialFiles.forEach(file => {\n                if (file.dataURL && file.dataURL.startsWith('http')) {\n                    console.log('[S3] Initializing image from S3:', file.dataURL);\n                    fetch(file.dataURL)\n                    .then(res => res.blob())\n                    .then(blob => {\n                        const reader = new FileReader();\n                        reader.onload = () => {\n                            this.api.addFiles([{ ...file, dataURL: reader.result }]);\n                        };\n                        reader.readAsDataURL(blob);\n                    }).catch(e => console.error('Failed to fetch initial S3 asset', e));\n                } else if (file.dataURL) {\n                    this.api.addFiles([file]);\n                }\n            });\n        }`;
 
 if (indexContent.includes(oldInitAssetsStr)) {
     indexContent = indexContent.replace(oldInitAssetsStr, newInitAssetsStr);
@@ -177,12 +139,12 @@ let diffContent = fs.readFileSync(diffPath, 'utf8');
 
 diffContent = diffContent.replace(
     'export const getDeltaOperationsForAssets = (lastKnownFileIds, files) => {',
-    'export const getDeltaOperationsForAssets = (lastKnownFileIds, files) => {\nconsole.log("[y-excalidraw-diff] Computing asset delta. files:", files ? Object.keys(files) : "null");'
+    'export const getDeltaOperationsForAssets = (lastKnownFileIds, files) => {'
 );
 
 diffContent = diffContent.replace(
     'operations.push({ type: "append", id: fileId, asset: files[fileId] });',
-    'console.log("[y-excalidraw-diff] Appending asset:", fileId); operations.push({ type: "append", id: fileId, asset: files[fileId] });'
+    'operations.push({ type: "append", id: fileId, asset: files[fileId] });'
 );
 
 fs.writeFileSync(diffPath, diffContent);
@@ -202,10 +164,10 @@ if (this.yAssets && this.yAssets.doc) {
                 fetch('/api/s3/presign?filename=' + asset.id + '.' + ext + '&contentType=' + asset.mimeType)
                 .then(r => r.json())
                 .then(async ({ presignedUrl, publicUrl }) => {
-                    console.log("[y-excalidraw] Uploading image to S3...", publicUrl);
+                    console.log("[S3] Uploading image to S3...", publicUrl);
                     const blob = await (await fetch(asset.dataURL)).blob();
                     await fetch(presignedUrl, { method: 'PUT', body: blob, headers: { 'Content-Type': asset.mimeType } });
-                    console.log("[y-excalidraw] Upload complete, syncing S3 URL via Yjs");
+                    console.log("[S3] Upload complete, syncing S3 URL via Yjs");
                     this.yAssets.set(op.id, { ...asset, dataURL: publicUrl });
                 }).catch(console.error);
                 
