@@ -98,10 +98,30 @@ fs.writeFileSync(targetPath, content, 'utf8');
 console.log("Done patching.");
 
 const oldAddedFiles = `const addedFiles = [...events.keysChanged].map((key) => this.yAssets.get(key));`;
-const newAddedFiles = `const addedFiles = [...events.keysChanged].map((key) => this.yAssets.get(key)).filter(Boolean);`;
+const newAddedFiles = `
+const addedFiles = [...events.keysChanged].map((key) => this.yAssets.get(key)).filter(Boolean);
+addedFiles.forEach(file => {
+    if (file.dataURL && file.dataURL.startsWith('http')) {
+        fetch(file.dataURL)
+        .then(res => res.blob())
+        .then(blob => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                this.api.addFiles([{ ...file, dataURL: reader.result }]);
+            };
+            reader.readAsDataURL(blob);
+        }).catch(e => console.error("Failed to fetch remote S3 asset", e));
+    } else if (file.dataURL) {
+        this.api.addFiles([file]);
+    }
+});
+// Avoid original addFiles call
+`;
 
 if (content.includes(oldAddedFiles)) {
     content = content.replace(oldAddedFiles, newAddedFiles);
+    // Remove the original this.api.addFiles(addedFiles) call since we do it inside the loop
+    content = content.replace(/this.api.addFiles\(addedFiles\);/g, '');
 }
 fs.writeFileSync(targetPath, content, 'utf8');
 
@@ -139,10 +159,40 @@ indexContent = indexContent.replace(
     'applyElementOperations(this.yElements, operations, this);',
     'if (this.yElements.doc) { this.yElements.doc.transact(() => { applyElementOperations(this.yElements, operations, this); }, this); } else { applyElementOperations(this.yElements, operations, this); }'
 );
+
+const customApplyAssets = `
+if (this.yAssets && this.yAssets.doc) { 
+    this.yAssets.doc.transact(() => { 
+        assetOperations.forEach(op => {
+            if (op.type === 'append' && op.asset && op.asset.dataURL && op.asset.dataURL.startsWith('data:')) {
+                const asset = op.asset;
+                const ext = asset.mimeType === 'image/jpeg' ? 'jpg' : asset.mimeType === 'image/svg+xml' ? 'svg' : 'png';
+                fetch('/api/s3/presign?filename=' + asset.id + '.' + ext + '&contentType=' + asset.mimeType)
+                .then(r => r.json())
+                .then(async ({ presignedUrl, publicUrl }) => {
+                    console.log("[y-excalidraw] Uploading image to S3...", publicUrl);
+                    const blob = await (await fetch(asset.dataURL)).blob();
+                    await fetch(presignedUrl, { method: 'PUT', body: blob, headers: { 'Content-Type': asset.mimeType } });
+                    console.log("[y-excalidraw] Upload complete, syncing S3 URL via Yjs");
+                    this.yAssets.set(op.id, { ...asset, dataURL: publicUrl });
+                }).catch(console.error);
+                
+                // Set temporary placeholder to avoid syncing base64
+                this.yAssets.set(op.id, { ...asset, dataURL: '' }); 
+            } else if (op.type === 'append') {
+                this.yAssets.set(op.id, op.asset);
+            } else if (op.type === 'delete') {
+                this.yAssets.delete(op.id);
+            }
+        });
+    }, this); 
+} else { applyAssetOperations(this.yAssets, assetOperations, this); }
+`;
 indexContent = indexContent.replace(
     'applyAssetOperations(this.yAssets, assetOperations, this);',
-    'if (this.yAssets && this.yAssets.doc) { this.yAssets.doc.transact(() => { applyAssetOperations(this.yAssets, assetOperations, this); }, this); } else { applyAssetOperations(this.yAssets, assetOperations, this); }'
+    customApplyAssets
 );
+
 fs.writeFileSync(indexPath2, indexContent);
 
 console.log("Logs injected successfully!");
