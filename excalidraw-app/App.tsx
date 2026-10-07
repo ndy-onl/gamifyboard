@@ -228,6 +228,8 @@ const isIntersecting = (
   );
 };
 
+let localUserPlayerSlotId: string | null = null;
+
 const checkGameState = (
   excalidrawAPI: ExcalidrawImperativeAPI,
   elements: readonly any[] | null,
@@ -264,13 +266,19 @@ const checkGameState = (
         latestPlayerSlots[slotId] = slot;
     }
 
-    // Cursor-Namen updaten, falls dieser Slot gerade ausgewählt/bearbeitet wird
+    // Wenn der Nutzer diesen Slot gerade bearbeitet/auswählt, weisen wir ihm diese Slot-ID zu
     if (appState.selectedElementIds[slot.id] || appState.editingElement?.id === slot.id || (slot.containerId && appState.selectedElementIds[slot.containerId])) {
-        if (setCursorName && slot.text) {
-           setCursorName(slot.text);
-        }
+        localUserPlayerSlotId = slotId;
     }
   });
+
+  // Cursor-Name immer anhand der zugewiesenen Slot-ID updaten
+  if (localUserPlayerSlotId && latestPlayerSlots[localUserPlayerSlotId]) {
+      const mySlot = latestPlayerSlots[localUserPlayerSlotId];
+      if (setCursorName && mySlot.text) {
+          setCursorName(mySlot.text);
+      }
+  }
 
   const updatedElements = elements.map((el) => {
     if (el.type === "text") {
