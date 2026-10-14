@@ -5540,6 +5540,34 @@ class App extends React.Component<AppProps, AppState> {
     });
   };
 
+  /**
+   * Triggers a render pass of the Excalidraw component or canvas scene.
+   *
+   * @param force - If `true`, explicitly forces a full canvas scene update by
+   * invoking `this.scene.triggerUpdate()`. If `false` or omitted, merely triggers
+   * a React component re-render via `this.setState({})`.
+   *
+   * ============================================================================
+   * GAMIFYBOARD ARCHITECTURAL NOTE: `triggerRender(true)` vs `refresh()`
+   * ============================================================================
+   * Why `triggerRender(true)` is essential for GamifyBoard countdown timers:
+   * 1. DYNAMIC CANVAS EVALUATION: GamifyBoard countdown timers (`isTimerDisplay`)
+   *    compute their remaining time dynamically during canvas rendering
+   *    (`Math.ceil((endTime - Date.now()) / 1000)` in `renderElement.ts`).
+   *    The element's properties in the scene do NOT mutate every second. This
+   *    deliberate architecture avoids flooding the Yjs CRDT WebSocket connection
+   *    with 1-second state updates across all connected clients.
+   * 2. CANVAS INVALIDATION: Because element state does not change, standard React
+   *    re-renders (`setState({})`) or calling `refresh()` (which only updates
+   *    `offsetTop`/`offsetLeft` DOM offsets) do NOT trigger a canvas repainting.
+   * 3. THE SCENE TICK: When `force === true`, `triggerRender` calls
+   *    `this.scene.triggerUpdate()`. In `Scene.ts`, `triggerUpdate()` increments
+   *    `sceneNonce` and fires all scene callbacks, forcing `renderStaticScene` in
+   *    `StaticCanvas.tsx` to repaint the 2D canvas context. This causes
+   *    `renderElement.ts` to re-read `Date.now()` and render the new MM:SS text
+   *    with zero network overhead.
+   * ============================================================================
+   */
   public triggerRender = (
     /** force always re-renders canvas even if no change */
     force?: boolean,
@@ -14072,6 +14100,24 @@ class App extends React.Component<AppProps, AppState> {
     }
   };
 
+  /**
+   * Recalculates and updates the canvas container offsets (`offsetLeft`, `offsetTop`)
+   * relative to the viewport/DOM bounding client rect.
+   *
+   * ============================================================================
+   * GAMIFYBOARD NOTE: WHY `refresh()` CANNOT BE USED FOR TIMER COUNTDOWNS
+   * ============================================================================
+   * `refresh()` only synchronizes container positioning (`getCanvasOffsets()`) into
+   * React component state. If the container element has not moved or resized on
+   * screen, Excalidraw's canvas rendering pipeline optimizes away redraw passes
+   * and does NOT repaint the static canvas elements.
+   *
+   * Therefore, invoking `refresh()` on a 1-second interval does NOT update the
+   * dynamic countdown timer text calculated in `renderElement.ts`. To force a
+   * genuine 2D canvas repaint without altering element properties, call
+   * `triggerRender(true)` instead.
+   * ============================================================================
+   */
   public refresh = () => {
     this.setState({ ...this.getCanvasOffsets() });
   };

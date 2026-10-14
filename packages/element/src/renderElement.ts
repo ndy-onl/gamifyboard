@@ -480,6 +480,37 @@ const drawElementOnCanvas = (
 
       rc.draw(ShapeCache.generateElementShape(element, renderConfig));
       
+      /**
+       * ========================================================================
+       * GAMIFYBOARD: DYNAMIC CANVAS TIMER COUNTDOWN RENDERING
+       * ========================================================================
+       * Rationale & Architecture:
+       * When an element represents a game timer display (`customData.isTimerDisplay`),
+       * its remaining time text is calculated on-the-fly directly inside the canvas
+       * rendering loop rather than storing mutating seconds into the element state.
+       *
+       * Why this design is critical:
+       * 1. ZERO NETWORK OVERHEAD: Storing a ticking countdown (e.g. 59, 58, 57...) in
+       *    the element's properties would emit a CRDT state mutation every second over
+       *    the Yjs WebSocket connection for all clients in the room. By instead
+       *    storing a static `endTime` timestamp (set once when started), 0 network
+       *    bytes are transferred during active countdown ticks.
+       * 2. CLIENT INDEPENDENCE & DRIFT PREVENTION: Every client evaluates
+       *    `remaining = ceil((endTime - Date.now()) / 1000)` locally against the
+       *    system clock, guaranteeing perfect synchrony without clock drift or
+       *    accumulated networking latency.
+       * 3. RENDERING PIPELINE INTEGRATION: The 1-second tick interval in `App.tsx`
+       *    invokes `excalidrawAPI.triggerRender(true)` (which calls `scene.triggerUpdate()`),
+       *    triggering a static canvas repaint that executes this block with the
+       *    current `Date.now()`.
+       *
+       * Formatting:
+       * - Active Timer (`endTime` exists): Displays MM:SS countdown down to 00:00.
+       * - Idle / Unstarted Timer: Displays configured `timerDuration` (or default 300s).
+       * - Layout: Centered horizontally and vertically, font size scaled to 40%
+       *   of element height (`height * 0.4`), rendered using `element.strokeColor`.
+       * ========================================================================
+       */
       if (element.customData?.isTimerDisplay) {
         let text = "";
         if (element.customData?.endTime) {
@@ -506,6 +537,23 @@ const drawElementOnCanvas = (
       
       break;
     }
+    /**
+     * ========================================================================
+     * GAMIFYBOARD: CUSTOM "counter" ELEMENT RENDERING
+     * ========================================================================
+     * Rationale & Architecture:
+     * Represents a specialized numeric token or scoreboard display (`type: "counter"`).
+     *
+     * How it functions:
+     * 1. BASE GEOMETRY: Renders roughjs shape geometry cached in `ShapeCache`.
+     * 2. DYNAMIC VALUE: Reads `element.customData?.value ?? 0`, dynamically computed
+     *    and synchronized by the game state loop in `App.tsx`:
+     *    - Specific Card Count: `countsType` tallies intersecting cards inside a zone.
+     *    - Master Aggregation: `sumsCountersForZone` sums sibling counter values.
+     * 3. VISUAL DISPLAY: Centered text with prominent font size (60% of element height:
+     *    `height * 0.6`), styled with `element.strokeColor`.
+     * ========================================================================
+     */
     case "counter": {
       context.lineJoin = "round";
       context.lineCap = "round";
@@ -744,6 +792,9 @@ const generateElementWithCanvas = (
 
   if (
     !prevElementWithCanvas ||
+    // GAMIFYBOARD: Force regeneration for timer displays so the updated MM:SS text
+    // (dynamically calculated from Date.now()) is painted onto a fresh canvas rather
+    // than serving stale prerendered bitmap cache.
     Boolean(element.customData?.isTimerDisplay) ||
     shouldRegenerateBecauseZoom ||
     prevElementWithCanvas.theme !== appState.theme ||
@@ -1150,6 +1201,8 @@ const drawElement = (
     case "text":
     case "iframe":
     case "embeddable":
+    // GAMIFYBOARD: Custom "counter" elements generate vector shapes via ShapeCache
+    // during static scene rendering and SVG/PNG exports.
     case "counter": {
       ShapeCache.generateElementShape(element, renderConfig);
       if (renderConfig.isExporting) {

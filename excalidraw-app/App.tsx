@@ -163,6 +163,10 @@ import { createBoard } from "./src/api";
 import { useCollaboration } from "./hooks/useCollaboration";
 import * as Y from "yjs";
 
+/**
+ * Dialog component for saving the current local board to GamifyBoard Pro Cloud.
+ * Serializes elements, appState, and binary files and uploads to the cloud API.
+ */
 const SaveToProDialog = ({
   excalidrawAPI,
   elements,
@@ -170,7 +174,7 @@ const SaveToProDialog = ({
   files,
   onSuccess,
   onError,
-}) => {
+}: any) => {
   const [boardName, setBoardName] = useState(excalidrawAPI.getName());
 
   const onSave = async () => {
@@ -216,6 +220,30 @@ const SaveToProDialog = ({
   );
 };
 
+/**
+ * ============================================================================
+ * GAMIFYBOARD: 2D AXIS-ALIGNED BOUNDING BOX (AABB) INTERSECTION
+ * ============================================================================
+ * Computes whether two rectangular bounding boxes intersect in 2D Euclidean space.
+ *
+ * Collision Algorithm:
+ * Evaluates the standard separating axis theorem for axis-aligned rectangles:
+ * Two boxes intersect if and only if they overlap simultaneously along both
+ * the horizontal (X) and vertical (Y) projection axes:
+ *   r1.left < r2.right && r1.right > r2.left &&
+ *   r1.top < r2.bottom && r1.bottom > r2.top
+ *
+ * Use cases in GamifyBoard:
+ * 1. Card-Zone Validation: Tests whether a movable game card (`customData.isCard`)
+ *    is placed inside an interactive target zone (`customData.isZone`).
+ * 2. Numeric Counter Tallying: Tallying the number of tokens or cards matching a
+ *    given `countsType` physically resting inside a zone (`countsZone`).
+ *
+ * @param r1 - First bounding box with coordinates {x, y, width, height}
+ * @param r2 - Second bounding box with coordinates {x, y, width, height}
+ * @returns `true` if the two bounding boxes overlap; otherwise `false`.
+ * ============================================================================
+ */
 const isIntersecting = (
   r1: { x: number; y: number; width: number; height: number },
   r2: { x: number; y: number; width: number; height: number },
@@ -229,41 +257,79 @@ const isIntersecting = (
 };
 
 // ============================================================================
-// GAMIFYBOARD: PLAYER-SLOT & CURSOR-NAME SYNCHRONISATION
+// GAMIFYBOARD: PLAYER-SLOT & CURSOR-NAME SYNCHRONIZATION ARCHITECTURE
 // ============================================================================
-// Auf dem GamifyBoard können Spieler-Slots (z.B. auf Spielertableaus, Spielfiguren
-// oder Tokens) miteinander über eine einheitliche `playerSlotId` verknüpft sein.
+// On GamifyBoard, multiple canvas elements (e.g. player boards, character tokens,
+// score sheets, turn trackers) can be linked together to represent the same
+// logical player identity via a shared `customData.playerSlotId`.
 //
-// PROBLEM / EDGE-CASE:
-// Wenn ein Spieler einen Slot editiert (z.B. von "Player 2" auf "Adrian"), klickt
-// er danach ins Leere (Blur). Früher wurde stur der Slot mit der höchsten `version`
-// als Source of Truth genommen. Wenn ein anderer Slot (der noch "Player 2" hieß)
-// zuvor bewegt wurde und eine höhere `version` hatte, wurde "Adrian" sofort wieder
-// auf "Player 2" zurückgesetzt.
+// HISTORICAL EDGE CASE & WHY VERSION PRECEDENCE FAILED:
+// In standard Excalidraw CRDT synchronization, element conflicts are resolved by
+// picking the element with the highest `version`.
+// However, in a collaborative game board:
+// 1. A user double-clicks Slot A ("Player 2") and types "Adrian".
+// 2. Meanwhile, Slot B (which also has `playerSlotId: "p2"`, but still shows "Player 2")
+//    was previously moved or formatted, giving it `version: 80` while Slot A had `version: 12`.
+// 3. When the user finishes typing and clicks outside (blur), a naive version-based check
+//    would observe Slot B (v80) > Slot A (v12), and immediately overwrite "Adrian" back
+//    to "Player 2", destroying user input!
 //
-// LÖSUNG:
-// 1. `isSlotActive`: Prüft aktiv ausgewählte Elemente UND `editingTextElement`.
-// 2. Aktiv bearbeitete Slots schlagen stur die Versionsnummer und werden zwingend
-//    als `latestPlayerSlots` (Source of Truth) gesetzt.
-// 3. Nach dem Blur merken wir uns den zuletzt bearbeiteten Slot (`lastActiveSlotTimestamp`)
-//    für 10 Sekunden, damit er beim Event-Wechsel nicht direkt überschrieben wird.
-// 4. Alle verknüpften Slots mit derselben `playerSlotId` werden synchronisiert und
-//    erhalten `version = max(version, truth.version) + 1`, um Yjs-Konflikte zu lösen.
-// 5. Der Cursor-Name des Nutzers (Collaboration Awareness) wird direkt auf den
-//    neuen Namen gesetzt.
+// MULTI-TIER SOURCE-OF-TRUTH RESOLUTION:
+// To guarantee input preservation and reliable multiplayer convergence:
+// Tier 1: Active WYSIWYG Editing (`isSlotActive`):
+//   Any element currently selected or actively edited in Excalidraw's WYSIWYG editor
+//   (`appState.editingTextElement`) unconditionally takes precedence as the Source of Truth,
+//   ignoring raw element version numbers.
+// Tier 2: 10-Second Blur Grace Period (`lastActiveSlotTimestamp`):
+//   Upon blur, `editingTextElement` is cleared. To prevent immediate race conditions
+//   before version updates settle across Yjs peers, the most recently active slot is
+//   retained as authoritative for 10,000ms.
+// Tier 3: Highest Version Fallback:
+//   When no slots are active or within grace period, standard highest-version resolution applies.
+//
+// SIBLING RECONCILIATION & CRDT CONVERGENCE:
+// All sibling slots sharing the same `playerSlotId` are updated to match the Source of
+// Truth's text, and their version is bumped via:
+//   `version = Math.max(sibling.version, truth.version) + 1`
+// This ensures the updated text dominates all historical replicas across the Yjs network.
+//
+// AWARENESS INTEGRATION:
+// The local player's cursor badge is synchronized via `setCursorName(slot.text)`,
+// dynamically broadcasting the player's name across Yjs Ephemeral Awareness.
 // ============================================================================
 
+/** The playerSlotId currently claimed or edited by the local user. */
 let localUserPlayerSlotId: string | null = null;
+/** Element ID of the most recently active player slot for the local user. */
 let lastActiveSlotElementId: string | null = null;
+/** Timestamp (ms) when the local user last interacted with or edited their slot. */
 let lastActiveSlotTimestamp = 0;
 
+/**
+ * Determines whether a player slot element (or its bound container) is currently
+ * active in the local user's editor state.
+ *
+ * Checks both:
+ * 1. Selection state: `appState.selectedElementIds[slot.id]` or container ID.
+ * 2. Active WYSIWYG text editing: `appState.editingTextElement` (Excalidraw's internal
+ *    property holding the active text editor element, as distinct from `editingElement`).
+ *
+ * Container Inheritance:
+ * If a text element is bound inside a parent container (e.g. a player board frame or
+ * token shape), `slot.containerId` links the two. Selecting or editing either the
+ * text child or the container parent marks the slot active.
+ *
+ * @param slot - The candidate player slot element.
+ * @param appState - Current Excalidraw application state.
+ * @returns `true` if the slot is actively focused, selected, or edited.
+ */
 const isSlotActive = (slot: any, appState: any) => {
   if (!appState) return false;
   if (appState.selectedElementIds) {
     if (appState.selectedElementIds[slot.id]) return true;
     if (slot.containerId && appState.selectedElementIds[slot.containerId]) return true;
   }
-  // In Excalidraw heißt der Text-Editor appState.editingTextElement (nicht editingElement!)
+  // In Excalidraw, active text editing is stored in appState.editingTextElement (not editingElement)
   const editingEl = appState.editingTextElement || (appState as any).editingElement;
   const editingId = editingEl?.id;
   if (editingId) {
@@ -273,6 +339,18 @@ const isSlotActive = (slot: any, appState: any) => {
   return false;
 };
 
+/**
+ * Retrieves the logical `playerSlotId` associated with an element.
+ *
+ * Resolution Order:
+ * 1. Direct customData: Checks `el.customData?.playerSlotId` directly on the element.
+ * 2. Container Inheritance: If the element is a bound text child (`el.containerId`),
+ *    searches `elements` for the parent container and checks its `customData.playerSlotId`.
+ *
+ * @param el - The target element to inspect.
+ * @param elements - The complete scene elements list for resolving container references.
+ * @returns The string `playerSlotId`, or `null` if the element is not a player slot.
+ */
 const getPlayerSlotId = (el: any, elements?: readonly any[]) => {
   if (!el) return null;
   if (el.customData?.isPlayerSlot && el.customData?.playerSlotId) return el.customData.playerSlotId;
@@ -285,6 +363,54 @@ const getPlayerSlotId = (el: any, elements?: readonly any[]) => {
   return null;
 };
 
+/**
+ * ============================================================================
+ * GAMIFYBOARD: CORE GAME STATE EVALUATION ENGINE (checkGameState)
+ * ============================================================================
+ * Central state machine and game rule evaluation loop for GamifyBoard.
+ * Invoked on user interaction events (such as `onPointerUp`), remote sync updates,
+ * and programmatic changes.
+ *
+ * Multi-Phase Evaluation Pipeline:
+ * Phase 1: Card Collection
+ *   Filters all movable card elements (`customData.isCard`).
+ *
+ * Phase 2: Player Slot Discovery & Source-of-Truth Arbitration
+ *   Discovers all player slots (`type === "text"` sharing `playerSlotId`).
+ *   Resolves the authoritative text for each `playerSlotId` using 3-tier priority:
+ *     - Priority 1 (Active WYSIWYG): `isSlotActive` (currently focused or in `editingTextElement`).
+ *     - Priority 2 (Blur Grace Period): Most recently active slot within a 10s window
+ *       (`Date.now() - lastActiveSlotTimestamp < 10000`) to prevent blur race conditions.
+ *     - Priority 3 (Fallback): Highest `version` number.
+ *
+ * Phase 3: Ephemeral Awareness Cursor Sync
+ *   Synchronizes the local player's claimed slot text to their collaboration
+ *   cursor name badge via `setCursorName(mySlot.text)`.
+ *
+ * Phase 4: Sibling Player Slot Propagation & CRDT Convergence
+ *   Updates all sibling slots to match the Source of Truth's text, bumping
+ *   `version = Math.max(sibling.version, truth.version) + 1`.
+ *
+ * Phase 5: Numeric Counter Calculation
+ *   - Master Counters (`sumsCountersForZone`): Computes the aggregate sum of all
+ *     sibling counters targeting the specified zone.
+ *   - Type Counters (`countsType`): Tallies cards with matching `cardType` that
+ *     physically intersect (`isIntersecting`) the target zone.
+ *
+ * Phase 6: Zone Collision & Dynamic Color Validation
+ *   Evaluates cards placed inside each interactive zone (`customData.isZone`):
+ *   If cards are present and all match `acceptedCardTypes`, sets `backgroundColor`
+ *   to `zoneColorActive` (default `#aaffaa`), otherwise `zoneColorDefault` (default `#ffaaaa`).
+ *
+ * Phase 7: Batch Scene Update
+ *   Applies mutations in a single batch pass via `excalidrawAPI.updateScene`
+ *   if and only if `needsUpdate === true`.
+ *
+ * @param excalidrawAPI - Imperative API for scene reads and updates.
+ * @param elements - The scene elements list to evaluate.
+ * @param setCursorName - Optional callback to sync player name to Yjs Awareness cursor.
+ * ============================================================================
+ */
 const checkGameState = (
   excalidrawAPI: ExcalidrawImperativeAPI,
   elements: readonly any[] | null,
@@ -294,19 +420,21 @@ const checkGameState = (
     return;
   }
 
+  // Phase 1: Filter all movable game cards for zone and counter evaluation
   const cards = elements.filter((el) => el.customData?.isCard);
   let needsUpdate = false;
 
   const appState = excalidrawAPI.getAppState();
   let latestPlayerSlots: Record<string, any> = {};
-  
   let activeSlotForSlotId: Record<string, any> = {};
 
+  // Phase 2a: Discover all text slots sharing a playerSlotId
   const playerSlots = elements.filter((el) => el.type === "text" && getPlayerSlotId(el, elements));
   playerSlots.forEach((slot) => {
     const slotId = getPlayerSlotId(slot, elements);
     if (!slotId) return;
 
+    // Check if actively selected or currently being edited in WYSIWYG mode
     const isActive = isSlotActive(slot, appState);
     if (isActive) {
       activeSlotForSlotId[slotId] = slot;
@@ -315,18 +443,18 @@ const checkGameState = (
       lastActiveSlotTimestamp = Date.now();
     }
     
-    // Standardmäßig: Slot mit der höchsten Version
+    // Default version fallback: Track slot with highest version number
     if (!latestPlayerSlots[slotId] || (slot.version || 0) > (latestPlayerSlots[slotId].version || 0)) {
         latestPlayerSlots[slotId] = slot;
     }
   });
 
-  // Priorität 1: Ein aktiv bearbeiteter/ausgewählter Slot ist immer die Source of Truth
+  // Phase 2b: Priority 1 - Actively edited slot unconditionally overrides versions
   Object.keys(activeSlotForSlotId).forEach((slotId) => {
     latestPlayerSlots[slotId] = activeSlotForSlotId[slotId];
   });
 
-  // Priorität 2: Slot, der in den letzten 10 Sekunden vom Nutzer bearbeitet wurde (Schutz vor Blur-Reset)
+  // Phase 2c: Priority 2 - 10-second blur grace period protects against race conditions
   if (lastActiveSlotElementId && Date.now() - lastActiveSlotTimestamp < 10000) {
     const recentSlot = playerSlots.find(s => s.id === lastActiveSlotElementId);
     if (recentSlot) {
@@ -337,7 +465,7 @@ const checkGameState = (
     }
   }
 
-  // Cursor-Name via Collaboration Awareness synchronisieren
+  // Phase 3: Synchronize local player's cursor badge via Yjs Ephemeral Awareness
   if (localUserPlayerSlotId && latestPlayerSlots[localUserPlayerSlotId]) {
       const mySlot = latestPlayerSlots[localUserPlayerSlotId];
       if (setCursorName && mySlot.text) {
@@ -345,7 +473,9 @@ const checkGameState = (
       }
   }
 
+  // Map elements and apply state updates
   const updatedElements = elements.map((el) => {
+    // Phase 4: Sibling player slot synchronization & CRDT version bumping
     if (el.type === "text") {
         const slotId = getPlayerSlotId(el, elements);
         if (slotId) {
@@ -362,7 +492,9 @@ const checkGameState = (
         }
     }
 
+    // Phase 5: Numeric Counter element evaluation
     if (el.type === "counter") {
+      // 5a. Master Counter: Aggregates values of all sibling counters for the target zone
       const sumsZone = el.customData?.sumsCountersForZone;
       if (sumsZone) {
         const otherCounters = elements.filter(
@@ -382,6 +514,7 @@ const checkGameState = (
         }
       }
 
+      // 5b. Card Type Counter: Tallies cards of matching cardType physically inside the target zone
       const countsType = el.customData?.countsType;
       if (countsType && !sumsZone) {
         const targetZoneName = el.customData?.countsZone;
@@ -412,6 +545,7 @@ const checkGameState = (
       return el;
     }
 
+    // Phase 6: Zone Collision & Dynamic Background Color Validation
     if (!el.customData?.isZone) {
       return el;
     }
@@ -423,8 +557,10 @@ const checkGameState = (
       return el;
     }
 
+    // Identify all cards whose bounding box intersects this zone
     const cardsInZone = cards.filter((card) => isIntersecting(card, el as any));
 
+    // Validation rule: Zone is correct if >=1 card is present and ALL cards match acceptedCardTypes
     const isCorrect =
       cardsInZone.length > 0 &&
       cardsInZone.every((card) =>
@@ -441,6 +577,7 @@ const checkGameState = (
     return el;
   });
 
+  // Phase 7: Batch scene update commit
   if (needsUpdate) {
     excalidrawAPI.updateScene({ elements: updatedElements });
   }
@@ -647,6 +784,29 @@ const initializeScene = async (opts: {
     return { scene, isExternalScene: false };
 };
 
+/**
+ * Renders the top-right header action bar, including the collaborative Edit/Game Mode toggle,
+ * room sharing dialog, and authentication controls.
+ *
+ * ============================================================================
+ * GAMIFYBOARD: COLLABORATIVE GAME MODE TOGGLE
+ * ============================================================================
+ * Allows room participants to toggle between:
+ * 1. EDIT MODE (`isEditMode === true`):
+ *    - Standard Excalidraw authoring tools are available.
+ *    - The `PropertiesSidebar` appears when shapes are selected to configure
+ *      custom Gamify mechanics (Card types, Zone rules, Counters, Timers, Teleporters).
+ * 2. GAME MODE (`isEditMode === false`):
+ *    - Streamlined gameplay experience without authoring panels.
+ *    - Clicking interactive elements (such as `isTeleporter` or `isTimerButton`)
+ *      directly triggers their gameplay action in `onPointerDown`.
+ *
+ * Synchronization:
+ * Toggling invokes `setGlobalGameMode(newMode)` to broadcast the state change
+ * to all players via the shared `gamifyState` Y.Map, ensuring everyone plays
+ * in the same synchronized mode.
+ * ============================================================================
+ */
 const renderTopRightUI = ({
   isMobile,
   collabError,
@@ -665,7 +825,7 @@ const renderTopRightUI = ({
   return (
     <div style={{ display: "flex", gap: "10px" }}>
       {collabError.message && <CollabError collabError={collabError} />}
-            {setIsEditMode && (
+      {setIsEditMode && (
         <button
           className={`excalidraw-button collab-button ${isEditMode ? '' : 'active'}`}
           onClick={() => {
@@ -866,9 +1026,37 @@ const ExcalidrawWrapper = ({
     }
   }, [excalidrawAPI, setExcalidrawAPI, onExcalidrawAPISet]);
 
+  /**
+   * ============================================================================
+   * GAMIFYBOARD: SCENE ELEMENT PROCESSOR & VIEWPORT TELEPORTATION
+   * ============================================================================
+   * Handles board-level camera positioning, initial viewport autofocus, and
+   * synchronized multiplayer teleportation triggers.
+   *
+   * Subsystem 1: Initial Start Frame Autofocus (`isStartFrame`)
+   * - Purpose: Centers and zooms the player's viewport onto the board's designated
+   *   starting zone/frame (`type: "frame" && customData.isStartFrame`) upon load.
+   * - Latch: Marked by `hasInitialTeleported` to prevent re-centering on every scene change.
+   * - Grace timeout: After 5000ms from initial load, marks `hasInitialTeleported = true`
+   *   to prevent infinite checks on boards without a start frame.
+   *
+   * Subsystem 2: Global Teleport Triggers & Anti-Ping-Pong Loop Protection
+   * - Purpose: Enables teleporters (`isTeleporter` with `teleportAll: true`) to animate
+   *   the camera view of all connected players in the room to a specific frame.
+   * - Anti-Ping-Pong Invariants:
+   *   1. TIMESTAMP MAX: When multiple frames have triggers, `reduce` selects the single
+   *      frame with the highest timestamp (`latestFrame`).
+   *   2. 10-SECOND FRESHNESS: Ignores triggers older than 10s (`triggerTime > Date.now() - 10000`)
+   *      so players joining a room don't trigger stale historical teleports.
+   *   3. IDEMPOTENCY LATCH: Compares against `(window as any).lastTeleportTrigger !== triggerTime`.
+   *      Each unique trigger event animates the camera exactly once, avoiding endless
+   *      re-trigger loops on subsequent scene update passes.
+   * ============================================================================
+   */
   const processSceneElements = useCallback((elements: readonly any[]) => {
     if (!elements || elements.length === 0) return;
 
+    // Subsystem 1: Initial Start Frame autofocus
     if (!(window as any).hasInitialTeleported) {
        const startFrame = elements.find(el => el.type === "frame" && el.customData?.isStartFrame);
        if (startFrame) {
@@ -894,13 +1082,16 @@ const ExcalidrawWrapper = ({
        }
     }
     
+    // Subsystem 2: Global Teleport Triggers with Anti-Ping-Pong protection
     const triggeredFrames = elements.filter(el => el.type === "frame" && el.customData?.globalTeleportTrigger);
     if (triggeredFrames.length > 0) {
+       // Pick the frame with the latest trigger timestamp
        const latestFrame = triggeredFrames.reduce((prev, current) => {
           return (prev.customData.globalTeleportTrigger > current.customData.globalTeleportTrigger) ? prev : current;
        });
        const triggerTime = latestFrame.customData.globalTeleportTrigger;
        
+       // Enforce 10s freshness window and trigger latch to prevent re-triggering loops
        if (triggerTime > Date.now() - 10000 && (window as any).lastTeleportTrigger !== triggerTime) {
           (window as any).lastTeleportTrigger = triggerTime;
           if (excalidrawAPI) {
@@ -914,6 +1105,11 @@ const ExcalidrawWrapper = ({
     }
   }, [excalidrawAPI]);
 
+  /**
+   * Monkey-patches `excalidrawAPI.updateScene` to intercept scene updates.
+   * Ensures `processSceneElements` evaluates all elements whenever remote Yjs sync
+   * or local operations push new elements into the scene.
+   */
   useEffect(() => {
     if (!excalidrawAPI) return;
     if (!(excalidrawAPI as any).__wrappedUpdateScene) {
@@ -1111,7 +1307,25 @@ const ExcalidrawWrapper = ({
     }
   };
 
-    const handleUpdateElement = (updatedData: any) => {
+  /**
+   * ============================================================================
+   * GAMIFYBOARD: ELEMENT PROPERTY MUTATION HANDLER (handleUpdateElement)
+   * ============================================================================
+   * Applied when the user modifies custom Gamify properties in the `PropertiesSidebar`.
+   *
+   * Responsibilities:
+   * 1. CUSTOM DATA MERGING: Merges `updatedData` into `selectedElement.customData`.
+   * 2. ELEMENT TYPE CONVERSION:
+   *    - When an element is designated as a counter (`isCounter: true`), converts
+   *      its Excalidraw element type to `"counter"` and initializes `customData.value: 0`.
+   * 3. VISUAL AFFORDANCE STYLING:
+   *    - Automatically sets `strokeStyle: "dashed"` for validation zones (`isZone: true`)
+   *      to provide visual distinction on the canvas.
+   * 4. CRDT VERSION BUMP: Increments `version` on modified elements to ensure proper
+   *    Yjs sync propagation.
+   * ============================================================================
+   */
+  const handleUpdateElement = (updatedData: any) => {
     if (!excalidrawAPI || selectedElements.length === 0) {
       return;
     }
@@ -1161,6 +1375,32 @@ const ExcalidrawWrapper = ({
 
   const [isEditMode, setIsEditMode] = useState(true);
 
+  /**
+   * ============================================================================
+   * GAMIFYBOARD: GAMEPLAY ACTION DISPATCHER (triggerAction)
+   * ============================================================================
+   * Executes game mechanics triggered either by clicking interactive tokens in
+   * Game Mode (`onPointerDown`) or via the `PropertiesSidebar`.
+   *
+   * Supported Actions:
+   * 1. "startTimer" / "resetTimer":
+   *    - Identifies target timer display matching `targetElement.customData.targetTimerName`.
+   *    - "startTimer": Computes `endTime = Date.now() + duration * 1000`, clears `hasFrozen: false`,
+   *      and unlocks all cards on the board (`locked: false`).
+   *    - "resetTimer": Sets `endTime = 0`, clears `hasFrozen: false`, and unlocks all cards.
+   *    - Updates scene via `excalidrawAPI.updateScene`.
+   *
+   * 2. "teleport":
+   *    - Identifies target frame element matching `targetElement.customData.targetFrame`.
+   *    - Local Focus (`teleportAll: false`): Animates local camera to frame via `scrollToContent`.
+   *    - Global Broadcast (`teleportAll: true`): Sets `globalTeleportTrigger = Date.now()`
+   *      on the target frame element and increments its version. When synchronized over Yjs,
+   *      all connected clients' `processSceneElements` hook animates their viewports.
+   *
+   * @param action - Action identifier ("startTimer" | "resetTimer" | "teleport")
+   * @param targetElement - The triggering element containing action parameters in customData.
+   * ============================================================================
+   */
   const triggerAction = (action: string, targetElement: NonDeletedExcalidrawElement) => {
     if (!excalidrawAPI) return;
     const sceneElements = excalidrawAPI.getSceneElements();
@@ -1228,6 +1468,10 @@ const ExcalidrawWrapper = ({
     }
   };
 
+  /**
+   * Action handler invoked by the `PropertiesSidebar` action buttons.
+   * Routes user action requests to `triggerAction` for the selected element.
+   */
   const handleAction = (action: string) => {
     if (!excalidrawAPI || selectedElements.length === 0) return;
     const sceneElements = excalidrawAPI.getSceneElements();
@@ -1331,6 +1575,11 @@ const ExcalidrawWrapper = ({
       <Excalidraw
         onPointerUpdate={onPointerUpdate}
         onExcalidrawAPI={excalidrawRefCallback}
+        /**
+         * GAMIFYBOARD: GAME MODE INTERACTION DISPATCHER
+         * When in Game Mode (`!isEditMode`), clicking canvas tokens directly activates
+         * their configured gameplay action without requiring the properties sidebar.
+         */
         onPointerDown={(activeTool, pointerDownState) => {
           const hitElement = pointerDownState.hit?.element;
           if (hitElement && hitElement.customData && !isEditMode) {
@@ -1341,6 +1590,16 @@ const ExcalidrawWrapper = ({
              }
           }
         }}
+        /**
+         * GAMIFYBOARD: REAL-TIME SCENE & TYPING SYNCHRONIZATION
+         * 1. Evaluates start frames & global teleport triggers via `processSceneElements`.
+         * 2. Real-Time Player Slot Typing Stream:
+         *    When a user actively edits text in a PlayerSlot (`editingTextElement`),
+         *    immediately registers this slot as the local user's active slot and streams
+         *    the text to `setCursorName(el.text)`. This allows other players to see the
+         *    user's cursor label change keystroke-by-keystroke in real-time before blur!
+         * 3. Maintains `selectedElements` state for the properties sidebar.
+         */
         onChange={(elements, appState, files) => {
           onChange(elements, appState, files);
           
@@ -1361,8 +1620,6 @@ const ExcalidrawWrapper = ({
                  }
              }
           }
-          
-
 
           if (
             appState.selectedElementIds &&
@@ -1386,6 +1643,11 @@ const ExcalidrawWrapper = ({
             setSelectedElements([]);
           }
         }}
+        /**
+         * GAMIFYBOARD: INTERACTION SETTLE TRIGGER
+         * Evaluates game rules (`checkGameState`) as soon as a user finishes dragging
+         * a card, releasing a token, or clicking on the canvas.
+         */
         onPointerUp={() => {
           // Trigger the check after user interaction
           if (excalidrawAPI) {
@@ -1462,6 +1724,8 @@ const ExcalidrawWrapper = ({
           }
         }}
       >
+        {/* GAMIFYBOARD: Custom mechanics configuration panel (Cards, Zones, PlayerSlots, Timers, Teleporters)
+            Only rendered in Edit Mode when canvas elements are currently selected */}
         {isEditMode && selectedElements.length > 0 && (
           <PropertiesSidebar
             elements={selectedElements}
@@ -1676,7 +1940,40 @@ const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props,
   }, [excalidrawAPI]);
 
   
-  // GAMIFY: Global Timer Tick
+  /**
+   * ============================================================================
+   * GAMIFYBOARD: GLOBAL TIMER TICK & CARD FREEZE ENGINE
+   * ============================================================================
+   * Runs a 1-second interval heartbeat loop to manage timer countdowns and game
+   * freeze states across the board.
+   *
+   * Responsibilities:
+   * 1. ACTIVE TIMER DETECTION:
+   *    - Scans for elements with `customData.isTimerDisplay` and an active `endTime`.
+   *    - Calculates `remaining = ceil((endTime - Date.now()) / 1000)`.
+   *
+   * 2. EXPIRATION & CARD LOCKING (Game Freeze):
+   *    - When `remaining === 0` and the timer has not yet frozen (`!hasFrozen`):
+   *      a) Sets `hasFrozen: true` on the timer display.
+   *      b) Freezes all game cards on the board by setting `locked: true` and
+   *         incrementing their version.
+   *      c) Displays a notification toast to the room.
+   *      d) Broadcasts the locked state via `excalidrawAPI.updateScene` to all peers.
+   *
+   * 3. ZERO-PAYLOAD LOCAL TIMER CANVAS TICK:
+   *    - When any timer is actively counting down (`remaining > 0`):
+   *      * The timer string ("MM:SS") is computed on-the-fly during canvas painting
+   *        in `renderElement.ts`. The scene element itself does NOT mutate each second.
+   *      * WHY NOT `refresh()`?
+   *        `refresh()` only recalculates container bounding rect offsets
+   *        (`offsetLeft`, `offsetTop`). It does NOT trigger a canvas repaint.
+   *      * WHY `triggerRender(true)`?
+   *        `triggerRender(true)` calls `this.scene.triggerUpdate()`, generating a new
+   *        `sceneNonce` and repainting the 2D canvas context. This causes
+   *        `renderElement.ts` to re-read `Date.now()` and redraw the visual countdown
+   *        without transferring a single byte across the Yjs WebSocket network!
+   * ============================================================================
+   */
   useEffect(() => {
     if (!excalidrawAPI) return;
     const interval = setInterval(() => {
@@ -1717,16 +2014,7 @@ const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props,
       } else if (needsSceneUpdate) {
         excalidrawAPI.updateScene({ elements: newElements });
       } else if (hasRunningTimer) {
-        // ====================================================================
-        // GAMIFYBOARD: TIMER-COUNTDOWN RENDERING
-        // ====================================================================
-        // Der Timer berechnet seine verbleibende Restzeit dynamisch beim
-        // Canvas-Zeichnen (renderElement.ts: remaining = endTime - Date.now()).
-        // Ein einfaches `refresh()` aktualisiert nur DOM/Canvas-Offsets, erzwingt
-        // jedoch kein Neuzeichnen der Canvas-Elemente.
-        // `triggerRender(true)` erzwingt das Repaint jede Sekunde, ohne
-        // das Yjs-Netzwerk mit unnötigen Element-Updates zu fluten.
-        // ====================================================================
+        // Broadcast local repaint tick to canvas without network overhead
         (window as any).__gamifyTimerTick = Date.now();
         if (typeof (excalidrawAPI as any).triggerRender === "function") {
           (excalidrawAPI as any).triggerRender(true);
