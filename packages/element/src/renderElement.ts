@@ -744,6 +744,7 @@ const generateElementWithCanvas = (
 
   if (
     !prevElementWithCanvas ||
+    Boolean(element.customData?.isTimerDisplay) ||
     shouldRegenerateBecauseZoom ||
     prevElementWithCanvas.theme !== appState.theme ||
     prevElementWithCanvas.imageCrop !== imageCrop ||
