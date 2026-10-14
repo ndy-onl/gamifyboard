@@ -2053,7 +2053,7 @@
 
 "@ndy-onl/y-excalidraw@git+https://github.com/ndy-onl/y-excalidraw.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com/ndy-onl/y-excalidraw.git#58f74dc40bfd6248a0783a56609ca1c8a77f1aed"
+  resolved "git+https://github.com/ndy-onl/y-excalidraw.git#58f74dc40bfd6248a0783a56609ca1c8a77f1aed"
 
 "@next/env@14.1.4":
   version "14.1.4"
