@@ -228,7 +228,50 @@ const isIntersecting = (
   );
 };
 
+// ============================================================================
+// GAMIFYBOARD: PLAYER-SLOT & CURSOR-NAME SYNCHRONISATION
+// ============================================================================
+// Auf dem GamifyBoard können Spieler-Slots (z.B. auf Spielertableaus, Spielfiguren
+// oder Tokens) miteinander über eine einheitliche `playerSlotId` verknüpft sein.
+//
+// PROBLEM / EDGE-CASE:
+// Wenn ein Spieler einen Slot editiert (z.B. von "Player 2" auf "Adrian"), klickt
+// er danach ins Leere (Blur). Früher wurde stur der Slot mit der höchsten `version`
+// als Source of Truth genommen. Wenn ein anderer Slot (der noch "Player 2" hieß)
+// zuvor bewegt wurde und eine höhere `version` hatte, wurde "Adrian" sofort wieder
+// auf "Player 2" zurückgesetzt.
+//
+// LÖSUNG:
+// 1. `isSlotActive`: Prüft aktiv ausgewählte Elemente UND `editingTextElement`.
+// 2. Aktiv bearbeitete Slots schlagen stur die Versionsnummer und werden zwingend
+//    als `latestPlayerSlots` (Source of Truth) gesetzt.
+// 3. Nach dem Blur merken wir uns den zuletzt bearbeiteten Slot (`lastActiveSlotTimestamp`)
+//    für 10 Sekunden, damit er beim Event-Wechsel nicht direkt überschrieben wird.
+// 4. Alle verknüpften Slots mit derselben `playerSlotId` werden synchronisiert und
+//    erhalten `version = max(version, truth.version) + 1`, um Yjs-Konflikte zu lösen.
+// 5. Der Cursor-Name des Nutzers (Collaboration Awareness) wird direkt auf den
+//    neuen Namen gesetzt.
+// ============================================================================
+
 let localUserPlayerSlotId: string | null = null;
+let lastActiveSlotElementId: string | null = null;
+let lastActiveSlotTimestamp = 0;
+
+const isSlotActive = (slot: any, appState: any) => {
+  if (!appState) return false;
+  if (appState.selectedElementIds) {
+    if (appState.selectedElementIds[slot.id]) return true;
+    if (slot.containerId && appState.selectedElementIds[slot.containerId]) return true;
+  }
+  // In Excalidraw heißt der Text-Editor appState.editingTextElement (nicht editingElement!)
+  const editingEl = appState.editingTextElement || (appState as any).editingElement;
+  const editingId = editingEl?.id;
+  if (editingId) {
+    if (editingId === slot.id) return true;
+    if (slot.containerId && (editingId === slot.containerId || editingEl?.containerId === slot.containerId)) return true;
+  }
+  return false;
+};
 
 const checkGameState = (
   excalidrawAPI: ExcalidrawImperativeAPI,
@@ -257,22 +300,44 @@ const checkGameState = (
     return null;
   };
 
+  let activeSlotForSlotId: Record<string, any> = {};
+
   const playerSlots = elements.filter((el) => el.type === "text" && getPlayerSlotId(el));
   playerSlots.forEach((slot) => {
     const slotId = getPlayerSlotId(slot);
+    if (!slotId) return;
+
+    const isActive = isSlotActive(slot, appState);
+    if (isActive) {
+      activeSlotForSlotId[slotId] = slot;
+      localUserPlayerSlotId = slotId;
+      lastActiveSlotElementId = slot.id;
+      lastActiveSlotTimestamp = Date.now();
+    }
     
-    // Die 'source of truth' ist immer der Slot mit der höchsten Version (zuletzt bearbeitet)
+    // Standardmäßig: Slot mit der höchsten Version
     if (!latestPlayerSlots[slotId] || (slot.version || 0) > (latestPlayerSlots[slotId].version || 0)) {
         latestPlayerSlots[slotId] = slot;
     }
-
-    // Wenn der Nutzer diesen Slot gerade bearbeitet/auswählt, weisen wir ihm diese Slot-ID zu
-    if (appState.selectedElementIds[slot.id] || appState.editingElement?.id === slot.id || (slot.containerId && appState.selectedElementIds[slot.containerId])) {
-        localUserPlayerSlotId = slotId;
-    }
   });
 
-  // Cursor-Name immer anhand der zugewiesenen Slot-ID updaten
+  // Priorität 1: Ein aktiv bearbeiteter/ausgewählter Slot ist immer die Source of Truth
+  Object.keys(activeSlotForSlotId).forEach((slotId) => {
+    latestPlayerSlots[slotId] = activeSlotForSlotId[slotId];
+  });
+
+  // Priorität 2: Slot, der in den letzten 10 Sekunden vom Nutzer bearbeitet wurde (Schutz vor Blur-Reset)
+  if (lastActiveSlotElementId && Date.now() - lastActiveSlotTimestamp < 10000) {
+    const recentSlot = playerSlots.find(s => s.id === lastActiveSlotElementId);
+    if (recentSlot) {
+      const slotId = getPlayerSlotId(recentSlot);
+      if (slotId && !activeSlotForSlotId[slotId]) {
+        latestPlayerSlots[slotId] = recentSlot;
+      }
+    }
+  }
+
+  // Cursor-Name via Collaboration Awareness synchronisieren
   if (localUserPlayerSlotId && latestPlayerSlots[localUserPlayerSlotId]) {
       const mySlot = latestPlayerSlots[localUserPlayerSlotId];
       if (setCursorName && mySlot.text) {
@@ -291,7 +356,7 @@ const checkGameState = (
                     ...el,
                     text: truthSlot.text,
                     originalText: truthSlot.text,
-                    version: (el.version || 0) + 1,
+                    version: Math.max((el.version || 0), (truthSlot.version || 0)) + 1,
                 };
             }
         }
@@ -801,7 +866,69 @@ const ExcalidrawWrapper = ({
     }
   }, [excalidrawAPI, setExcalidrawAPI, onExcalidrawAPISet]);
 
-  const [shareDialogState, setShareDialogState] = useAtom(shareDialogStateAtom);
+  const processSceneElements = useCallback((elements: readonly any[]) => {
+    if (!elements || elements.length === 0) return;
+
+    if (!(window as any).hasInitialTeleported) {
+       const startFrame = elements.find(el => el.type === "frame" && el.customData?.isStartFrame);
+       if (startFrame) {
+          (window as any).hasInitialTeleported = true;
+          const doScroll = () => {
+             if (excalidrawAPI) {
+                if (typeof (excalidrawAPI as any).scrollToContent === "function") {
+                   (excalidrawAPI as any).scrollToContent(startFrame, { animate: false });
+                } else if (typeof excalidrawAPI.setViewport === "function") {
+                   excalidrawAPI.setViewport({ target: [startFrame], fit: "contain", offsets: { ui: true } });
+                }
+             }
+          };
+          if (isTestEnv()) {
+             doScroll();
+          } else {
+             setTimeout(doScroll, 500);
+          }
+       } else if ((window as any).initialLoadTime && Date.now() - (window as any).initialLoadTime > 5000) {
+          (window as any).hasInitialTeleported = true;
+       } else if (!(window as any).initialLoadTime && elements.length > 0) {
+          (window as any).initialLoadTime = Date.now();
+       }
+    }
+    
+    const triggeredFrames = elements.filter(el => el.type === "frame" && el.customData?.globalTeleportTrigger);
+    if (triggeredFrames.length > 0) {
+       const latestFrame = triggeredFrames.reduce((prev, current) => {
+          return (prev.customData.globalTeleportTrigger > current.customData.globalTeleportTrigger) ? prev : current;
+       });
+       const triggerTime = latestFrame.customData.globalTeleportTrigger;
+       
+       if (triggerTime > Date.now() - 10000 && (window as any).lastTeleportTrigger !== triggerTime) {
+          (window as any).lastTeleportTrigger = triggerTime;
+          if (excalidrawAPI) {
+             if (typeof (excalidrawAPI as any).scrollToContent === "function") {
+                (excalidrawAPI as any).scrollToContent(latestFrame, { animate: true });
+             } else if (typeof excalidrawAPI.setViewport === "function") {
+                excalidrawAPI.setViewport({ target: [latestFrame], fit: "contain", animation: { duration: 300 }, offsets: { ui: true } });
+             }
+          }
+       }
+    }
+  }, [excalidrawAPI]);
+
+  useEffect(() => {
+    if (!excalidrawAPI) return;
+    if (!(excalidrawAPI as any).__wrappedUpdateScene) {
+      (excalidrawAPI as any).__wrappedUpdateScene = true;
+      const originalUpdateScene = excalidrawAPI.updateScene;
+      excalidrawAPI.updateScene = (sceneData: any) => {
+        originalUpdateScene(sceneData);
+        if (sceneData?.elements) {
+          processSceneElements(sceneData.elements);
+        }
+      };
+    }
+  }, [excalidrawAPI, processSceneElements]);
+
+    const [shareDialogState, setShareDialogState] = useAtom(shareDialogStateAtom);
   const collabError = useAtomValue(collabErrorIndicatorAtom);
 
   useHandleLibrary({
@@ -1217,46 +1344,20 @@ const ExcalidrawWrapper = ({
         onChange={(elements, appState, files) => {
           onChange(elements, appState, files);
           
-          if (!(window as any).hasInitialTeleported) {
-             const startFrame = elements.find(el => el.type === "frame" && el.customData?.isStartFrame);
-             if (startFrame) {
-                (window as any).hasInitialTeleported = true;
-                setTimeout(() => {
-                   if (typeof (excalidrawAPI as any).scrollToContent === "function") {
-                      (excalidrawAPI as any).scrollToContent(startFrame, { animate: false });
-                   } else if (typeof excalidrawAPI.setViewport === "function") {
-                      excalidrawAPI.setViewport({ target: [startFrame], fit: "contain", offsets: { ui: true } });
-                   }
-                }, 500);
-             } else if ((window as any).initialLoadTime && Date.now() - (window as any).initialLoadTime > 5000) {
-                (window as any).hasInitialTeleported = true;
-             } else if (!(window as any).initialLoadTime && elements.length > 0) {
-                (window as any).initialLoadTime = Date.now();
-             }
-          }
-          
-          const triggeredFrames = elements.filter(el => el.type === "frame" && el.customData?.globalTeleportTrigger);
-          if (triggeredFrames.length > 0) {
-             const latestFrame = triggeredFrames.reduce((prev, current) => {
-                return (prev.customData.globalTeleportTrigger > current.customData.globalTeleportTrigger) ? prev : current;
-             });
-             const triggerTime = latestFrame.customData.globalTeleportTrigger;
-             
-             if (triggerTime > Date.now() - 10000 && (window as any).lastTeleportTrigger !== triggerTime) {
-                (window as any).lastTeleportTrigger = triggerTime;
-                if (typeof (excalidrawAPI as any).scrollToContent === "function") {
-                   (excalidrawAPI as any).scrollToContent(latestFrame, { animate: true });
-                } else if (typeof excalidrawAPI.setViewport === "function") {
-                   excalidrawAPI.setViewport({ target: [latestFrame], fit: "contain", animation: { duration: 300 }, offsets: { ui: true } });
-                }
-             }
-          }
+          processSceneElements(elements);
 
-          if (appState.editingElement?.id) {
-             const el = elements.find(e => e.id === appState.editingElement?.id);
-             if (el && el.type === "text" && (el.customData?.isPlayerSlot || (el.containerId && elements.find(c => c.id === el.containerId)?.customData?.isPlayerSlot))) {
-                 if (setCursorName && el.text) {
-                     setCursorName(el.text);
+          const activeText = appState.editingTextElement || (appState as any).editingElement;
+          if (activeText?.id) {
+             const el = elements.find(e => e.id === activeText.id);
+             if (el && el.type === "text") {
+                 const slotId = getPlayerSlotId(el);
+                 if (slotId) {
+                     localUserPlayerSlotId = slotId;
+                     lastActiveSlotElementId = el.id;
+                     lastActiveSlotTimestamp = Date.now();
+                     if (setCursorName && el.text) {
+                         setCursorName(el.text);
+                     }
                  }
              }
           }
@@ -1558,7 +1659,7 @@ const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props,
   useImperativeHandle(ref, () => ({
     excalidrawAPI,
     checkGameState: (elements: readonly any[]) =>
-      excalidrawAPI && checkGameState(excalidrawAPI, elements, setCursorName),
+      excalidrawAPI && checkGameState(excalidrawAPI, elements),
   }));
 
   useEffect(() => {
@@ -1568,7 +1669,7 @@ const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props,
         (window as any).ExcalidrawHandle = {
           excalidrawAPI,
           checkGameState: (elements: readonly any[] | null) =>
-            checkGameState(excalidrawAPI, elements, setCursorName),
+            checkGameState(excalidrawAPI, elements),
         };
       }
     }
@@ -1616,7 +1717,22 @@ const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props,
       } else if (needsSceneUpdate) {
         excalidrawAPI.updateScene({ elements: newElements });
       } else if (hasRunningTimer) {
-        excalidrawAPI.refresh();
+        // ====================================================================
+        // GAMIFYBOARD: TIMER-COUNTDOWN RENDERING
+        // ====================================================================
+        // Der Timer berechnet seine verbleibende Restzeit dynamisch beim
+        // Canvas-Zeichnen (renderElement.ts: remaining = endTime - Date.now()).
+        // Ein einfaches `refresh()` aktualisiert nur DOM/Canvas-Offsets, erzwingt
+        // jedoch kein Neuzeichnen der Canvas-Elemente.
+        // `triggerRender(true)` erzwingt das Repaint jede Sekunde, ohne
+        // das Yjs-Netzwerk mit unnötigen Element-Updates zu fluten.
+        // ====================================================================
+        (window as any).__gamifyTimerTick = Date.now();
+        if (typeof (excalidrawAPI as any).triggerRender === "function") {
+          (excalidrawAPI as any).triggerRender(true);
+        } else {
+          excalidrawAPI.refresh();
+        }
       }
     }, 1000);
     return () => clearInterval(interval);

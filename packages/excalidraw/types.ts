@@ -1384,6 +1384,7 @@ export interface ExcalidrawImperativeAPI {
   >["setElementRenderOverrides"];
   registerAction: (action: Action) => void;
   refresh: InstanceType<typeof App>["refresh"];
+  triggerRender?: InstanceType<typeof App>["triggerRender"];
   setToast: InstanceType<typeof App>["setToast"];
   addFiles: (data: BinaryFileData[]) => void;
   id: string;

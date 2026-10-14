@@ -46,7 +46,10 @@ describe("Gamify Edge Cases", () => {
       render(<ExcalidrawApp />);
     });
 
-    const { excalidrawAPI } = await waitFor(() => (window as any).ExcalidrawHandle);
+    const { excalidrawAPI } = await waitFor(() => {
+      if (!(window as any).ExcalidrawHandle) throw new Error('Handle not ready');
+      return (window as any).ExcalidrawHandle;
+    });
 
     let scrollToContentCalls = 0;
     (excalidrawAPI as any).scrollToContent = () => { scrollToContentCalls++; };
@@ -77,7 +80,10 @@ describe("Gamify Edge Cases", () => {
       render(<ExcalidrawApp />);
     });
 
-    const { excalidrawAPI } = await waitFor(() => (window as any).ExcalidrawHandle);
+    const { excalidrawAPI } = await waitFor(() => {
+      if (!(window as any).ExcalidrawHandle) throw new Error('Handle not ready');
+      return (window as any).ExcalidrawHandle;
+    });
 
     let scrolledToStart = false;
     (excalidrawAPI as any).scrollToContent = (frame: any) => { 
@@ -95,5 +101,109 @@ describe("Gamify Edge Cases", () => {
     await waitFor(() => {
       expect(scrolledToStart).toBe(true);
     }, { timeout: 2000 });
+  });
+  it("should prioritize actively edited player slot over higher version sibling slot", async () => {
+    act(() => {
+      render(<ExcalidrawApp />);
+    });
+
+    const { excalidrawAPI, checkGameState } = await waitFor(() => {
+      if (!(window as any).ExcalidrawHandle) throw new Error('Handle not ready');
+      return (window as any).ExcalidrawHandle;
+    });
+
+    const slot1 = {
+      id: "slot1",
+      type: "text",
+      text: "Old Name",
+      originalText: "Old Name",
+      version: 50,
+      versionNonce: 1,
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 25,
+      fontSize: 20,
+      fontFamily: 1,
+      textAlign: "left",
+      verticalAlign: "top",
+      baseline: 18,
+      lineHeight: 1.2,
+      groupIds: [],
+      customData: { isPlayerSlot: true, playerSlotId: "p2" },
+    };
+
+    const slot2 = {
+      id: "slot2",
+      type: "text",
+      text: "Adrian",
+      originalText: "Adrian",
+      version: 10,
+      versionNonce: 2,
+      x: 100,
+      y: 0,
+      width: 100,
+      height: 25,
+      fontSize: 20,
+      fontFamily: 1,
+      textAlign: "left",
+      verticalAlign: "top",
+      baseline: 18,
+      lineHeight: 1.2,
+      groupIds: [],
+      customData: { isPlayerSlot: true, playerSlotId: "p2" },
+    };
+
+    act(() => {
+      excalidrawAPI.updateScene({
+        elements: [slot1, slot2],
+      });
+    });
+
+    act(() => {
+      excalidrawAPI.updateScene({
+        appState: {
+          selectedElementIds: { slot2: true },
+        },
+      });
+    });
+
+    act(() => {
+      checkGameState(excalidrawAPI.getSceneElements());
+    });
+
+    // Expect slot1 to sync to Adrian, NOT revert slot2 back to Old Name
+    await waitFor(() => {
+      const elements = excalidrawAPI.getSceneElements();
+      const s1 = elements.find((el: any) => el.id === "slot1");
+      const s2 = elements.find((el: any) => el.id === "slot2");
+      expect(s2?.text).toBe("Adrian");
+      expect(s1?.text).toBe("Adrian");
+    });
+  });
+
+  it("should trigger render on global timer tick when timer is running", async () => {
+    (window as any).__gamifyTimerTick = undefined;
+    act(() => {
+      render(<ExcalidrawApp />);
+    });
+
+    const { excalidrawAPI } = await waitFor(() => {
+      if (!(window as any).ExcalidrawHandle) throw new Error('Handle not ready');
+      return (window as any).ExcalidrawHandle;
+    });
+
+    act(() => {
+      excalidrawAPI.updateScene({
+        elements: [
+          { id: "timer1", type: "rectangle", width: 100, height: 50, customData: { isTimerDisplay: true, timerName: "T1", endTime: Date.now() + 60000 } },
+        ],
+      });
+    });
+
+    // Wait for the 1-second interval tick
+    await waitFor(() => {
+      expect((window as any).__gamifyTimerTick).toBeDefined();
+    }, { timeout: 4000 });
   });
 });

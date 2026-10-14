@@ -846,6 +846,7 @@ class App extends React.Component<AppProps, AppState> {
         this.actionManager.registerAction(action);
       },
       refresh: this.refresh,
+      triggerRender: this.triggerRender,
       setToast: this.setToast,
       id: this.id,
       setActiveTool: this.setActiveTool,

@@ -86,6 +86,24 @@ Object.defineProperty(window, "FontFace", {
       this.status = "unloaded";
       this.unicodeRange = "U+0000-00FF";
     }
-    return null;
+    
+    load() {
+      return Promise.resolve(this);
+    }
+  }
+});
+
+if (typeof document !== "undefined") {
+  const fontSet = new Set();
+  (document as any).fonts = {
+    add: (font: any) => fontSet.add(font),
+    has: (font: any) => fontSet.has(font),
+    delete: (font: any) => fontSet.delete(font),
+    clear: () => fontSet.clear(),
+    load: () => Promise.resolve([]),
+    check: () => true,
+    ready: Promise.resolve(),
+    forEach: fontSet.forEach.bind(fontSet),
+    [Symbol.iterator]: fontSet[Symbol.iterator].bind(fontSet),
   };
 }
