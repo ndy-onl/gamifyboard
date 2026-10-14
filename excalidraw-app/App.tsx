@@ -273,6 +273,18 @@ const isSlotActive = (slot: any, appState: any) => {
   return false;
 };
 
+const getPlayerSlotId = (el: any, elements?: readonly any[]) => {
+  if (!el) return null;
+  if (el.customData?.isPlayerSlot && el.customData?.playerSlotId) return el.customData.playerSlotId;
+  if (el.containerId && elements) {
+    const container = elements.find(c => c.id === el.containerId);
+    if (container?.customData?.isPlayerSlot && container?.customData?.playerSlotId) {
+      return container.customData.playerSlotId;
+    }
+  }
+  return null;
+};
+
 const checkGameState = (
   excalidrawAPI: ExcalidrawImperativeAPI,
   elements: readonly any[] | null,
@@ -288,23 +300,11 @@ const checkGameState = (
   const appState = excalidrawAPI.getAppState();
   let latestPlayerSlots: Record<string, any> = {};
   
-  // Find currently edited/selected player slots to determine the "source of truth"
-  const getPlayerSlotId = (el: any) => {
-    if (el.customData?.isPlayerSlot && el.customData?.playerSlotId) return el.customData.playerSlotId;
-    if (el.containerId) {
-      const container = elements.find(c => c.id === el.containerId);
-      if (container?.customData?.isPlayerSlot && container?.customData?.playerSlotId) {
-        return container.customData.playerSlotId;
-      }
-    }
-    return null;
-  };
-
   let activeSlotForSlotId: Record<string, any> = {};
 
-  const playerSlots = elements.filter((el) => el.type === "text" && getPlayerSlotId(el));
+  const playerSlots = elements.filter((el) => el.type === "text" && getPlayerSlotId(el, elements));
   playerSlots.forEach((slot) => {
-    const slotId = getPlayerSlotId(slot);
+    const slotId = getPlayerSlotId(slot, elements);
     if (!slotId) return;
 
     const isActive = isSlotActive(slot, appState);
@@ -330,7 +330,7 @@ const checkGameState = (
   if (lastActiveSlotElementId && Date.now() - lastActiveSlotTimestamp < 10000) {
     const recentSlot = playerSlots.find(s => s.id === lastActiveSlotElementId);
     if (recentSlot) {
-      const slotId = getPlayerSlotId(recentSlot);
+      const slotId = getPlayerSlotId(recentSlot, elements);
       if (slotId && !activeSlotForSlotId[slotId]) {
         latestPlayerSlots[slotId] = recentSlot;
       }
@@ -347,7 +347,7 @@ const checkGameState = (
 
   const updatedElements = elements.map((el) => {
     if (el.type === "text") {
-        const slotId = getPlayerSlotId(el);
+        const slotId = getPlayerSlotId(el, elements);
         if (slotId) {
             const truthSlot = latestPlayerSlots[slotId];
             if (truthSlot && truthSlot.id !== el.id && el.text !== truthSlot.text) {
@@ -1350,7 +1350,7 @@ const ExcalidrawWrapper = ({
           if (activeText?.id) {
              const el = elements.find(e => e.id === activeText.id);
              if (el && el.type === "text") {
-                 const slotId = getPlayerSlotId(el);
+                 const slotId = getPlayerSlotId(el, elements);
                  if (slotId) {
                      localUserPlayerSlotId = slotId;
                      lastActiveSlotElementId = el.id;
