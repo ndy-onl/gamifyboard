@@ -393,33 +393,51 @@ Game masters or interactive buttons can initiate a global teleport to transport 
 
 ---
 
-## 6. Collaborative Game Modes & Interactions
+## 6. Collaborative Board Modes & Interactions (3-Tier Mode System)
 
-### 6.1 Edit Mode vs. Play Mode
-GamifyBoard features two operational modes toggled collaboratively across all room participants:
-- **Edit Mode (`isEditMode === true`)**: Standard Excalidraw authoring. Users can drag, resize, rotate, group, and modify element properties in `PropertiesSidebar`.
-- **Play Mode (`isEditMode === false`)**: Board game mode. Dragging is constrained to playable cards/tokens, and interactive elements act as buttons rather than editable shapes.
+### 6.1 The 3-Tier Board Mode Cycle
+GamifyBoard features three operational modes toggled collaboratively across all room participants via the top-right button:
+1. **🎨 Whiteboard Mode (`boardMode === "whiteboard"`)**:
+   - Standard Excalidraw whiteboard experience.
+   - The left authoring tool menu (`.App-menu__left`) is fully visible.
+   - The Gamify `PropertiesSidebar` is completely hidden.
+2. **🛠️ Gamify Editor Mode (`boardMode === "editor"`)**:
+   - Authoring mode for game masters/creators.
+   - The left authoring tool menu (`.App-menu__left`) is visible.
+   - The Gamify `PropertiesSidebar` appears when shapes are selected to configure Cards, Zones, Counters, Timers, and Teleporters.
+3. **🎮 Game Mode (`boardMode === "game"`)**:
+   - Clean, distraction-free board game mode.
+   - The left Excalidraw toolbar (`.App-menu__left` / `.selected-shape-actions`) is **completely hidden via CSS** (`.excalidraw-app.board-mode-game`).
+   - The Gamify `PropertiesSidebar` is hidden.
+   - Interactive elements (`isTeleporter`, `isTimerButton`) directly execute their gameplay actions on `onPointerDown`.
 
 ### 6.2 Collaborative Mode Synchronization
-The game mode is stored inside the Yjs document root under the `gamifyState` map:
+The board mode is stored inside the Yjs document root under the `gamifyState` map:
 ```ts
 // excalidraw-app/hooks/useCollaboration.ts
 const gamifyState = ydoc.getMap<any>('gamifyState');
 gamifyState.observe(event => {
-  const mode = gamifyState.get('isEditMode');
-  if (mode !== undefined && onGameModeChange) {
-    onGameModeChange(mode);
+  const remoteMode = gamifyState.get('boardMode');
+  if (remoteMode && onBoardModeChange) {
+    onBoardModeChange(remoteMode);
+  } else {
+    // Backward compatibility with legacy boolean isEditMode
+    const legacyEdit = gamifyState.get('isEditMode');
+    if (legacyEdit !== undefined && onBoardModeChange) {
+      onBoardModeChange(legacyEdit ? "editor" : "game");
+    }
   }
 });
 
-const setGlobalGameMode = (isEditMode: boolean) => {
-  gamifyState.set('isEditMode', isEditMode);
+const setGlobalBoardMode = (mode: BoardMode) => {
+  gamifyState.set('boardMode', mode);
+  gamifyState.set('isEditMode', mode !== 'game');
 };
 ```
 When any facilitator toggles the mode switch, all clients transition in real time.
 
-### 6.3 Play Mode Button Interactions
-In `excalidraw-app/App.tsx`, `<Excalidraw onPointerDown={...} />` intercepts clicks when `!isEditMode`:
+### 6.3 Game Mode Button Interactions
+In `excalidraw-app/App.tsx`, `<Excalidraw onPointerDown={...} />` intercepts clicks when in Game Mode (`boardMode === "game"`):
 - **Teleporter Button (`customData.isTeleporter`)**:
   - Locates the frame named `customData.targetFrame`.
   - If `customData.teleportAll === true`, updates the frame with `globalTeleportTrigger: Date.now()`, synchronizing all players.

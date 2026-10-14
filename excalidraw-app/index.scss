@@ -233,3 +233,19 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+// ============================================================================
+// GAMIFYBOARD: 3-TIER BOARD MODE STYLES
+// ============================================================================
+// When in Game Mode (.board-mode-game), the left Excalidraw authoring toolbar
+// (.App-menu__left / .selected-shape-actions) is completely hidden to provide a
+// clean, distraction-free gameplay canvas.
+// ============================================================================
+.excalidraw-app.board-mode-game {
+  .App-menu__left,
+  .selected-shape-actions,
+  .selected-shape-actions-container,
+  .compact-shape-actions-island {
+    display: none !important;
+  }
+}

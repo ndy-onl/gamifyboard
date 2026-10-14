@@ -160,7 +160,7 @@ import { actionLoadScene } from "@excalidraw/excalidraw/actions";
 import { Card } from "@excalidraw/excalidraw/components/Card";
 import { saveAs } from "@excalidraw/excalidraw/components/icons";
 import { createBoard } from "./src/api";
-import { useCollaboration } from "./hooks/useCollaboration";
+import { useCollaboration, BoardMode } from "./hooks/useCollaboration";
 import * as Y from "yjs";
 
 /**
@@ -785,26 +785,35 @@ const initializeScene = async (opts: {
 };
 
 /**
- * Renders the top-right header action bar, including the collaborative Edit/Game Mode toggle,
+ * Renders the top-right header action bar, including the collaborative 3-Tier Board Mode toggle,
  * room sharing dialog, and authentication controls.
  *
  * ============================================================================
- * GAMIFYBOARD: COLLABORATIVE GAME MODE TOGGLE
+ * GAMIFYBOARD: 3-TIER BOARD MODE (renderTopRightUI)
  * ============================================================================
- * Allows room participants to toggle between:
- * 1. EDIT MODE (`isEditMode === true`):
- *    - Standard Excalidraw authoring tools are available.
- *    - The `PropertiesSidebar` appears when shapes are selected to configure
- *      custom Gamify mechanics (Card types, Zone rules, Counters, Timers, Teleporters).
- * 2. GAME MODE (`isEditMode === false`):
- *    - Streamlined gameplay experience without authoring panels.
- *    - Clicking interactive elements (such as `isTeleporter` or `isTimerButton`)
- *      directly triggers their gameplay action in `onPointerDown`.
+ * Cycles through 3 operational modes for all connected participants:
+ *
+ * 1. WHITEBOARD MODE (`boardMode === "whiteboard"`):
+ *    - Standard Excalidraw whiteboard experience.
+ *    - Left tools menu (.App-menu__left) is visible.
+ *    - Gamify PropertiesSidebar is completely hidden.
+ *
+ * 2. GAMIFY EDITOR MODE (`boardMode === "editor"`):
+ *    - Authoring mode for game masters/creators.
+ *    - Left tools menu (.App-menu__left) is visible.
+ *    - Gamify PropertiesSidebar appears when elements are selected to configure
+ *      Cards, Zones, Counters, Timers, and Teleporters.
+ *
+ * 3. GAME MODE (`boardMode === "game"`):
+ *    - Distraction-free gameplay experience.
+ *    - Left tools menu (.App-menu__left) is completely hidden.
+ *    - Gamify PropertiesSidebar is hidden.
+ *    - Clicking interactive tokens (`isTeleporter`, `isTimerButton`) directly
+ *      triggers their action on pointer down.
  *
  * Synchronization:
- * Toggling invokes `setGlobalGameMode(newMode)` to broadcast the state change
- * to all players via the shared `gamifyState` Y.Map, ensuring everyone plays
- * in the same synchronized mode.
+ * Toggling invokes `setGlobalBoardMode(nextMode)` to broadcast the state change
+ * to all players via the shared `gamifyState` Y.Map.
  * ============================================================================
  */
 const renderTopRightUI = ({
@@ -818,24 +827,69 @@ const renderTopRightUI = ({
   onLoginClick,
   excalidrawAPI,
   isCollaborating,
-  isEditMode,
-  setIsEditMode,
-  setGlobalGameMode,
+  boardMode,
+  setBoardMode,
+  setGlobalBoardMode,
 }: any) => {
+  const getNextMode = (current: BoardMode): BoardMode => {
+    if (current === "whiteboard") return "editor";
+    if (current === "editor") return "game";
+    return "whiteboard";
+  };
+
+  const getButtonConfig = (mode: BoardMode) => {
+    switch (mode) {
+      case "whiteboard":
+        return {
+          label: "🎨 Whiteboard",
+          background: "transparent",
+          color: "inherit",
+          border: "1px solid var(--button-gray-2)",
+        };
+      case "editor":
+        return {
+          label: "🛠️ Gamify Editor",
+          background: "var(--color-primary-light, #e0f2fe)",
+          color: "var(--color-primary-darker, #0284c7)",
+          border: "1px solid var(--color-primary, #0284c7)",
+        };
+      case "game":
+        return {
+          label: "🎮 Game Mode!",
+          background: "#aaffaa",
+          color: "#052e16",
+          border: "1px solid #16a34a",
+        };
+    }
+  };
+
+  const btnConfig = getButtonConfig(boardMode);
+
   return (
     <div style={{ display: "flex", gap: "10px" }}>
       {collabError.message && <CollabError collabError={collabError} />}
-      {setIsEditMode && (
+      {setBoardMode && (
         <button
-          className={`excalidraw-button collab-button ${isEditMode ? '' : 'active'}`}
+          className={`excalidraw-button collab-button board-mode-button ${boardMode}`}
           onClick={() => {
-            const newMode = !isEditMode;
-            setGlobalGameMode(newMode);
-            setIsEditMode(newMode);
+            const nextMode = getNextMode(boardMode);
+            if (setGlobalBoardMode) {
+              setGlobalBoardMode(nextMode);
+            }
+            setBoardMode(nextMode);
           }}
-          style={{ padding: "8px 16px", background: isEditMode ? "transparent" : "#aaffaa", color: isEditMode ? "inherit" : "#000", fontWeight: "bold" }}
+          style={{
+            padding: "8px 16px",
+            background: btnConfig.background,
+            color: btnConfig.color,
+            border: btnConfig.border,
+            fontWeight: "bold",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+          }}
+          title={`Current: ${btnConfig.label}. Click to switch to ${getButtonConfig(getNextMode(boardMode)).label}`}
         >
-          {isEditMode ? "Edit Mode" : "Game Mode!"}
+          {btnConfig.label}
         </button>
       )}
       <button
@@ -1005,10 +1059,12 @@ const ExcalidrawWrapper = ({
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
 
-  const { isCollaborating, updateBoard, onPointerUpdate, setGlobalGameMode, setCursorName } = useCollaboration(
+  const [boardMode, setBoardMode] = useState<BoardMode>("whiteboard");
+
+  const { isCollaborating, updateBoard, onPointerUpdate, setGlobalGameMode, setGlobalBoardMode, setCursorName } = useCollaboration(
     excalidrawAPI,
     selectedBoardId,
-    (newMode) => setIsEditMode(newMode)
+    (newMode) => setBoardMode(newMode)
   );
 
   useEffect(() => {
@@ -1373,7 +1429,9 @@ const ExcalidrawWrapper = ({
     }
   };
 
-  const [isEditMode, setIsEditMode] = useState(true);
+  // Derive boolean flags from boardMode for compatibility
+  const isEditMode = boardMode === "editor";
+  const isGameMode = boardMode === "game";
 
   /**
    * ============================================================================
@@ -1570,19 +1628,19 @@ const ExcalidrawWrapper = ({
   return (
     <div
       style={{ height: "100%" }}
-      className="excalidraw-app"
+      className={`excalidraw-app board-mode-${boardMode}`}
     >
       <Excalidraw
         onPointerUpdate={onPointerUpdate}
         onExcalidrawAPI={excalidrawRefCallback}
         /**
          * GAMIFYBOARD: GAME MODE INTERACTION DISPATCHER
-         * When in Game Mode (`!isEditMode`), clicking canvas tokens directly activates
+         * When in Game Mode (`isGameMode`), clicking canvas tokens directly activates
          * their configured gameplay action without requiring the properties sidebar.
          */
         onPointerDown={(activeTool, pointerDownState) => {
           const hitElement = pointerDownState.hit?.element;
-          if (hitElement && hitElement.customData && !isEditMode) {
+          if (hitElement && hitElement.customData && isGameMode) {
              if (hitElement.customData.isTeleporter) {
                 triggerAction("teleport", hitElement as NonDeletedExcalidrawElement);
              } else if (hitElement.customData.isTimerButton) {
@@ -1712,9 +1770,9 @@ const ExcalidrawWrapper = ({
             onLoginClick,
             excalidrawAPI,
             isCollaborating,
-            isEditMode,
-            setIsEditMode,
-            setGlobalGameMode,
+            boardMode,
+            setBoardMode,
+            setGlobalBoardMode,
           });
         }}
         onLinkOpen={(element, event) => {

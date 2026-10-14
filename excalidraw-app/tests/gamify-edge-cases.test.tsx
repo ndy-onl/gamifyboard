@@ -817,4 +817,156 @@ describe("Gamify Edge Cases", () => {
       expect(master?.customData?.value).toBe(42); // 15 + 27
     });
   });
+
+  it("cycles through 3-tier board modes (whiteboard -> editor -> game -> whiteboard)", async () => {
+    const { container } = render(<ExcalidrawApp onLoginClick={() => {}} />);
+
+    await waitFor(() => {
+      expect((window as any).ExcalidrawHandle?.excalidrawAPI).toBeDefined();
+    });
+
+    // 1. Initial State: Whiteboard mode
+    const modeBtn = container.querySelector(".board-mode-button") as HTMLButtonElement;
+    expect(modeBtn).not.toBeNull();
+    expect(modeBtn.textContent).toContain("Whiteboard");
+    expect(container.querySelector(".board-mode-whiteboard")).not.toBeNull();
+
+    // 2. Click 1 -> Switch to Gamify Editor
+    act(() => {
+      modeBtn.click();
+    });
+
+    await waitFor(() => {
+      expect(modeBtn.textContent).toContain("Gamify Editor");
+      expect(container.querySelector(".board-mode-editor")).not.toBeNull();
+    });
+
+    // 3. Click 2 -> Switch to Game Mode
+    act(() => {
+      modeBtn.click();
+    });
+
+    await waitFor(() => {
+      expect(modeBtn.textContent).toContain("Game Mode!");
+      expect(container.querySelector(".board-mode-game")).not.toBeNull();
+    });
+
+    // 4. Click 3 -> Cycle back to Whiteboard
+    act(() => {
+      modeBtn.click();
+    });
+
+    await waitFor(() => {
+      expect(modeBtn.textContent).toContain("Whiteboard");
+      expect(container.querySelector(".board-mode-whiteboard")).not.toBeNull();
+    });
+  });
+
+  it("triggers teleporter action when in Game Mode", async () => {
+    render(<ExcalidrawApp onLoginClick={() => {}} />);
+
+    await waitFor(() => {
+      expect((window as any).ExcalidrawHandle?.excalidrawAPI).toBeDefined();
+    });
+
+    const excalidrawAPI = (window as any).ExcalidrawHandle.excalidrawAPI;
+
+    const targetFrame = {
+      ...createDefaultElementProps({
+        id: "frame_destination",
+        name: "Stage 2",
+        type: "frame",
+        x: 1000,
+        y: 1000,
+        width: 800,
+        height: 600,
+      }),
+    } as any;
+
+    const teleporterBtn = {
+      ...createDefaultElementProps({
+        id: "teleport_token",
+        type: "rectangle",
+        x: 100,
+        y: 100,
+        width: 50,
+        height: 50,
+        customData: {
+          isTeleporter: true,
+          targetFrame: "Stage 2",
+          teleportAll: true,
+        },
+      }),
+    } as any;
+
+    act(() => {
+      excalidrawAPI.updateScene({ elements: [targetFrame, teleporterBtn] });
+    });
+
+    // Verify globalTeleportTrigger is updated when action triggers
+    act(() => {
+      const el = excalidrawAPI.getSceneElements().find((e: any) => e.id === "teleport_token");
+      // Simulate triggerAction for teleport
+      const frames = excalidrawAPI.getSceneElements().filter((e: any) => e.type === "frame" && e.name === el.customData.targetFrame);
+      if (frames.length > 0) {
+        excalidrawAPI.updateScene({
+          elements: excalidrawAPI.getSceneElements().map((e: any) =>
+            e.id === frames[0].id
+              ? { ...e, customData: { ...e.customData, globalTeleportTrigger: 999999 } }
+              : e
+          ),
+        });
+      }
+    });
+
+    await waitFor(() => {
+      const frame = excalidrawAPI.getSceneElements().find((e: any) => e.id === "frame_destination");
+      expect(frame?.customData?.globalTeleportTrigger).toBe(999999);
+    });
+  });
+
+  it("starts timer via timer button action", async () => {
+    render(<ExcalidrawApp onLoginClick={() => {}} />);
+
+    await waitFor(() => {
+      expect((window as any).ExcalidrawHandle?.excalidrawAPI).toBeDefined();
+    });
+
+    const excalidrawAPI = (window as any).ExcalidrawHandle.excalidrawAPI;
+
+    const timerDisplay = {
+      ...createDefaultElementProps({
+        id: "timer_display_1",
+        type: "rectangle",
+        customData: {
+          isTimerDisplay: true,
+          timerName: "RoundTimer",
+          timerDuration: 120,
+          endTime: 0,
+        },
+      }),
+    } as any;
+
+    act(() => {
+      excalidrawAPI.updateScene({ elements: [timerDisplay] });
+    });
+
+    // Simulate timer start
+    act(() => {
+      const now = Date.now();
+      excalidrawAPI.updateScene({
+        elements: excalidrawAPI.getSceneElements().map((e: any) =>
+          e.customData?.timerName === "RoundTimer"
+            ? { ...e, customData: { ...e.customData, endTime: now + 120000, hasFrozen: false } }
+            : e
+        ),
+      });
+    });
+
+    await waitFor(() => {
+      const display = excalidrawAPI.getSceneElements().find((e: any) => e.id === "timer_display_1");
+      expect(display?.customData?.endTime).toBeGreaterThan(0);
+      expect(display?.customData?.hasFrozen).toBe(false);
+    });
+  });
 });

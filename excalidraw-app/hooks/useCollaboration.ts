@@ -7,6 +7,8 @@ import * as Y from 'yjs';
 import { SocketIOProvider } from 'y-socket.io';
 import { ExcalidrawBinding } from '@ndy-onl/y-excalidraw';
 
+export type BoardMode = "whiteboard" | "editor" | "game";
+
 /**
  * ============================================================================
  * GAMIFYBOARD: MULTIPLAYER COLLABORATION & AWARENESS HOOK
@@ -20,8 +22,9 @@ import { ExcalidrawBinding } from '@ndy-onl/y-excalidraw';
  *    - Binds `yElements` (CRDT array) and `yAssets` (CRDT map) to Excalidraw
  *      via `@ndy-onl/y-excalidraw`'s `ExcalidrawBinding`.
  * 2. SHARED ROOM STATE (`gamifyState`):
- *    - Observes and synchronizes room-wide metadata (e.g. `isEditMode` toggle)
- *      via a dedicated `Y.Map`.
+ *    - Observes and synchronizes room-wide metadata (e.g. `boardMode` cycle:
+ *      "whiteboard" | "editor" | "game") via a dedicated `Y.Map`.
+ *    - Maintains backward compatibility with legacy boolean `isEditMode`.
  * 3. EPHEMERAL COLLABORATION AWARENESS:
  *    - Manages client presence, multiplayer cursor positions, and color badges.
  *    - Implements dynamic cursor name synchronization (`setCursorName`) tied to
@@ -29,13 +32,13 @@ import { ExcalidrawBinding } from '@ndy-onl/y-excalidraw';
  *
  * @param excalidrawAPI - Imperative API handle to the Excalidraw canvas instance.
  * @param boardId - Unique identifier of the collaborative board room.
- * @param onGameModeChange - Optional callback invoked when another user toggles Edit/Game mode.
+ * @param onBoardModeChange - Optional callback invoked when another user toggles board mode.
  * ============================================================================
  */
 export const useCollaboration = (
   excalidrawAPI: ExcalidrawImperativeAPI | null,
   boardId: string | null,
-  onGameModeChange?: (isEditMode: boolean) => void
+  onBoardModeChange?: (mode: BoardMode) => void
 ) => {
   const [isCollaborating, setIsCollaborating] = useState(false);
   const { isLoggedIn, accessToken } = useAtomValue(authStatusAtom);
@@ -62,9 +65,15 @@ export const useCollaboration = (
       
       // Listen for remote game mode changes across all connected clients
       gamifyState.observe(event => {
-         const mode = gamifyState.get('isEditMode');
-         if (mode !== undefined && onGameModeChange) {
-            onGameModeChange(mode);
+         const remoteBoardMode = gamifyState.get('boardMode') as BoardMode | undefined;
+         if (remoteBoardMode && onBoardModeChange) {
+            onBoardModeChange(remoteBoardMode);
+         } else {
+            // Backward compatibility with legacy boolean isEditMode
+            const legacyEditMode = gamifyState.get('isEditMode');
+            if (legacyEditMode !== undefined && onBoardModeChange) {
+               onBoardModeChange(legacyEditMode ? "editor" : "game");
+            }
          }
       });
 
@@ -141,14 +150,21 @@ export const useCollaboration = (
   }, []);
 
   /**
-   * Toggles and broadcasts the global room mode (Edit Mode vs Game Mode)
+   * Broadcasts the global room mode ("whiteboard" | "editor" | "game")
    * to all connected participants via the shared `gamifyState` Y.Map.
+   * Also sets legacy `isEditMode` boolean for backward compatibility.
    */
-  const setGlobalGameMode = useCallback((isEditMode: boolean) => {
+  const setGlobalBoardMode = useCallback((mode: BoardMode) => {
     if (gamifyStateRef.current) {
-       gamifyStateRef.current.set('isEditMode', isEditMode);
+       gamifyStateRef.current.set('boardMode', mode);
+       gamifyStateRef.current.set('isEditMode', mode !== 'game');
     }
   }, []);
+
+  // Backward compatibility alias
+  const setGlobalGameMode = useCallback((isEditMode: boolean) => {
+    setGlobalBoardMode(isEditMode ? "editor" : "game");
+  }, [setGlobalBoardMode]);
 
   /**
    * ========================================================================
@@ -182,6 +198,6 @@ export const useCollaboration = (
     }
   }, []);
 
-  return { isCollaborating, updateBoard, onPointerUpdate, setGlobalGameMode, setCursorName };
+  return { isCollaborating, updateBoard, onPointerUpdate, setGlobalGameMode, setGlobalBoardMode, setCursorName };
 
 };
