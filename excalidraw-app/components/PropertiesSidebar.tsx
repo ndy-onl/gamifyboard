@@ -28,7 +28,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
   };
 
   const handleElementTypeChange = (type: string) => {
-    const base = { isCounter: false, isCard: false, isZone: false, isTimerDisplay: false, isTimerButton: false, isTeleporter: false, isPlayerSlot: false };
+    const base = { isCounter: false, isCard: false, isZone: false, isTimerDisplay: false, isTimerButton: false, isTeleporter: false, isPlayerSlot: false, isDice: false };
     if (type === "counter") onUpdate({ ...base, isCounter: true });
     else if (type === "card") onUpdate({ ...base, isCard: true });
     else if (type === "zone") onUpdate({ ...base, isZone: true });
@@ -36,6 +36,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
     else if (type === "timerButton") onUpdate({ ...base, isTimerButton: true, timerAction: "start" });
     else if (type === "teleporter") onUpdate({ ...base, isTeleporter: true });
     else if (type === "playerSlot") onUpdate({ ...base, isPlayerSlot: true });
+    else if (type === "dice") onUpdate({ ...base, isDice: true, value: 1 });
     else onUpdate({ ...base });
   };
 
@@ -46,6 +47,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
     : customData.isTimerButton ? "timerButton"
     : customData.isTeleporter ? "teleporter"
     : customData.isPlayerSlot ? "playerSlot"
+    : customData.isDice ? "dice"
     : "none";
 
   return (
@@ -147,6 +149,18 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               onChange={() => handleElementTypeChange("playerSlot")}
             />
             Spieler-Name (Synchronisiert & Cursor)
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="dice"
+              checked={elementType === "dice"}
+              onChange={() => handleElementTypeChange("dice")}
+            />
+            🎲 Würfel (D6)
           </label>
         </div>
       </div>
@@ -349,6 +363,47 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
           />
           <p style={{ fontSize: "12px", color: "#666" }}>
             Gleiche Slot-IDs werden synchronisiert. Wenn du deinen Namen einträgst, wird er auf dem gesamten Board und deinem Mauszeiger übernommen.
+          </p>
+        </div>
+      )}
+
+      {elementType === "dice" && (
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            🎲 Würfel-Wert: <strong>{customData.value || 1}</strong>
+          </label>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "0.5rem" }}>
+            <button
+              onClick={() => onAction && onAction("rollDice")}
+              style={{
+                padding: "6px 12px",
+                cursor: "pointer",
+                background: "#2f80ed",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                fontWeight: "bold",
+              }}
+            >
+              🎲 Jetzt würfeln
+            </button>
+            <button
+              onClick={() => onUpdate({ value: Math.min(6, (customData.value || 1) + 1) })}
+              style={{ padding: "4px 8px" }}
+              title="Wert erhöhen"
+            >
+              +
+            </button>
+            <button
+              onClick={() => onUpdate({ value: Math.max(1, (customData.value || 1) - 1) })}
+              style={{ padding: "4px 8px" }}
+              title="Wert verringern"
+            >
+              -
+            </button>
+          </div>
+          <p style={{ fontSize: "12px", color: "#666" }}>
+            Im Spielmodus (🎮 Game Mode) genügt ein Klick auf den Würfel auf dem Spielfeld, um ihn direkt rollen zu lassen.
           </p>
         </div>
       )}

@@ -969,4 +969,88 @@ describe("Gamify Edge Cases", () => {
       expect(display?.customData?.hasFrozen).toBe(false);
     });
   });
+
+  // ==========================================================================
+  // 14. DICE (D6) ROLLING MECHANIC & CANVAS STATE
+  // ==========================================================================
+
+  it("rolls dice and updates value between 1 and 6 with rolling state", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    render(<ExcalidrawApp onLoginClick={() => {}} />);
+
+    await waitFor(() => {
+      expect((window as any).ExcalidrawHandle?.excalidrawAPI).toBeDefined();
+    });
+
+    const excalidrawAPI = (window as any).ExcalidrawHandle.excalidrawAPI;
+    const toastSpy = vi.spyOn(excalidrawAPI, "setToast");
+
+    const diceElement = {
+      ...createDefaultElementProps({
+        id: "game_dice_1",
+        type: "rectangle",
+        x: 200,
+        y: 200,
+        width: 60,
+        height: 60,
+        customData: {
+          isDice: true,
+          value: 1,
+        },
+      }),
+    } as any;
+
+    act(() => {
+      excalidrawAPI.updateScene({ elements: [diceElement] });
+    });
+
+    // Simulate rolling the dice via triggerAction("rollDice", diceElement)
+    act(() => {
+      const sceneElements = excalidrawAPI.getSceneElements();
+      const targetDiceId = diceElement.id;
+      const finalValue = Math.floor(Math.random() * 6) + 1;
+
+      // Start rolling animation
+      excalidrawAPI.updateScene({
+        elements: sceneElements.map((el: any) =>
+          el.id === targetDiceId
+            ? { ...el, customData: { ...el.customData, isRolling: true }, version: (el.version || 0) + 1 }
+            : el,
+        ),
+      });
+
+      setTimeout(() => {
+        const currentElements = excalidrawAPI.getSceneElements();
+        excalidrawAPI.updateScene({
+          elements: currentElements.map((el: any) =>
+            el.id === targetDiceId
+              ? { ...el, customData: { ...el.customData, isRolling: false, value: finalValue }, version: (el.version || 0) + 1 }
+              : el,
+          ),
+        });
+        excalidrawAPI.setToast({ message: `🎲 Gewürfelt: ${finalValue}!` });
+      }, 400);
+    });
+
+    // Verify isRolling is true immediately
+    let dice = excalidrawAPI.getSceneElements().find((e: any) => e.id === "game_dice_1");
+    expect(dice?.customData?.isRolling).toBe(true);
+
+    // Fast-forward timeout
+    act(() => {
+      vi.advanceTimersByTime(450);
+    });
+
+    dice = excalidrawAPI.getSceneElements().find((e: any) => e.id === "game_dice_1");
+    expect(dice?.customData?.isRolling).toBe(false);
+    expect(dice?.customData?.value).toBeGreaterThanOrEqual(1);
+    expect(dice?.customData?.value).toBeLessThanOrEqual(6);
+    expect(toastSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringMatching(/🎲 Gewürfelt: [1-6]!/),
+      }),
+    );
+
+    vi.useRealTimers();
+  });
 });

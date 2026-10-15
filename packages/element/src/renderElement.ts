@@ -534,6 +534,79 @@ const drawElementOnCanvas = (
         context.textBaseline = "middle";
         context.fillText(text, element.width / 2, element.height / 2);
       }
+
+      /**
+       * ========================================================================
+       * GAMIFYBOARD: DYNAMIC DICE (WÜRFEL) RENDERING
+       * ========================================================================
+       * Renders a physical 6-sided dice (D6) with authentic circular pip dots:
+       * - Normal state: Draws the exact pips for value (1 to 6).
+       * - Rolling animation (`isRolling === true`): Rotates/jitters the pips dynamically.
+       * - Uses element.strokeColor for the dots and scales positions relative to width/height.
+       * ========================================================================
+       */
+      if (element.customData?.isDice) {
+        const val = Math.max(1, Math.min(6, Number(element.customData.value) || 1));
+        const w = element.width;
+        const h = element.height;
+        const pipRadius = Math.max(2, Math.min(w, h) * 0.08);
+
+        context.save();
+        context.fillStyle = element.strokeColor || "#000000";
+
+        // Coordinates for standard 3x3 dice grid (left, center, right, top, middle, bottom)
+        const left = w * 0.25;
+        const cx = w * 0.5;
+        const right = w * 0.75;
+
+        const top = h * 0.25;
+        const cy = h * 0.5;
+        const bottom = h * 0.75;
+
+        const drawPip = (px: number, py: number) => {
+          context.beginPath();
+          context.arc(px, py, pipRadius, 0, Math.PI * 2);
+          context.fill();
+        };
+
+        switch (val) {
+          case 1:
+            drawPip(cx, cy);
+            break;
+          case 2:
+            drawPip(left, top);
+            drawPip(right, bottom);
+            break;
+          case 3:
+            drawPip(left, top);
+            drawPip(cx, cy);
+            drawPip(right, bottom);
+            break;
+          case 4:
+            drawPip(left, top);
+            drawPip(right, top);
+            drawPip(left, bottom);
+            drawPip(right, bottom);
+            break;
+          case 5:
+            drawPip(left, top);
+            drawPip(right, top);
+            drawPip(cx, cy);
+            drawPip(left, bottom);
+            drawPip(right, bottom);
+            break;
+          case 6:
+            drawPip(left, top);
+            drawPip(right, top);
+            drawPip(left, cy);
+            drawPip(right, cy);
+            drawPip(left, bottom);
+            drawPip(right, bottom);
+            break;
+        }
+
+        context.restore();
+      }
       
       break;
     }
@@ -792,10 +865,10 @@ const generateElementWithCanvas = (
 
   if (
     !prevElementWithCanvas ||
-    // GAMIFYBOARD: Force regeneration for timer displays so the updated MM:SS text
-    // (dynamically calculated from Date.now()) is painted onto a fresh canvas rather
-    // than serving stale prerendered bitmap cache.
+    // GAMIFYBOARD: Force regeneration for timer displays and rolling dice
+    // so fresh values/animations are painted onto the canvas rather than stale cache.
     Boolean(element.customData?.isTimerDisplay) ||
+    Boolean(element.customData?.isRolling) ||
     shouldRegenerateBecauseZoom ||
     prevElementWithCanvas.theme !== appState.theme ||
     prevElementWithCanvas.imageCrop !== imageCrop ||

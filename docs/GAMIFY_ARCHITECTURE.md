@@ -301,6 +301,10 @@ When elements are drawn to the static canvas:
   context.textBaseline = "middle";
   context.fillText(String(value), element.width / 2, element.height / 2);
   ```
+- For elements with `customData.isDice`:
+  Physical D6 dice with circular pip dots (1 to 6) are drawn using a 3x3 normalized grid layout (`[-offset, 0, offset]`).
+  - Cache bypass is active when `element.customData?.isRolling` is `true` in `generateElementWithCanvas`.
+  - In Game Mode (`boardMode === "game"`), clicking the dice on the canvas invokes `triggerAction("rollDice", element)`. This sets `isRolling: true`, rolls a random value (1–6) after 400ms, updates the element scene state, and presents a toast notification.
 
 ### 4.2 Cache Invalidation for Dynamic Elements
 Excalidraw optimizes performance by caching pre-rendered bitmap representations of elements in offscreen canvas buffers (`generateElementCanvas`).

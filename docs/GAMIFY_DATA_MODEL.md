@@ -243,6 +243,38 @@ Excalidraw frames with specialized Gamify attributes for initial camera position
 
 ---
 
+### 2.9 Dice (`isDice`)
+Playable D6 dice with physical pip rendering (1 to 6 dots) on canvas. Players can place dice on the board and click them in Game Mode (`boardMode === "game"`) to trigger a randomized dice roll synchronized across all multiplayer peers via Yjs.
+
+| Field Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `isDice` | `boolean` | **Yes** | `false` | Discriminator flag marking the element as an interactive D6 dice. |
+| `value` | `number` | Optional | `1` | Integer between `1` and `6` representing the current top face of the dice. |
+| `isRolling` | `boolean` | Optional | `false` | Ephemeral rolling state flag. When `true`, canvas caching is bypassed and rolling animation/effects can be shown. |
+
+#### Example Dice Element:
+```json
+{
+  "id": "dice_token_01",
+  "type": "rectangle",
+  "x": 400,
+  "y": 300,
+  "width": 64,
+  "height": 64,
+  "strokeColor": "#1e1e1e",
+  "backgroundColor": "#ffffff",
+  "roundness": { "type": 3 },
+  "version": 5,
+  "customData": {
+    "isDice": true,
+    "value": 4,
+    "isRolling": false
+  }
+}
+```
+
+---
+
 ## 3. Formal TypeScript Interfaces & Schemas
 
 ```ts

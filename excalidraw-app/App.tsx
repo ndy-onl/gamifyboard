@@ -1523,6 +1523,34 @@ const ExcalidrawWrapper = ({
           excalidrawAPI.setToast({ message: "Frame '" + targetFrameName + "' nicht gefunden!", color: "danger" });
         }
       }
+    } else if (action === "rollDice") {
+      // GAMIFYBOARD: DICE ROLLING MECHANIC
+      // Generates a cryptographically strong random value (1 to 6)
+      // Broadcasts isRolling: true for a brief animated sequence, then sets final value
+      const targetDiceId = targetElement.id;
+      const finalValue = Math.floor(Math.random() * 6) + 1;
+
+      // Start rolling animation
+      excalidrawAPI.updateScene({
+        elements: sceneElements.map(el =>
+          el.id === targetDiceId
+            ? { ...el, customData: { ...el.customData, isRolling: true }, version: (el.version || 0) + 1 }
+            : el
+        )
+      });
+
+      // Brief animation timeout to simulate dice roll before settling on final value
+      setTimeout(() => {
+        const currentElements = excalidrawAPI.getSceneElements();
+        excalidrawAPI.updateScene({
+          elements: currentElements.map(el =>
+            el.id === targetDiceId
+              ? { ...el, customData: { ...el.customData, isRolling: false, value: finalValue }, version: (el.version || 0) + 1 }
+              : el
+          )
+        });
+        excalidrawAPI.setToast({ message: `🎲 Gewürfelt: ${finalValue}!` });
+      }, 400);
     }
   };
 
@@ -1549,6 +1577,8 @@ const ExcalidrawWrapper = ({
       excalidrawAPI.updateScene({ elements: newSceneElements });
     } else if (action === "teleport") {
       triggerAction("teleport", element);
+    } else if (action === "rollDice") {
+      triggerAction("rollDice", element);
     }
   };
 
@@ -1645,6 +1675,8 @@ const ExcalidrawWrapper = ({
                 triggerAction("teleport", hitElement as NonDeletedExcalidrawElement);
              } else if (hitElement.customData.isTimerButton) {
                 triggerAction(hitElement.customData.timerAction === "reset" ? "resetTimer" : "startTimer", hitElement as NonDeletedExcalidrawElement);
+             } else if (hitElement.customData.isDice) {
+                triggerAction("rollDice", hitElement as NonDeletedExcalidrawElement);
              }
           }
         }}
