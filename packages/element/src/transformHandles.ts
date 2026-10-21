@@ -282,7 +282,9 @@ export const getTransformHandles = (
   if (
     element.locked ||
     // Elbow arrows cannot be rotated
-    isElbowArrow(element)
+    isElbowArrow(element) ||
+    // Cards with disableResize cannot be resized/scaled
+    (element.customData && element.customData.disableResize)
   ) {
     return {};
   }

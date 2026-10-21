@@ -94,6 +94,12 @@ export const actionClearCanvas = register({
     );
   },
   perform: (elements, appState, _, app) => {
+    const confirmClear = window.confirm(
+      
+    );
+    if (!confirmClear) {
+      return false;
+    }
     app.imageCache.clear();
     return {
       elements: elements.map((element) =>

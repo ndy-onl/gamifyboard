@@ -272,6 +272,21 @@ export const actionDeleteSelected = register({
       };
     }
 
+    // Protection: Confirm before deleting large portions of the board
+    const nonDeletedCount = elements.filter(el => !el.isDeleted).length;
+    const selectedCount = Object.keys(appState.selectedElementIds || {}).filter(
+      id => appState.selectedElementIds[id]
+    ).length;
+
+    if (nonDeletedCount > 10 && (selectedCount >= nonDeletedCount * 0.7 || selectedCount >= 25)) {
+      const confirmDelete = window.confirm(
+        
+      );
+      if (!confirmDelete) {
+        return false;
+      }
+    }
+
     let { elements: nextElements, appState: nextAppState } =
       deleteSelectedElements(elements, appState, app);
 

@@ -220,8 +220,18 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
             placeholder={t("propertiesSidebar.card.placeholder") || "Typ"}
             defaultValue={customData.cardType || ""}
             onChange={(e) => onUpdate({ cardType: e.target.value })}
-            style={{ width: "200px" }}
+            style={{ width: "200px", marginBottom: "0.75rem" }}
           />
+          <div style={{ marginTop: "0.5rem" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.85rem" }}>
+              <input
+                type="checkbox"
+                defaultChecked={!!customData.disableResize}
+                onChange={(e) => onUpdate({ disableResize: e.target.checked })}
+              />
+              🔒 Skalieren / Größe sperren (nur bewegen)
+            </label>
+          </div>
         </div>
       )}
 
