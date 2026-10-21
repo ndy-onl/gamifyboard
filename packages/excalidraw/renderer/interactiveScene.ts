@@ -2055,7 +2055,7 @@ const _renderInteractiveScene = ({
             }
           : getOmitSidesForEditorInterface(editorInterface),
       );
-      if (selectedElements.some((element) => !element.locked)) {
+      if (selectedElements.some((element) => !element.locked && !(element.customData && element.customData.disableResize))) {
         renderTransformHandles(
           context,
           renderConfig,

@@ -744,6 +744,9 @@ export const resizeSingleElement = (
     shouldInformMutation?: boolean;
   } = {},
 ) => {
+  if (latestElement.customData && latestElement.customData.disableResize) {
+    return;
+  }
   if (isTextElement(latestElement) && isTextElement(origElement)) {
     return resizeSingleTextElement(
       origElement,
@@ -1231,6 +1234,9 @@ export const resizeMultipleElements = (
     originalBoundingBox?: BoundingBox;
   } = {},
 ) => {
+  if (selectedElements.some(el => el.customData && el.customData.disableResize)) {
+    return;
+  }
   // in the case of just flipping, there is no need to specify the next width and height
   if (
     nextWidth === undefined &&
