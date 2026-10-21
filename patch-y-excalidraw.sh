@@ -174,7 +174,12 @@ if (this.yAssets && this.yAssets.doc) {
                 // Set temporary placeholder to avoid syncing base64
                 this.yAssets.set(op.id, { ...asset, dataURL: '' }); 
             } else if (op.type === 'append') {
-                this.yAssets.set(op.id, op.asset);
+                const existing = this.yAssets.get(op.id);
+                if (existing && existing.dataURL && existing.dataURL.startsWith('http') && (!op.asset.dataURL || !op.asset.dataURL.startsWith('http'))) {
+                    console.log('[S3 Protection] Retaining valid S3 dataURL for asset', op.id);
+                } else {
+                    this.yAssets.set(op.id, op.asset);
+                }
             } else if (op.type === 'delete') {
                 this.yAssets.delete(op.id);
             }
