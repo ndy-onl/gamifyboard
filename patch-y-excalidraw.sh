@@ -147,6 +147,47 @@ diffContent = diffContent.replace(
     'operations.push({ type: "append", id: fileId, asset: files[fileId] });'
 );
 
+// Prevent "TypeError: can't access property 'set', e.get(...) is undefined" during element operations
+diffContent = diffContent.replace(
+    `case "update": {
+                    yElements.get(idYjsIndexMap[op.id]).set("el", { ...op.element });
+                    break;
+                }`,
+    `case "update": {
+                    const idx = idYjsIndexMap[op.id];
+                    if (idx !== undefined && yElements.get(idx)) {
+                        yElements.get(idx).set("el", { ...op.element });
+                    }
+                    break;
+                }`
+);
+
+diffContent = diffContent.replace(
+    `case "move": {
+                    yElements.get(idYjsIndexMap[op.id]).set("pos", op.pos);
+                    break;
+                }`,
+    `case "move": {
+                    const idx = idYjsIndexMap[op.id];
+                    if (idx !== undefined && yElements.get(idx)) {
+                        yElements.get(idx).set("pos", op.pos);
+                    }
+                    break;
+                }`
+);
+
+diffContent = diffContent.replace(
+    `if (op.type === "delete") {
+                        yElements.delete(idYjsIndexMap[op.id], 1);
+                    }`,
+    `if (op.type === "delete") {
+                        const idx = idYjsIndexMap[op.id];
+                        if (idx !== undefined && yElements.get(idx)) {
+                            yElements.delete(idx, 1);
+                        }
+                    }`
+);
+
 fs.writeFileSync(diffPath, diffContent);
 
 indexContent = indexContent.replace(
