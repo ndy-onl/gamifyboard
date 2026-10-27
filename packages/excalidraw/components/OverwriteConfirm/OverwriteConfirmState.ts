@@ -6,7 +6,7 @@ export type OverwriteConfirmState =
   | {
       active: true;
       title: string;
-      description: React.ReactNode;
+      description: React.ReactNode | (() => React.ReactNode);
       actionLabel: string;
       color: "danger" | "warning";
 
@@ -27,7 +27,7 @@ export async function openConfirmModal({
   color,
 }: {
   title: string;
-  description: React.ReactNode;
+  description: React.ReactNode | (() => React.ReactNode);
   actionLabel: string;
   color: "danger" | "warning";
 }) {

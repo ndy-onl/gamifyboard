@@ -5,8 +5,11 @@ import {
 } from "@excalidraw/excalidraw/actions/actionHistory";
 import { syncInvalidIndices } from "@excalidraw/element";
 import { API } from "@excalidraw/excalidraw/tests/helpers/api";
-import { act, render, waitFor } from "@excalidraw/excalidraw/tests/test-utils";
+import { act, waitFor } from "@testing-library/react";
+import { render } from "./test-utils";
 import { vi } from "vitest";
+
+vi.mock("../hooks/useCollaboration");
 
 import { StoreIncrement } from "@excalidraw/element";
 
@@ -21,7 +24,12 @@ const { h } = window;
 
 Object.defineProperty(window, "collab", {
   value: {
-    startCollaboration: vi.fn(),
+    startCollaboration: vi.fn().mockImplementation(() => {
+      h.app.updateScene({
+        elements: h.elements.filter((el) => !el.isDeleted),
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+    }),
   },
 });
 

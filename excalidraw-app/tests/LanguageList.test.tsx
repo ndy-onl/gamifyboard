@@ -5,7 +5,7 @@ import {
   fireEvent,
   waitFor,
   render,
-} from "@excalidraw/excalidraw/tests/test-utils";
+} from "./test-utils";
 
 import ExcalidrawApp from "../App";
 

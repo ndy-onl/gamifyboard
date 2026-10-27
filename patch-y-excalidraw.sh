@@ -1,0 +1,238 @@
+#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+console.log("Patching y-excalidraw for live dragging with DEBUG LOGS...");
+
+const targetPath = path.join(__dirname, 'node_modules', '@ndy-onl', 'y-excalidraw', 'dist', 'index.js');
+
+if (!fs.existsSync(targetPath)) {
+    console.error("Could not find y-excalidraw dist/index.js");
+    process.exit(0);
+}
+
+let content = fs.readFileSync(targetPath, 'utf8');
+
+// Remove the 'cursorButton === up' check in onChange
+content = content.replace(/state\.cursorButton === "up" &&\s*/g, '');
+
+const oldPointer = `        this.onPointerUpdate = (payload) => {
+            if (this.awareness) {
+                this.awareness.setLocalStateField("pointer", payload.pointer);
+                this.awareness.setLocalStateField("button", payload.button);
+            }
+        };`;
+
+const newPointer = `        this.onPointerUpdate = (payload) => {
+            if (this.awareness) {
+                this.awareness.setLocalStateField("pointer", payload.pointer);
+                this.awareness.setLocalStateField("button", payload.button);
+            }
+            if (this.api && this.yElements) {
+                const elements = this.api.getSceneElementsIncludingDeleted();
+                if (!areElementsSame(this.lastKnownElements, elements)) {
+                    const res = getDeltaOperationsForElements(this.lastKnownElements, elements);
+                    if (res.operations.length > 0) {
+                        const updateOps = res.operations.filter(op => op.type === "update");
+                        
+                        this.lastKnownElements = res.lastKnownElements;
+                        applyElementOperations(this.yElements, res.operations, this);
+                    }
+                }
+            }
+        };`;
+
+// Inject into onPointerUpdate
+if (content.includes(oldPointer)) {
+    content = content.replace(oldPointer, newPointer);
+} else {
+    // If it's already patched with getSceneElementsIncludingDeleted(), replace that block
+    const existingPatch = `        this.onPointerUpdate = (payload) => {
+            if (this.awareness) {
+                this.awareness.setLocalStateField("pointer", payload.pointer);
+                this.awareness.setLocalStateField("button", payload.button);
+            }
+            if (this.api && this.yElements) {
+                // Must use getSceneElementsIncludingDeleted to match what onChange does
+                // otherwise lastKnownElements lengths will flip-flop and break operations!
+                const elements = this.api.getSceneElementsIncludingDeleted();
+                if (!areElementsSame(this.lastKnownElements, elements)) {
+                    const res = getDeltaOperationsForElements(this.lastKnownElements, elements);
+                    if (res.operations.length > 0) {
+                        this.lastKnownElements = res.lastKnownElements;
+                        applyElementOperations(this.yElements, res.operations, this);
+                    }
+                }
+            }
+        };`;
+    content = content.replace(existingPatch, newPointer);
+}
+
+// Add debug log to remote element receiver
+const remoteReceiverStr = `        this._remoteElementsChangeHandler = (event, txn) => {
+            if (txn.origin === this) {
+                return;
+            }
+            const elements = yjsToExcalidraw(this.yElements);
+            this.lastKnownElements = elements;
+            this.api.updateScene({ elements });
+        };`;
+
+const newRemoteReceiverStr = `        this._remoteElementsChangeHandler = (event, txn) => {
+            if (txn.origin === this) {
+                return;
+            }
+            const elements = yjsToExcalidraw(this.yElements);
+            
+            this.lastKnownElements = elements;
+            this.api.updateScene({ elements });
+        };`;
+
+if (content.includes(remoteReceiverStr)) {
+    content = content.replace(remoteReceiverStr, newRemoteReceiverStr);
+}
+
+fs.writeFileSync(targetPath, content, 'utf8');
+console.log("Done patching.");
+
+
+
+const oldAddedFiles = `const addedFiles = [...events.keysChanged].map((key) => this.yAssets.get(key));`;
+const newAddedFiles = `\nconst addedFiles = [...events.keysChanged].map((key) => this.yAssets.get(key)).filter(Boolean);\naddedFiles.forEach(file => {\n    if (file.dataURL && file.dataURL.startsWith('http')) {\n        console.log('[S3] Remote user added image, downloading from S3:', file.dataURL);\n        fetch(file.dataURL)\n        .then(res => res.blob())\n        .then(blob => {\n            const reader = new FileReader();\n            reader.onload = () => {\n                this.api.addFiles([{ ...file, dataURL: reader.result }]);\n            };\n            reader.readAsDataURL(blob);\n        }).catch(e => console.error('Failed to fetch remote S3 asset', e));\n    } else if (file.dataURL) {\n        this.api.addFiles([file]);\n    }\n});\n`;
+
+if (content.includes(oldAddedFiles)) {
+    content = content.replace(oldAddedFiles, newAddedFiles);
+    // Remove the original this.api.addFiles(addedFiles) call since we do it inside the loop
+    content = content.replace(/this.api.addFiles\(addedFiles\);/g, '');
+}
+fs.writeFileSync(targetPath, content, 'utf8');
+
+const indexPath2 = path.join(__dirname, 'node_modules', '@ndy-onl', 'y-excalidraw', 'dist', 'index.js');
+let indexContent = fs.readFileSync(indexPath2, 'utf8');
+
+indexContent = indexContent.replace(
+    'const res = getDeltaOperationsForAssets(this.lastKnownFileIds, files);',
+    'const res = getDeltaOperationsForAssets(this.lastKnownFileIds, files);'
+);
+
+indexContent = indexContent.replace(
+    'const validFiles = Object.values(addedFiles).filter(Boolean);',
+    'const validFiles = Object.values(addedFiles).filter(Boolean);'
+);
+
+
+const oldInitAssetsStr = `// init assets
+        if (this.yAssets) {
+            this.api.addFiles([...this.yAssets.keys()].map((key) => this.yAssets.get(key)));
+        }`;
+
+const newInitAssetsStr = `// init assets\n        if (this.yAssets) {\n            const initialFiles = [...this.yAssets.keys()].map((key) => this.yAssets.get(key)).filter(Boolean);\n            initialFiles.forEach(file => {\n                if (file.dataURL && file.dataURL.startsWith('http')) {\n                    console.log('[S3] Initializing image from S3:', file.dataURL);\n                    fetch(file.dataURL)\n                    .then(res => res.blob())\n                    .then(blob => {\n                        const reader = new FileReader();\n                        reader.onload = () => {\n                            this.api.addFiles([{ ...file, dataURL: reader.result }]);\n                        };\n                        reader.readAsDataURL(blob);\n                    }).catch(e => console.error('Failed to fetch initial S3 asset', e));\n                } else if (file.dataURL) {\n                    this.api.addFiles([file]);\n                }\n            });\n        }`;
+
+if (indexContent.includes(oldInitAssetsStr)) {
+    indexContent = indexContent.replace(oldInitAssetsStr, newInitAssetsStr);
+}
+fs.writeFileSync(indexPath2, indexContent);
+
+
+const diffPath = path.join(__dirname, 'node_modules', '@ndy-onl', 'y-excalidraw', 'dist', 'diff.js');
+let diffContent = fs.readFileSync(diffPath, 'utf8');
+
+diffContent = diffContent.replace(
+    'export const getDeltaOperationsForAssets = (lastKnownFileIds, files) => {',
+    'export const getDeltaOperationsForAssets = (lastKnownFileIds, files) => {'
+);
+
+diffContent = diffContent.replace(
+    'operations.push({ type: "append", id: fileId, asset: files[fileId] });',
+    'operations.push({ type: "append", id: fileId, asset: files[fileId] });'
+);
+
+// Prevent "TypeError: can't access property 'set', e.get(...) is undefined" during element operations
+diffContent = diffContent.replace(
+    `case "update": {
+                    yElements.get(idYjsIndexMap[op.id]).set("el", { ...op.element });
+                    break;
+                }`,
+    `case "update": {
+                    const idx = idYjsIndexMap[op.id];
+                    if (idx !== undefined && yElements.get(idx)) {
+                        yElements.get(idx).set("el", { ...op.element });
+                    }
+                    break;
+                }`
+);
+
+diffContent = diffContent.replace(
+    `case "move": {
+                    yElements.get(idYjsIndexMap[op.id]).set("pos", op.pos);
+                    break;
+                }`,
+    `case "move": {
+                    const idx = idYjsIndexMap[op.id];
+                    if (idx !== undefined && yElements.get(idx)) {
+                        yElements.get(idx).set("pos", op.pos);
+                    }
+                    break;
+                }`
+);
+
+diffContent = diffContent.replace(
+    `if (op.type === "delete") {
+                        yElements.delete(idYjsIndexMap[op.id], 1);
+                    }`,
+    `if (op.type === "delete") {
+                        const idx = idYjsIndexMap[op.id];
+                        if (idx !== undefined && yElements.get(idx)) {
+                            yElements.delete(idx, 1);
+                        }
+                    }`
+);
+
+fs.writeFileSync(diffPath, diffContent);
+
+indexContent = indexContent.replace(
+    'applyElementOperations(this.yElements, operations, this);',
+    'if (this.yElements.doc) { this.yElements.doc.transact(() => { applyElementOperations(this.yElements, operations, this); }, this); } else { applyElementOperations(this.yElements, operations, this); }'
+);
+
+const customApplyAssets = `
+if (this.yAssets && this.yAssets.doc) { 
+    this.yAssets.doc.transact(() => { 
+        assetOperations.forEach(op => {
+            if (op.type === 'append' && op.asset && op.asset.dataURL && op.asset.dataURL.startsWith('data:')) {
+                const asset = op.asset;
+                const ext = asset.mimeType === 'image/jpeg' ? 'jpg' : asset.mimeType === 'image/svg+xml' ? 'svg' : 'png';
+                fetch('https://api.alpha.gamifyboard.com/s3/presign?filename=' + asset.id + '.' + ext + '&contentType=' + asset.mimeType)
+                .then(r => r.json())
+                .then(async ({ presignedUrl, publicUrl }) => {
+                    console.log("[S3] Uploading image to S3...", publicUrl);
+                    const blob = await (await fetch(asset.dataURL)).blob();
+                    await fetch(presignedUrl, { method: 'PUT', body: blob, headers: { 'Content-Type': asset.mimeType } });
+                    console.log("[S3] Upload complete, syncing S3 URL via Yjs");
+                    this.yAssets.set(op.id, { ...asset, dataURL: publicUrl });
+                }).catch(console.error);
+                
+                // Set temporary placeholder to avoid syncing base64
+                this.yAssets.set(op.id, { ...asset, dataURL: '' }); 
+            } else if (op.type === 'append') {
+                const existing = this.yAssets.get(op.id);
+                if (existing && existing.dataURL && existing.dataURL.startsWith('http') && (!op.asset.dataURL || !op.asset.dataURL.startsWith('http'))) {
+                    console.log('[S3 Protection] Retaining valid S3 dataURL for asset', op.id);
+                } else {
+                    this.yAssets.set(op.id, op.asset);
+                }
+            } else if (op.type === 'delete') {
+                this.yAssets.delete(op.id);
+            }
+        });
+    }, this); 
+} else { applyAssetOperations(this.yAssets, assetOperations, this); }
+`;
+indexContent = indexContent.replace(
+    'applyAssetOperations(this.yAssets, assetOperations, this);',
+    customApplyAssets
+);
+
+fs.writeFileSync(indexPath2, indexContent);
+
+console.log("Logs injected successfully!");

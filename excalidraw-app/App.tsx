@@ -1,3 +1,4 @@
+
 import {
   Excalidraw,
   LiveCollaborationTrigger,
@@ -77,7 +78,7 @@ import type {
   UIAppState,
 } from "@excalidraw/excalidraw/types";
 import type { ResolutionType } from "@excalidraw/common/utility-types";
-import type { ResolvablePromise } from "@excalidraw/common/utils";
+import type { ResolvablePromise }  from "@excalidraw/common/utils";
 
 import { GamifyBoardIcon } from "./components/GamifyBoardIcon";
 
@@ -86,6 +87,7 @@ import {
   Provider,
   useAtom,
   useAtomValue,
+  useSetAtom,
   useAtomWithInitialValue,
   appJotaiStore,
 } from "./app-jotai";
@@ -95,11 +97,7 @@ import {
   STORAGE_KEYS,
   SYNC_BROWSER_TABS_TIMEOUT,
 } from "./app_constants";
-import Collab, {
-  collabAPIAtom,
-  isCollaboratingAtom,
-  isOfflineAtom,
-} from "./collab/Collab";
+
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
@@ -144,11 +142,108 @@ import { AIComponents } from "./components/AI";
 import { ExcalidrawPlusIframeExport } from "./ExcalidrawPlusIframeExport";
 import { PropertiesSidebar } from "./components/PropertiesSidebar";
 import { GamifyToolbar } from "./components/GamifyToolbar";
+import AuthPanel from './components/AuthPanel';
+import LoginModal from './components/LoginModal';
+import RegisterModal from './components/RegisterModal';
+import './components/Modal.scss';
 
 import "./index.scss";
 
-import type { CollabAPI } from "./collab/Collab";
 
+
+import Auth from './components/Auth';
+import BoardList from './components/BoardList';
+import { getBoard, getPublicBoard, getProfile } from './src/api'; // logoutUser wird jetzt von logoutActionAtom behandelt
+import { authStatusAtom, loginActionAtom, logoutActionAtom } from "./state/authAtoms"; // Neue Importe
+import { BoardListDialog } from "./components/BoardListDialog";
+import { actionLoadScene } from "@excalidraw/excalidraw/actions";
+import { Card } from "@excalidraw/excalidraw/components/Card";
+import { saveAs } from "@excalidraw/excalidraw/components/icons";
+import { createBoard } from "./src/api";
+import { useCollaboration, BoardMode } from "./hooks/useCollaboration";
+import * as Y from "yjs";
+
+/**
+ * Dialog component for saving the current local board to GamifyBoard Pro Cloud.
+ * Serializes elements, appState, and binary files and uploads to the cloud API.
+ */
+const SaveToProDialog = ({
+  excalidrawAPI,
+  elements,
+  appState,
+  files,
+  onSuccess,
+  onError,
+}: any) => {
+  const [boardName, setBoardName] = useState(excalidrawAPI.getName());
+
+  const onSave = async () => {
+    if (!excalidrawAPI) {
+      onError(new Error("Excalidraw API not available"));
+      return;
+    }
+    try {
+      const elements = excalidrawAPI.getSceneElements();
+      const appState = excalidrawAPI.getAppState();
+      const files = excalidrawAPI.getFiles();
+      await createBoard(boardName, { elements, appState, files });
+      onSuccess();
+    } catch (error: any) {
+      onError(error);
+    }
+  };
+
+  return (
+    <Card color="pink">
+      <div className="Card-icon">{saveAs}</div>
+      <h2>Save to GamifyBoard Pro</h2>
+      <div className="Card-details">
+        Save your board to the GamifyBoard cloud to collaborate and share.
+      </div>
+      <input
+        type="text"
+        value={boardName}
+        onChange={(e) => setBoardName(e.target.value)}
+        placeholder="Board name"
+      />
+      <button
+        className="Card-button"
+        type="button"
+        title="Save to GamifyBoard Pro"
+        aria-label="Save to GamifyBoard Pro"
+        
+        onClick={onSave}
+      >
+        Save
+      </button>
+    </Card>
+  );
+};
+
+/**
+ * ============================================================================
+ * GAMIFYBOARD: 2D AXIS-ALIGNED BOUNDING BOX (AABB) INTERSECTION
+ * ============================================================================
+ * Computes whether two rectangular bounding boxes intersect in 2D Euclidean space.
+ *
+ * Collision Algorithm:
+ * Evaluates the standard separating axis theorem for axis-aligned rectangles:
+ * Two boxes intersect if and only if they overlap simultaneously along both
+ * the horizontal (X) and vertical (Y) projection axes:
+ *   r1.left < r2.right && r1.right > r2.left &&
+ *   r1.top < r2.bottom && r1.bottom > r2.top
+ *
+ * Use cases in GamifyBoard:
+ * 1. Card-Zone Validation: Tests whether a movable game card (`customData.isCard`)
+ *    is placed inside an interactive target zone (`customData.isZone`).
+ * 2. Numeric Counter Tallying: Tallying the number of tokens or cards matching a
+ *    given `countsType` physically resting inside a zone (`countsZone`).
+ *
+ * @param r1 - First bounding box with coordinates {x, y, width, height}
+ * @param r2 - Second bounding box with coordinates {x, y, width, height}
+ * @returns `true` if the two bounding boxes overlap; otherwise `false`.
+ * ============================================================================
+ */
 const isIntersecting = (
   r1: { x: number; y: number; width: number; height: number },
   r2: { x: number; y: number; width: number; height: number },
@@ -161,27 +256,275 @@ const isIntersecting = (
   );
 };
 
+// ============================================================================
+// GAMIFYBOARD: PLAYER-SLOT & CURSOR-NAME SYNCHRONIZATION ARCHITECTURE
+// ============================================================================
+// On GamifyBoard, multiple canvas elements (e.g. player boards, character tokens,
+// score sheets, turn trackers) can be linked together to represent the same
+// logical player identity via a shared `customData.playerSlotId`.
+//
+// HISTORICAL EDGE CASE & WHY VERSION PRECEDENCE FAILED:
+// In standard Excalidraw CRDT synchronization, element conflicts are resolved by
+// picking the element with the highest `version`.
+// However, in a collaborative game board:
+// 1. A user double-clicks Slot A ("Player 2") and types "Adrian".
+// 2. Meanwhile, Slot B (which also has `playerSlotId: "p2"`, but still shows "Player 2")
+//    was previously moved or formatted, giving it `version: 80` while Slot A had `version: 12`.
+// 3. When the user finishes typing and clicks outside (blur), a naive version-based check
+//    would observe Slot B (v80) > Slot A (v12), and immediately overwrite "Adrian" back
+//    to "Player 2", destroying user input!
+//
+// MULTI-TIER SOURCE-OF-TRUTH RESOLUTION:
+// To guarantee input preservation and reliable multiplayer convergence:
+// Tier 1: Active WYSIWYG Editing (`isSlotActive`):
+//   Any element currently selected or actively edited in Excalidraw's WYSIWYG editor
+//   (`appState.editingTextElement`) unconditionally takes precedence as the Source of Truth,
+//   ignoring raw element version numbers.
+// Tier 2: 10-Second Blur Grace Period (`lastActiveSlotTimestamp`):
+//   Upon blur, `editingTextElement` is cleared. To prevent immediate race conditions
+//   before version updates settle across Yjs peers, the most recently active slot is
+//   retained as authoritative for 10,000ms.
+// Tier 3: Highest Version Fallback:
+//   When no slots are active or within grace period, standard highest-version resolution applies.
+//
+// SIBLING RECONCILIATION & CRDT CONVERGENCE:
+// All sibling slots sharing the same `playerSlotId` are updated to match the Source of
+// Truth's text, and their version is bumped via:
+//   `version = Math.max(sibling.version, truth.version) + 1`
+// This ensures the updated text dominates all historical replicas across the Yjs network.
+//
+// AWARENESS INTEGRATION:
+// The local player's cursor badge is synchronized via `setCursorName(slot.text)`,
+// dynamically broadcasting the player's name across Yjs Ephemeral Awareness.
+// ============================================================================
+
+/** The playerSlotId currently claimed or edited by the local user. */
+let localUserPlayerSlotId: string | null = null;
+/** Element ID of the most recently active player slot for the local user. */
+let lastActiveSlotElementId: string | null = null;
+/** Timestamp (ms) when the local user last interacted with or edited their slot. */
+let lastActiveSlotTimestamp = 0;
+
+/**
+ * Determines whether a player slot element (or its bound container) is currently
+ * active in the local user's editor state.
+ *
+ * Checks both:
+ * 1. Selection state: `appState.selectedElementIds[slot.id]` or container ID.
+ * 2. Active WYSIWYG text editing: `appState.editingTextElement` (Excalidraw's internal
+ *    property holding the active text editor element, as distinct from `editingElement`).
+ *
+ * Container Inheritance:
+ * If a text element is bound inside a parent container (e.g. a player board frame or
+ * token shape), `slot.containerId` links the two. Selecting or editing either the
+ * text child or the container parent marks the slot active.
+ *
+ * @param slot - The candidate player slot element.
+ * @param appState - Current Excalidraw application state.
+ * @returns `true` if the slot is actively focused, selected, or edited.
+ */
+const isSlotActive = (slot: any, appState: any) => {
+  if (!appState) return false;
+  if (appState.selectedElementIds) {
+    if (appState.selectedElementIds[slot.id]) return true;
+    if (slot.containerId && appState.selectedElementIds[slot.containerId]) return true;
+  }
+  // In Excalidraw, active text editing is stored in appState.editingTextElement (not editingElement)
+  const editingEl = appState.editingTextElement || (appState as any).editingElement;
+  const editingId = editingEl?.id;
+  if (editingId) {
+    if (editingId === slot.id) return true;
+    if (slot.containerId && (editingId === slot.containerId || editingEl?.containerId === slot.containerId)) return true;
+  }
+  return false;
+};
+
+/**
+ * Retrieves the logical `playerSlotId` associated with an element.
+ *
+ * Resolution Order:
+ * 1. Direct customData: Checks `el.customData?.playerSlotId` directly on the element.
+ * 2. Container Inheritance: If the element is a bound text child (`el.containerId`),
+ *    searches `elements` for the parent container and checks its `customData.playerSlotId`.
+ *
+ * @param el - The target element to inspect.
+ * @param elements - The complete scene elements list for resolving container references.
+ * @returns The string `playerSlotId`, or `null` if the element is not a player slot.
+ */
+const getPlayerSlotId = (el: any, elements?: readonly any[]) => {
+  if (!el) return null;
+  if (el.customData?.isPlayerSlot && el.customData?.playerSlotId) return el.customData.playerSlotId;
+  if (el.containerId && elements) {
+    const container = elements.find(c => c.id === el.containerId);
+    if (container?.customData?.isPlayerSlot && container?.customData?.playerSlotId) {
+      return container.customData.playerSlotId;
+    }
+  }
+  return null;
+};
+
+/**
+ * ============================================================================
+ * GAMIFYBOARD: CORE GAME STATE EVALUATION ENGINE (checkGameState)
+ * ============================================================================
+ * Central state machine and game rule evaluation loop for GamifyBoard.
+ * Invoked on user interaction events (such as `onPointerUp`), remote sync updates,
+ * and programmatic changes.
+ *
+ * Multi-Phase Evaluation Pipeline:
+ * Phase 1: Card Collection
+ *   Filters all movable card elements (`customData.isCard`).
+ *
+ * Phase 2: Player Slot Discovery & Source-of-Truth Arbitration
+ *   Discovers all player slots (`type === "text"` sharing `playerSlotId`).
+ *   Resolves the authoritative text for each `playerSlotId` using 3-tier priority:
+ *     - Priority 1 (Active WYSIWYG): `isSlotActive` (currently focused or in `editingTextElement`).
+ *     - Priority 2 (Blur Grace Period): Most recently active slot within a 10s window
+ *       (`Date.now() - lastActiveSlotTimestamp < 10000`) to prevent blur race conditions.
+ *     - Priority 3 (Fallback): Highest `version` number.
+ *
+ * Phase 3: Ephemeral Awareness Cursor Sync
+ *   Synchronizes the local player's claimed slot text to their collaboration
+ *   cursor name badge via `setCursorName(mySlot.text)`.
+ *
+ * Phase 4: Sibling Player Slot Propagation & CRDT Convergence
+ *   Updates all sibling slots to match the Source of Truth's text, bumping
+ *   `version = Math.max(sibling.version, truth.version) + 1`.
+ *
+ * Phase 5: Numeric Counter Calculation
+ *   - Master Counters (`sumsCountersForZone`): Computes the aggregate sum of all
+ *     sibling counters targeting the specified zone.
+ *   - Type Counters (`countsType`): Tallies cards with matching `cardType` that
+ *     physically intersect (`isIntersecting`) the target zone.
+ *
+ * Phase 6: Zone Collision & Dynamic Color Validation
+ *   Evaluates cards placed inside each interactive zone (`customData.isZone`):
+ *   If cards are present and all match `acceptedCardTypes`, sets `backgroundColor`
+ *   to `zoneColorActive` (default `#aaffaa`), otherwise `zoneColorDefault` (default `#ffaaaa`).
+ *
+ * Phase 7: Batch Scene Update
+ *   Applies mutations in a single batch pass via `excalidrawAPI.updateScene`
+ *   if and only if `needsUpdate === true`.
+ *
+ * @param excalidrawAPI - Imperative API for scene reads and updates.
+ * @param elements - The scene elements list to evaluate.
+ * @param setCursorName - Optional callback to sync player name to Yjs Awareness cursor.
+ * ============================================================================
+ */
 const checkGameState = (
   excalidrawAPI: ExcalidrawImperativeAPI,
   elements: readonly any[] | null,
+  setCursorName?: (name: string) => void
 ) => {
   if (!excalidrawAPI || !elements) {
     return;
   }
 
+  // Phase 1: Filter all movable game cards for zone and counter evaluation
   const cards = elements.filter((el) => el.customData?.isCard);
   let needsUpdate = false;
 
+  const appState = excalidrawAPI.getAppState();
+  let latestPlayerSlots: Record<string, any> = {};
+  let activeSlotForSlotId: Record<string, any> = {};
+
+  // Phase 2a: Discover all text slots sharing a playerSlotId
+  const playerSlots = elements.filter((el) => el.type === "text" && getPlayerSlotId(el, elements));
+  playerSlots.forEach((slot) => {
+    const slotId = getPlayerSlotId(slot, elements);
+    if (!slotId) return;
+
+    // Check if actively selected or currently being edited in WYSIWYG mode
+    const isActive = isSlotActive(slot, appState);
+    if (isActive) {
+      activeSlotForSlotId[slotId] = slot;
+      localUserPlayerSlotId = slotId;
+      lastActiveSlotElementId = slot.id;
+      lastActiveSlotTimestamp = Date.now();
+    }
+    
+    // Default version fallback: Track slot with highest version number
+    if (!latestPlayerSlots[slotId] || (slot.version || 0) > (latestPlayerSlots[slotId].version || 0)) {
+        latestPlayerSlots[slotId] = slot;
+    }
+  });
+
+  // Phase 2b: Priority 1 - Actively edited slot unconditionally overrides versions
+  Object.keys(activeSlotForSlotId).forEach((slotId) => {
+    latestPlayerSlots[slotId] = activeSlotForSlotId[slotId];
+  });
+
+  // Phase 2c: Priority 2 - 10-second blur grace period protects against race conditions
+  if (lastActiveSlotElementId && Date.now() - lastActiveSlotTimestamp < 10000) {
+    const recentSlot = playerSlots.find(s => s.id === lastActiveSlotElementId);
+    if (recentSlot) {
+      const slotId = getPlayerSlotId(recentSlot, elements);
+      if (slotId && !activeSlotForSlotId[slotId]) {
+        latestPlayerSlots[slotId] = recentSlot;
+      }
+    }
+  }
+
+  // Phase 3: Synchronize local player's cursor badge via Yjs Ephemeral Awareness
+  if (localUserPlayerSlotId && latestPlayerSlots[localUserPlayerSlotId]) {
+      const mySlot = latestPlayerSlots[localUserPlayerSlotId];
+      if (setCursorName && mySlot.text) {
+          setCursorName(mySlot.text);
+      }
+  }
+
+  // Map elements and apply state updates
   const updatedElements = elements.map((el) => {
+    // Phase 4: Sibling player slot synchronization & CRDT version bumping
+    if (el.type === "text") {
+        const slotId = getPlayerSlotId(el, elements);
+        if (slotId) {
+            const truthSlot = latestPlayerSlots[slotId];
+            if (truthSlot && truthSlot.id !== el.id && el.text !== truthSlot.text) {
+                needsUpdate = true;
+                return {
+                    ...el,
+                    text: truthSlot.text,
+                    originalText: truthSlot.text,
+                    version: Math.max((el.version || 0), (truthSlot.version || 0)) + 1,
+                };
+            }
+        }
+    }
+
+    // Phase 5: Numeric Counter element evaluation
     if (el.type === "counter") {
+      // 5a. Master Counter: Aggregates values of all sibling counters for the target zone
+      const sumsZone = el.customData?.sumsCountersForZone;
+      if (sumsZone) {
+        const otherCounters = elements.filter(
+          (other) =>
+            other.type === "counter" &&
+            other.id !== el.id &&
+            other.customData?.countsZone === sumsZone
+        );
+        const sum = otherCounters.reduce((acc, curr) => acc + (curr.customData?.value || 0), 0);
+        if (el.customData.value !== sum) {
+          needsUpdate = true;
+          return {
+            ...el,
+            customData: { ...el.customData, value: sum },
+            version: (el.version || 0) + 1,
+          };
+        }
+      }
+
+      // 5b. Card Type Counter: Tallies cards of matching cardType physically inside the target zone
       const countsType = el.customData?.countsType;
-      if (countsType) {
+      if (countsType && !sumsZone) {
+        const targetZoneName = el.customData?.countsZone;
         const zone = elements.find(
           (zoneEl) =>
             zoneEl.customData?.isZone &&
             (zoneEl.customData.acceptedCardTypes || "")
               .split(",")
-              .includes(countsType),
+              .includes(countsType) &&
+            (!targetZoneName || zoneEl.customData?.zoneName === targetZoneName)
         );
         if (zone) {
           const cardsInZone = cards.filter(
@@ -194,6 +537,7 @@ const checkGameState = (
             return {
               ...el,
               customData: { ...el.customData, value: cardsInZone.length },
+              version: (el.version || 0) + 1,
             };
           }
         }
@@ -201,6 +545,7 @@ const checkGameState = (
       return el;
     }
 
+    // Phase 6: Zone Collision & Dynamic Background Color Validation
     if (!el.customData?.isZone) {
       return el;
     }
@@ -212,22 +557,27 @@ const checkGameState = (
       return el;
     }
 
+    // Identify all cards whose bounding box intersects this zone
     const cardsInZone = cards.filter((card) => isIntersecting(card, el as any));
 
+    // Validation rule: Zone is correct if >=1 card is present and ALL cards match acceptedCardTypes
     const isCorrect =
       cardsInZone.length > 0 &&
       cardsInZone.every((card) =>
         acceptedTypes.includes(card.customData?.cardType),
       );
-    const newBackgroundColor = isCorrect ? "#aaffaa" : "#ffaaaa";
+    const colorActive = el.customData?.zoneColorActive || "#aaffaa";
+    const colorDefault = el.customData?.zoneColorDefault || "#ffaaaa";
+    const newBackgroundColor = isCorrect ? colorActive : colorDefault;
 
     if (el.backgroundColor !== newBackgroundColor) {
       needsUpdate = true;
-      return { ...el, backgroundColor: newBackgroundColor };
+      return { ...el, backgroundColor: newBackgroundColor, version: (el.version || 0) + 1 };
     }
     return el;
   });
 
+  // Phase 7: Batch scene update commit
   if (needsUpdate) {
     excalidrawAPI.updateScene({ elements: updatedElements });
   }
@@ -285,7 +635,7 @@ if (window.self !== window.top) {
 
 const shareableLinkConfirmDialog = {
   title: t("overwriteConfirm.modal.shareableLink.title"),
-  description: (
+  description: () => (
     <Trans
       i18nKey="overwriteConfirm.modal.shareableLink.description"
       bold={(text) => <strong>{text}</strong>}
@@ -296,164 +646,405 @@ const shareableLinkConfirmDialog = {
   color: "danger",
 } as const;
 
+// REC-05: Create a helper to reduce code duplication
+const createErrorScene = (errorMessage: string) => {
+  return { scene: { appState: { errorMessage } }, isExternalScene: false };
+};
+
 const initializeScene = async (opts: {
-  collabAPI: CollabAPI | null;
   excalidrawAPI: ExcalidrawImperativeAPI;
+  selectedBoardId: string | null;
+  token: string | null;
 }): Promise<
   { scene: ExcalidrawInitialDataState | null } & (
-    | { isExternalScene: true; id: string; key: string }
+    | { isExternalScene: true; id: string | null; key: string | null }
     | { isExternalScene: false; id?: null; key?: null }
   )
 > => {
-  const searchParams = new URLSearchParams(window.location.search);
-  const id = searchParams.get("id");
-  const jsonBackendMatch = window.location.hash.match(
-    /^#json=([a-zA-Z0-9_-]+),([a-zA-Z0-9_-]+)$/,
-  );
-  const externalUrlMatch = window.location.hash.match(/^#url=(.*)$/);
+    const { excalidrawAPI, selectedBoardId, token } = opts;
 
-  const localDataState = importFromLocalStorage();
+    const searchParams = new URLSearchParams(window.location.search);
+    const id = searchParams.get("id");
+    const jsonBackendMatch = window.location.hash.match(
+      /^#json=([a-zA-Z0-9_-]+),([a-zA-Z0-9_-]+)$/,
+    );
+    const externalUrlMatch = window.location.hash.match(/^#url=(.*)$/);
 
-  let scene: RestoredDataState & {
-    scrollToContent?: boolean;
-  } = await loadScene(null, null, localDataState);
+    // Highest priority: Handle collaboration link with an ID.
+    if (id) {
+      try {
+        let response;
+        try {
+          response = await getBoard(id);
+        } catch (authError: any) {
+          if (authError.response?.status === 401 || authError.response?.status === 403) {
+            response = await getPublicBoard(id);
+          } else {
+            throw authError;
+          }
+        }
+        
+        const board = response.data;
+        if (board && board.board_data) {
+          const loadedAppState = {
+            ...(board.board_data.appState || {}),
+            showWelcomeScreen: false,
+            openDialog: null,
+            isLoading: false,
+          };
+          const scene = {
+            elements: board.board_data.elements || [],
+            appState: restoreAppState(loadedAppState, null),
+            scrollToContent: true,
+          };
+          if (excalidrawAPI && board.name) {
+            excalidrawAPI.updateScene({ appState: { name: board.name } });
+          }
+          if (excalidrawAPI && board.board_data.files && Object.keys(board.board_data.files).length > 0) {
+            excalidrawAPI.addFiles(Object.values(board.board_data.files));
+          }
+          return { scene, isExternalScene: true, id: id, key: null };
+        }
+        // This case should ideally not be reached if getBoard returns valid data
+        return createErrorScene("Board data is invalid.");
 
-  let roomLinkData = getCollaborationLinkData(window.location.href);
-  const isExternalScene = !!(id || jsonBackendMatch || roomLinkData);
-  if (isExternalScene) {
-    if (
-      // don't prompt if scene is empty
-      !scene.elements.length ||
-      // don't prompt for collab scenes because we don't override local storage
-      roomLinkData ||
-      // otherwise, prompt whether user wants to override current scene
-      (await openConfirmModal(shareableLinkConfirmDialog))
-    ) {
-      if (jsonBackendMatch) {
-        scene = await loadScene(
-          jsonBackendMatch[1],
-          jsonBackendMatch[2],
-          localDataState,
-        );
+      } catch (error: any) {
+        console.error("Failed to load board from backend via URL", error);
+
+        // REC-02: Granular error handling
+        const status = error.response?.status;
+        if (status === 404) {
+          return createErrorScene("The board you are looking for does not exist or has been deleted.");
+        }
+        if (status === 403) {
+          return createErrorScene("You do not have permission to view this board.");
+        }
+        return createErrorScene("Could not load the board. Please check your connection or try again later.");
       }
-      scene.scrollToContent = true;
-      if (!roomLinkData) {
-        window.history.replaceState({}, APP_NAME, window.location.origin);
-      }
-    } else {
-      // https://github.com/excalidraw/excalidraw/issues/1919
-      if (document.hidden) {
-        return new Promise((resolve, reject) => {
-          window.addEventListener(
-            "focus",
-            () => initializeScene(opts).then(resolve).catch(reject),
-            {
-              once: true,
-            },
-          );
-        });
-      }
-
-      roomLinkData = null;
-      window.history.replaceState({}, APP_NAME, window.location.origin);
     }
-  } else if (externalUrlMatch) {
-    window.history.replaceState({}, APP_NAME, window.location.origin);
 
-    const url = externalUrlMatch[1];
-    try {
-      const request = await fetch(window.decodeURIComponent(url));
-      const data = await loadFromBlob(await request.blob(), null, null);
+    // --- Fallback logic for non-collaboration scenes ---
+
+    const localDataState = importFromLocalStorage();
+    let scene: RestoredDataState & { scrollToContent?: boolean } = await loadScene(
+      null,
+      null,
+      localDataState,
+    );
+
+    let roomLinkData = getCollaborationLinkData(window.location.href);
+    const isExternalScene = !!(jsonBackendMatch || externalUrlMatch || roomLinkData);
+
+    if (isExternalScene) {
       if (
         !scene.elements.length ||
+        roomLinkData ||
         (await openConfirmModal(shareableLinkConfirmDialog))
       ) {
-        return { scene: data, isExternalScene };
+        if (jsonBackendMatch) {
+          scene = await loadScene(
+            jsonBackendMatch[1],
+            jsonBackendMatch[2],
+            localDataState,
+          );
+        } else if (externalUrlMatch) {
+          // REC-03: Security risk - this part needs a separate security audit.
+          // For now, we proceed with the existing logic.
+          const url = window.decodeURIComponent(externalUrlMatch[1]);
+          try {
+            const request = await fetch(url);
+            const data = await loadFromBlob(await request.blob(), null, null);
+            scene = data;
+          } catch (error: any) {
+            return createErrorScene(t("alerts.invalidSceneUrl"));
+          }
+        }
+        scene.scrollToContent = true;
+        if (!roomLinkData) {
+          window.history.replaceState({}, APP_NAME, window.location.origin);
+        }
+        return {
+            scene,
+            isExternalScene: true,
+            id: jsonBackendMatch ? jsonBackendMatch[1] : null,
+            key: jsonBackendMatch ? jsonBackendMatch[2] : null
+        };
+      } else {
+        window.history.replaceState({}, APP_NAME, window.location.origin);
       }
-    } catch (error: any) {
-      return {
-        scene: {
-          appState: {
-            errorMessage: t("alerts.invalidSceneUrl"),
-          },
-        },
-        isExternalScene,
+    }
+
+    if (!isExternalScene && scene.appState.isLoading) {
+      scene = {
+        ...scene,
+        appState: { ...scene.appState, isLoading: false },
       };
     }
-  }
 
-  if (roomLinkData && opts.collabAPI) {
-    const { excalidrawAPI } = opts;
-
-    const scene = await opts.collabAPI.startCollaboration(roomLinkData);
-
-    return {
-      // when collaborating, the state may have already been updated at this
-      // point (we may have received updates from other clients), so reconcile
-      // elements and appState with existing state
-      scene: {
-        ...scene,
-        appState: {
-          ...restoreAppState(
-            {
-              ...scene?.appState,
-              theme: localDataState?.appState?.theme || scene?.appState?.theme,
-            },
-            excalidrawAPI.getAppState(),
-          ),
-          // necessary if we're invoking from a hashchange handler which doesn't
-          // go through App.initializeScene() that resets this flag
-          isLoading: false,
-        },
-        elements: reconcileElements(
-          scene?.elements || [],
-          excalidrawAPI.getSceneElementsIncludingDeleted() as RemoteExcalidrawElement[],
-          excalidrawAPI.getAppState(),
-        ),
-      },
-      isExternalScene: true,
-      id: roomLinkData.roomId,
-      key: roomLinkData.roomKey,
-    };
-  } else if (scene) {
-    return isExternalScene && jsonBackendMatch
-      ? {
-          scene,
-          isExternalScene,
-          id: jsonBackendMatch[1],
-          key: jsonBackendMatch[2],
-        }
-      : { scene, isExternalScene: false };
-  }
-  return { scene: null, isExternalScene: false };
+    return { scene, isExternalScene: false };
 };
+
+/**
+ * Renders the top-right header action bar, including the collaborative 3-Tier Board Mode toggle,
+ * room sharing dialog, and authentication controls.
+ *
+ * ============================================================================
+ * GAMIFYBOARD: 3-TIER BOARD MODE (renderTopRightUI)
+ * ============================================================================
+ * Cycles through 3 operational modes for all connected participants:
+ *
+ * 1. WHITEBOARD MODE (`boardMode === "whiteboard"`):
+ *    - Standard Excalidraw whiteboard experience.
+ *    - Left tools menu (.App-menu__left) is visible.
+ *    - Gamify PropertiesSidebar is completely hidden.
+ *
+ * 2. GAMIFY EDITOR MODE (`boardMode === "editor"`):
+ *    - Authoring mode for game masters/creators.
+ *    - Left tools menu (.App-menu__left) is visible.
+ *    - Gamify PropertiesSidebar appears when elements are selected to configure
+ *      Cards, Zones, Counters, Timers, and Teleporters.
+ *
+ * 3. GAME MODE (`boardMode === "game"`):
+ *    - Distraction-free gameplay experience.
+ *    - Left tools menu (.App-menu__left) is completely hidden.
+ *    - Gamify PropertiesSidebar is hidden.
+ *    - Clicking interactive tokens (`isTeleporter`, `isTimerButton`) directly
+ *      triggers their action on pointer down.
+ *
+ * Synchronization:
+ * Toggling invokes `setGlobalBoardMode(nextMode)` to broadcast the state change
+ * to all players via the shared `gamifyState` Y.Map.
+ * ============================================================================
+ */
+const renderTopRightUI = ({
+  isMobile,
+  collabError,
+  isCollabDisabled,
+  setShareDialogState,
+  isLoggedIn,
+  loggedInUiState,
+  handleLogout,
+  onLoginClick,
+  excalidrawAPI,
+  isCollaborating,
+  boardMode,
+  setBoardMode,
+  setGlobalBoardMode,
+}: any) => {
+  const getNextMode = (current: BoardMode): BoardMode => {
+    if (current === "whiteboard") return "editor";
+    if (current === "editor") return "game";
+    return "whiteboard";
+  };
+
+  const getButtonConfig = (mode: BoardMode) => {
+    switch (mode) {
+      case "whiteboard":
+        return {
+          label: "🎨 Whiteboard",
+          background: "transparent",
+          color: "inherit",
+          border: "1px solid var(--button-gray-2)",
+        };
+      case "editor":
+        return {
+          label: "🛠️ Gamify Editor",
+          background: "var(--color-primary-light, #e0f2fe)",
+          color: "var(--color-primary-darker, #0284c7)",
+          border: "1px solid var(--color-primary, #0284c7)",
+        };
+      case "game":
+        return {
+          label: "🎮 Game Mode!",
+          background: "#aaffaa",
+          color: "#052e16",
+          border: "1px solid #16a34a",
+        };
+    }
+  };
+
+  const btnConfig = getButtonConfig(boardMode);
+
+  return (
+    <div style={{ display: "flex", gap: "10px" }}>
+      {collabError.message && <CollabError collabError={collabError} />}
+      {setBoardMode && (
+        <button
+          className={`excalidraw-button collab-button board-mode-button ${boardMode}`}
+          onClick={() => {
+            const nextMode = getNextMode(boardMode);
+            if (setGlobalBoardMode) {
+              setGlobalBoardMode(nextMode);
+            }
+            setBoardMode(nextMode);
+          }}
+          style={{
+            padding: "8px 16px",
+            background: btnConfig.background,
+            color: btnConfig.color,
+            border: btnConfig.border,
+            fontWeight: "bold",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+          }}
+          title={`Current: ${btnConfig.label}. Click to switch to ${getButtonConfig(getNextMode(boardMode)).label}`}
+        >
+          {btnConfig.label}
+        </button>
+      )}
+      <button
+        className="excalidraw-button collab-button"
+        onClick={() => setShareDialogState({ isOpen: true, type: "share" })}
+        style={{ padding: "8px 16px" }}
+      >
+        Share
+      </button>
+      <div style={{ display: "flex", gap: "10px" }}>
+        {isLoggedIn || loggedInUiState ? (
+          <button className="excalidraw-button collab-button" onClick={handleLogout} style={{ padding: "8px 16px", width: "54px" }}>
+            Logout
+          </button>
+        ) : (
+          <button className="excalidraw-button collab-button" onClick={onLoginClick} style={{ padding: "8px 16px", width: "54px" }}>
+            Login
+          </button>
+        )}
+      </div>
+      {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
+    </div>
+  );
+};
+
+
 
 const ExcalidrawWrapper = ({
   setExcalidrawAPI,
   onExcalidrawAPISet,
+  onLoginClick,
+  authPanelView,
+  setAuthPanelView,
+  onLoginSuccess,
+  onLogoutSuccess,
 }: {
   setExcalidrawAPI: (api: ExcalidrawImperativeAPI) => void;
   onExcalidrawAPISet: (api: ExcalidrawImperativeAPI) => void;
+  onLoginClick: () => void;
+  authPanelView: "login" | "register" | null;
+  setAuthPanelView: (view: "login" | "register" | null) => void;
+  onLoginSuccess: () => void;
+  onLogoutSuccess: () => void;
 }) => {
-  const [selectedElement, setSelectedElement] =
-    useState<NonDeletedExcalidrawElement | null>(null);
+  const isInitializedRef = useRef(false);
+  const [isBoardListDialogOpen, setIsBoardListDialogOpen] = useState(false);
+  const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
+
+  const onLoadBoard = async (boardId: string) => {
+    if (!excalidrawAPI) {
+      console.error("Excalidraw API not available.");
+      setErrorMessage("Excalidraw API not available. Cannot load board.");
+      return;
+    }
+    try {
+      // 1. End any active collaboration session by resetting the boardId
+      setSelectedBoardId(null);
+
+      // 2. Fetch the private board data from the REST API
+      const response = await getBoard(boardId);
+      const board = response.data;
+
+      if (board && board.board_data) {
+        // 3. Restore the scene with the fetched data
+        const restoredAppState = restoreAppState(board.board_data.appState || {}, null);
+        // Ensure collaborators is a valid Map, as the backend might return null.
+        if (!(restoredAppState.collaborators instanceof Map)) {
+          restoredAppState.collaborators = new Map();
+        }
+        const scene = {
+          elements: board.board_data.elements || [],
+          appState: restoredAppState,
+          scrollToContent: true,
+        };
+        excalidrawAPI.updateScene(scene);
+        if (board.board_data.files && Object.keys(board.board_data.files).length > 0) {
+            excalidrawAPI.addFiles(Object.values(board.board_data.files));
+        }
+        excalidrawAPI.setToast({ message: `Loaded board: ${board.name}` });
+      } else {
+        throw new Error("Board data is invalid or empty.");
+      }
+      setIsBoardListDialogOpen(false); // Close the dialog on success
+    } catch (error: any) {
+      console.error("Failed to load board:", error);
+      setErrorMessage(`Error loading board: ${error.message}`);
+    }
+  };
+
+  const handleLoadFromFile = () => {
+    if (!excalidrawAPI) {
+      return;
+    }
+    // we need to close the dialog first, so that the file open dialog is not blocked
+    setIsBoardListDialogOpen(false);
+    excalidrawAPI.actionManager.executeAction(actionLoadScene);
+  };
+
+  const handleSaveToCloud = async () => {
+    if (!excalidrawAPI) {
+      return;
+    }
+    try {
+      const elements = excalidrawAPI.getSceneElements();
+      const appState = excalidrawAPI.getAppState();
+      const files = excalidrawAPI.getFiles();
+      const name = excalidrawAPI.getName() || "Untitled";
+      await createBoard(name, { elements, appState, files });
+      excalidrawAPI.setToast({ message: "Board saved successfully!" });
+    } catch (error: any) {
+      excalidrawAPI.setToast({ message: "Failed to save board.", color: "danger" });
+      console.error(error);
+    }
+  };
+  const isInitialLoadRef = useRef(true);
+  const [selectedElements, setSelectedElements] = useState<NonDeletedExcalidrawElement[]>([]);
+  const { isLoggedIn, user, accessToken } = useAtomValue(authStatusAtom); // NEU: authStatusAtom verwenden
+  const setLogoutAction = useSetAtom(logoutActionAtom); // NEU: setLogoutAction verwenden
+
+  const handleLogout = async () => {
+    await setLogoutAction(onLogoutSuccess); // handleLogoutSuccess HIER HINZUFÜGEN
+  };
   const [errorMessage, setErrorMessage] = useState("");
   const isCollabDisabled = isRunningInIframe();
+  const [loggedInUiState, setLoggedInUiState] = useState(false); // NEU: loggedInUiState definieren
+
+  const authPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (authPanelRef.current && !authPanelRef.current.contains(event.target as Node)) {
+        if (authPanelView) {
+          setAuthPanelView(null);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [authPanelView, setAuthPanelView]);
+
+  
 
   const { editorTheme, appTheme, setAppTheme } = useHandleAppTheme();
 
   const [langCode, setLangCode] = useAppLangCode();
 
+  // Persistenter Login wird jetzt von authAtomWithStorage automatisch übernommen
+
   // initial state
   // ---------------------------------------------------------------------------
 
-  const initialStatePromiseRef = useRef<{
-    promise: ResolvablePromise<ExcalidrawInitialDataState | null>;
-  }>({ promise: null! });
-  if (!initialStatePromiseRef.current.promise) {
-    initialStatePromiseRef.current.promise =
-      resolvablePromise<ExcalidrawInitialDataState | null>();
-  }
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const debugCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -468,6 +1059,14 @@ const ExcalidrawWrapper = ({
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
 
+  const [boardMode, setBoardMode] = useState<BoardMode>("whiteboard");
+
+  const { isCollaborating, updateBoard, onPointerUpdate, setGlobalGameMode, setGlobalBoardMode, setCursorName } = useCollaboration(
+    excalidrawAPI,
+    selectedBoardId,
+    (newMode) => setBoardMode(newMode)
+  );
+
   useEffect(() => {
     if (excalidrawAPI) {
       setExcalidrawAPI(excalidrawAPI);
@@ -477,17 +1076,111 @@ const ExcalidrawWrapper = ({
         (window as any).ExcalidrawHandle = {
           excalidrawAPI,
           checkGameState: (elements: readonly any[] | null) =>
-            checkGameState(excalidrawAPI, elements),
+            checkGameState(excalidrawAPI, elements, setCursorName),
         };
       }
     }
   }, [excalidrawAPI, setExcalidrawAPI, onExcalidrawAPISet]);
 
-  const [, setShareDialogState] = useAtom(shareDialogStateAtom);
-  const [collabAPI] = useAtom(collabAPIAtom);
-  const [isCollaborating] = useAtomWithInitialValue(isCollaboratingAtom, () => {
-    return isCollaborationLink(window.location.href);
-  });
+  /**
+   * ============================================================================
+   * GAMIFYBOARD: SCENE ELEMENT PROCESSOR & VIEWPORT TELEPORTATION
+   * ============================================================================
+   * Handles board-level camera positioning, initial viewport autofocus, and
+   * synchronized multiplayer teleportation triggers.
+   *
+   * Subsystem 1: Initial Start Frame Autofocus (`isStartFrame`)
+   * - Purpose: Centers and zooms the player's viewport onto the board's designated
+   *   starting zone/frame (`type: "frame" && customData.isStartFrame`) upon load.
+   * - Latch: Marked by `hasInitialTeleported` to prevent re-centering on every scene change.
+   * - Grace timeout: After 5000ms from initial load, marks `hasInitialTeleported = true`
+   *   to prevent infinite checks on boards without a start frame.
+   *
+   * Subsystem 2: Global Teleport Triggers & Anti-Ping-Pong Loop Protection
+   * - Purpose: Enables teleporters (`isTeleporter` with `teleportAll: true`) to animate
+   *   the camera view of all connected players in the room to a specific frame.
+   * - Anti-Ping-Pong Invariants:
+   *   1. TIMESTAMP MAX: When multiple frames have triggers, `reduce` selects the single
+   *      frame with the highest timestamp (`latestFrame`).
+   *   2. 10-SECOND FRESHNESS: Ignores triggers older than 10s (`triggerTime > Date.now() - 10000`)
+   *      so players joining a room don't trigger stale historical teleports.
+   *   3. IDEMPOTENCY LATCH: Compares against `(window as any).lastTeleportTrigger !== triggerTime`.
+   *      Each unique trigger event animates the camera exactly once, avoiding endless
+   *      re-trigger loops on subsequent scene update passes.
+   * ============================================================================
+   */
+  const processSceneElements = useCallback((elements: readonly any[]) => {
+    if (!elements || elements.length === 0) return;
+
+    // Subsystem 1: Initial Start Frame autofocus
+    if (!(window as any).hasInitialTeleported) {
+       const startFrame = elements.find(el => el.type === "frame" && el.customData?.isStartFrame);
+       if (startFrame) {
+          (window as any).hasInitialTeleported = true;
+          const doScroll = () => {
+             if (excalidrawAPI) {
+                if (typeof (excalidrawAPI as any).scrollToContent === "function") {
+                   (excalidrawAPI as any).scrollToContent(startFrame, { animate: false });
+                } else if (typeof excalidrawAPI.setViewport === "function") {
+                   excalidrawAPI.setViewport({ target: [startFrame], fit: "contain", offsets: { ui: true } });
+                }
+             }
+          };
+          if (isTestEnv()) {
+             doScroll();
+          } else {
+             setTimeout(doScroll, 500);
+          }
+       } else if ((window as any).initialLoadTime && Date.now() - (window as any).initialLoadTime > 5000) {
+          (window as any).hasInitialTeleported = true;
+       } else if (!(window as any).initialLoadTime && elements.length > 0) {
+          (window as any).initialLoadTime = Date.now();
+       }
+    }
+    
+    // Subsystem 2: Global Teleport Triggers with Anti-Ping-Pong protection
+    const triggeredFrames = elements.filter(el => el.type === "frame" && el.customData?.globalTeleportTrigger);
+    if (triggeredFrames.length > 0) {
+       // Pick the frame with the latest trigger timestamp
+       const latestFrame = triggeredFrames.reduce((prev, current) => {
+          return (prev.customData.globalTeleportTrigger > current.customData.globalTeleportTrigger) ? prev : current;
+       });
+       const triggerTime = latestFrame.customData.globalTeleportTrigger;
+       
+       // Enforce 10s freshness window and trigger latch to prevent re-triggering loops
+       if (triggerTime > Date.now() - 10000 && (window as any).lastTeleportTrigger !== triggerTime) {
+          (window as any).lastTeleportTrigger = triggerTime;
+          if (excalidrawAPI) {
+             if (typeof (excalidrawAPI as any).scrollToContent === "function") {
+                (excalidrawAPI as any).scrollToContent(latestFrame, { animate: true });
+             } else if (typeof excalidrawAPI.setViewport === "function") {
+                excalidrawAPI.setViewport({ target: [latestFrame], fit: "contain", animation: { duration: 300 }, offsets: { ui: true } });
+             }
+          }
+       }
+    }
+  }, [excalidrawAPI]);
+
+  /**
+   * Monkey-patches `excalidrawAPI.updateScene` to intercept scene updates.
+   * Ensures `processSceneElements` evaluates all elements whenever remote Yjs sync
+   * or local operations push new elements into the scene.
+   */
+  useEffect(() => {
+    if (!excalidrawAPI) return;
+    if (!(excalidrawAPI as any).__wrappedUpdateScene) {
+      (excalidrawAPI as any).__wrappedUpdateScene = true;
+      const originalUpdateScene = excalidrawAPI.updateScene;
+      excalidrawAPI.updateScene = (sceneData: any) => {
+        originalUpdateScene(sceneData);
+        if (sceneData?.elements) {
+          processSceneElements(sceneData.elements);
+        }
+      };
+    }
+  }, [excalidrawAPI, processSceneElements]);
+
+    const [shareDialogState, setShareDialogState] = useAtom(shareDialogStateAtom);
   const collabError = useAtomValue(collabErrorIndicatorAtom);
 
   useHandleLibrary({
@@ -497,223 +1190,46 @@ const ExcalidrawWrapper = ({
     migrationAdapter: LibraryLocalStorageMigrationAdapter,
   });
 
+  useEffect(() => {
+    // This effect runs once on mount to handle loading from a URL.
+    const searchParams = new URLSearchParams(window.location.search);
+    const id = searchParams.get("id");
+    if (id) {
+      setSelectedBoardId(id);
+    }
+  }, []); // Empty dependency array ensures it runs only once.
+
   const [, forceRefresh] = useState(false);
 
   useEffect(() => {
-    if (isDevEnv()) {
-      const debugState = loadSavedDebugState();
-
-      if (debugState.enabled && !window.visualDebug) {
-        window.visualDebug = {
-          data: [],
-        };
-      } else {
-        delete window.visualDebug;
-      }
-      forceRefresh((prev) => !prev);
-    }
-  }, [excalidrawAPI]);
-
-  useEffect(() => {
-    if (!excalidrawAPI || (!isCollabDisabled && !collabAPI)) {
+    if (!excalidrawAPI || isInitialized) {
       return;
     }
 
-    const loadImages = (
-      data: ResolutionType<typeof initializeScene>,
-      isInitialLoad = false,
-    ) => {
-      if (!data.scene) {
+    const initialize = async () => {
+      // Check if a board is being loaded from URL. If so, do nothing here.
+      // The collaboration hook will handle it.
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.has("id")) {
+        setIsInitialized(true);
         return;
       }
-      if (collabAPI?.isCollaborating()) {
-        if (data.scene.elements) {
-          collabAPI
-            .fetchImageFilesFromFirebase({
-              elements: data.scene.elements,
-              forceFetchFiles: true,
-            })
-            .then(({ loadedFiles, erroredFiles }) => {
-              excalidrawAPI.addFiles(loadedFiles);
-              updateStaleImageStatuses({
-                excalidrawAPI,
-                erroredFiles,
-                elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
-              });
-            });
-        }
-      } else {
-        const fileIds =
-          data.scene.elements?.reduce((acc, element) => {
-            if (isInitializedImageElement(element)) {
-              return acc.concat(element.fileId);
-            }
-            return acc;
-          }, [] as FileId[]) || [];
 
-        if (data.isExternalScene) {
-          loadFilesFromFirebase(
-            `${FIREBASE_STORAGE_PREFIXES.shareLinkFiles}/${data.id}`,
-            data.key,
-            fileIds,
-          ).then(({ loadedFiles, erroredFiles }) => {
-            excalidrawAPI.addFiles(loadedFiles);
-            updateStaleImageStatuses({
-              excalidrawAPI,
-              erroredFiles,
-              elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
-            });
-          });
-        } else if (isInitialLoad) {
-          if (fileIds.length) {
-            LocalData.fileStorage
-              .getFiles(fileIds)
-              .then(({ loadedFiles, erroredFiles }) => {
-                if (loadedFiles.length) {
-                  excalidrawAPI.addFiles(loadedFiles);
-                }
-                updateStaleImageStatuses({
-                  excalidrawAPI,
-                  erroredFiles,
-                  elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
-                });
-              });
-          }
-          // on fresh load, clear unused files from IDB (from previous
-          // session)
-          LocalData.fileStorage.clearObsoleteFiles({ currentFileIds: fileIds });
-        }
+      // If not loading from URL, load from local storage.
+      const localDataState = importFromLocalStorage();
+      const scene = await loadScene(null, null, localDataState);
+
+      // Ensure isLoading is false after loading from local storage
+      if (scene.appState?.isLoading) {
+        scene.appState.isLoading = false;
       }
+
+      excalidrawAPI.updateScene(scene);
+      setIsInitialized(true);
     };
 
-    initializeScene({ collabAPI, excalidrawAPI }).then(async (data) => {
-      loadImages(data, /* isInitialLoad */ true);
-      initialStatePromiseRef.current.promise.resolve(data.scene);
-    });
-
-    const onHashChange = async (event: HashChangeEvent) => {
-      event.preventDefault();
-      const libraryUrlTokens = parseLibraryTokensFromUrl();
-      if (!libraryUrlTokens) {
-        if (
-          collabAPI?.isCollaborating() &&
-          !isCollaborationLink(window.location.href)
-        ) {
-          collabAPI.stopCollaboration(false);
-        }
-        excalidrawAPI.updateScene({ appState: { isLoading: true } });
-
-        initializeScene({ collabAPI, excalidrawAPI }).then((data) => {
-          loadImages(data);
-          if (data.scene) {
-            excalidrawAPI.updateScene({
-              ...data.scene,
-              ...restore(data.scene, null, null, { repairBindings: true }),
-              captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-            });
-          }
-        });
-      }
-    };
-
-    const titleTimeout = setTimeout(
-      () => (document.title = APP_NAME),
-      TITLE_TIMEOUT,
-    );
-
-    const syncData = debounce(() => {
-      if (isTestEnv()) {
-        return;
-      }
-      if (
-        !document.hidden &&
-        ((collabAPI && !collabAPI.isCollaborating()) || isCollabDisabled)
-      ) {
-        // don't sync if local state is newer or identical to browser state
-        if (isBrowserStorageStateNewer(STORAGE_KEYS.VERSION_DATA_STATE)) {
-          const localDataState = importFromLocalStorage();
-          const username = importUsernameFromLocalStorage();
-          setLangCode(getPreferredLanguage());
-          excalidrawAPI.updateScene({
-            ...localDataState,
-            captureUpdate: CaptureUpdateAction.NEVER,
-          });
-          LibraryIndexedDBAdapter.load().then((data) => {
-            if (data) {
-              excalidrawAPI.updateLibrary({
-                libraryItems: data.libraryItems,
-              });
-            }
-          });
-          collabAPI?.setUsername(username || "");
-        }
-
-        if (isBrowserStorageStateNewer(STORAGE_KEYS.VERSION_FILES)) {
-          const elements = excalidrawAPI.getSceneElementsIncludingDeleted();
-          const currFiles = excalidrawAPI.getFiles();
-          const fileIds =
-            elements?.reduce((acc, element) => {
-              if (
-                isInitializedImageElement(element) &&
-                // only load and update images that aren't already loaded
-                !currFiles[element.fileId]
-              ) {
-                return acc.concat(element.fileId);
-              }
-              return acc;
-            }, [] as FileId[]) || [];
-          if (fileIds.length) {
-            LocalData.fileStorage
-              .getFiles(fileIds)
-              .then(({ loadedFiles, erroredFiles }) => {
-                if (loadedFiles.length) {
-                  excalidrawAPI.addFiles(loadedFiles);
-                }
-                updateStaleImageStatuses({
-                  excalidrawAPI,
-                  erroredFiles,
-                  elements: excalidrawAPI.getSceneElementsIncludingDeleted(),
-                });
-              });
-          }
-        }
-      }
-    }, SYNC_BROWSER_TABS_TIMEOUT);
-
-    const onUnload = () => {
-      LocalData.flushSave();
-    };
-
-    const visibilityChange = (event: FocusEvent | Event) => {
-      if (event.type === EVENT.BLUR || document.hidden) {
-        LocalData.flushSave();
-      }
-      if (
-        event.type === EVENT.VISIBILITY_CHANGE ||
-        event.type === EVENT.FOCUS
-      ) {
-        syncData();
-      }
-    };
-
-    window.addEventListener(EVENT.HASHCHANGE, onHashChange, false);
-    window.addEventListener(EVENT.UNLOAD, onUnload, false);
-    window.addEventListener(EVENT.BLUR, visibilityChange, false);
-    document.addEventListener(EVENT.VISIBILITY_CHANGE, visibilityChange, false);
-    window.addEventListener(EVENT.FOCUS, visibilityChange, false);
-    return () => {
-      window.removeEventListener(EVENT.HASHCHANGE, onHashChange, false);
-      window.removeEventListener(EVENT.UNLOAD, onUnload, false);
-      window.removeEventListener(EVENT.BLUR, visibilityChange, false);
-      window.removeEventListener(EVENT.FOCUS, visibilityChange, false);
-      document.removeEventListener(
-        EVENT.VISIBILITY_CHANGE,
-        visibilityChange,
-        false,
-      );
-      clearTimeout(titleTimeout);
-    };
-  }, [isCollabDisabled, collabAPI, excalidrawAPI, setLangCode]);
+    initialize();
+  }, [excalidrawAPI, isInitialized]);
 
   useEffect(() => {
     const unloadHandler = (event: BeforeUnloadEvent) => {
@@ -745,9 +1261,7 @@ const ExcalidrawWrapper = ({
     appState: AppState,
     files: BinaryFiles,
   ) => {
-    if (collabAPI?.isCollaborating()) {
-      collabAPI.syncElements(elements);
-    }
+    // old collab logic removed
 
     // this check is redundant, but since this is a hot path, it's best
     // not to evaludate the nested expression every time
@@ -796,92 +1310,276 @@ const ExcalidrawWrapper = ({
     null,
   );
 
-  const onExportToBackend = async (
-    exportedElements: readonly NonDeletedExcalidrawElement[],
+  const onShareAndCollaborate = async (
+    elements: readonly NonDeletedExcalidrawElement[],
     appState: Partial<AppState>,
     files: BinaryFiles,
   ) => {
-    if (exportedElements.length === 0) {
+    const boardName = appState.name || "Untitled";
+    if (elements.length === 0) {
       throw new Error(t("alerts.cannotExportEmptyCanvas"));
     }
     try {
-      const { url, errorMessage } = await exportToBackend(
-        exportedElements,
-        {
-          ...appState,
-          viewBackgroundColor: appState.exportBackground
-            ? appState.viewBackgroundColor
-            : getDefaultAppState().viewBackgroundColor,
-        },
-        files,
-      );
+      // 1. Generate yjs_data from the current scene elements
+      const tempYDoc = new Y.Doc();
+      const yElements = tempYDoc.getArray("elements");
+      // Deep copy elements to avoid potential mutations of the original state
+      yElements.insert(0, JSON.parse(JSON.stringify(elements)));
+      const yAssets = tempYDoc.getMap("assets");
+      if (files) {
+        for (const fileId in files) {
+          yAssets.set(fileId, files[fileId]);
+        }
+      }
+      const yjsData = Y.encodeStateAsUpdate(tempYDoc);
+      // Convert Uint8Array to a plain array of numbers for JSON serialization
+      const yjsDataAsArray = Array.from(yjsData);
 
-      if (errorMessage) {
-        throw new Error(errorMessage);
+      // 2. Create a new board in the backend with both data formats
+      const boardData = { elements, appState, files };
+      const response = await createBoard(boardName, boardData, yjsDataAsArray);
+      const newBoard = response.data;
+
+      if (!newBoard || !newBoard.id) {
+        throw new Error("Failed to create a new board or receive a board ID.");
       }
 
-      if (url) {
-        setLatestShareableLink(url);
-      }
+      // 3. Create the shareable link
+      const url = `${window.location.origin}${window.location.pathname}?id=${newBoard.id}`;
+      setLatestShareableLink(url);
+
+      // 4. Set the current session to use the new board ID for collaboration
+      setSelectedBoardId(newBoard.id);
+
+      // 5. Update the URL in the browser bar without reloading
+      window.history.pushState({}, "", url);
+
+      // Clean up temporary Yjs doc
+      tempYDoc.destroy();
+
     } catch (error: any) {
-      if (error.name !== "AbortError") {
-        const { width, height } = appState;
-        console.error(error, {
-          width,
-          height,
-          devicePixelRatio: window.devicePixelRatio,
-        });
-        throw new Error(error.message);
-      }
+      console.error("Failed to share and collaborate:", error);
+      throw new Error("Failed to create a shareable link. Please try again.");
     }
   };
 
+  /**
+   * ============================================================================
+   * GAMIFYBOARD: ELEMENT PROPERTY MUTATION HANDLER (handleUpdateElement)
+   * ============================================================================
+   * Applied when the user modifies custom Gamify properties in the `PropertiesSidebar`.
+   *
+   * Responsibilities:
+   * 1. CUSTOM DATA MERGING: Merges `updatedData` into `selectedElement.customData`.
+   * 2. ELEMENT TYPE CONVERSION:
+   *    - When an element is designated as a counter (`isCounter: true`), converts
+   *      its Excalidraw element type to `"counter"` and initializes `customData.value: 0`.
+   * 3. VISUAL AFFORDANCE STYLING:
+   *    - Automatically sets `strokeStyle: "dashed"` for validation zones (`isZone: true`)
+   *      to provide visual distinction on the canvas.
+   * 4. CRDT VERSION BUMP: Increments `version` on modified elements to ensure proper
+   *    Yjs sync propagation.
+   * ============================================================================
+   */
   const handleUpdateElement = (updatedData: any) => {
-    if (!excalidrawAPI || !selectedElement) {
+    if (!excalidrawAPI || selectedElements.length === 0) {
       return;
     }
 
     const sceneElements = excalidrawAPI.getSceneElements();
-    const elementIndex = sceneElements.findIndex(
-      (el) => el.id === selectedElement.id,
-    );
-    if (elementIndex === -1) {
-      return;
+    let newSceneElements = [...sceneElements];
+    let updatedSelectedElements: any[] = [];
+    
+    let hasChanges = false;
+
+    for (const selectedElement of selectedElements) {
+        const elementIndex = newSceneElements.findIndex((el) => el.id === selectedElement.id);
+        if (elementIndex === -1) continue;
+
+        const newCustomData = { ...selectedElement.customData, ...updatedData };
+
+        if (newCustomData.isCounter && selectedElement.type !== "counter") {
+          const newElement = {
+            ...selectedElement,
+            type: "counter" as const,
+            customData: { ...newCustomData, value: 0 },
+            version: (selectedElement.version || 0) + 1,
+          };
+          newSceneElements[elementIndex] = newElement as any;
+          updatedSelectedElements.push(newElement as any);
+          hasChanges = true;
+          continue;
+        }
+
+        const updatedElement = {
+          ...selectedElement,
+          customData: newCustomData,
+          strokeStyle: (newCustomData.isZone ? "dashed" : "solid") as any,
+          version: (selectedElement.version || 0) + 1,
+        };
+
+        newSceneElements[elementIndex] = updatedElement as any;
+        updatedSelectedElements.push(updatedElement as any);
+        hasChanges = true;
     }
 
-    const newCustomData = { ...selectedElement.customData, ...updatedData };
-
-    if (newCustomData.isCounter && selectedElement.type !== "counter") {
-      const newElement = {
-        ...selectedElement,
-        type: "counter" as const,
-        customData: { ...newCustomData, value: 0 },
-      };
-      const newSceneElements = [
-        ...sceneElements.slice(0, elementIndex),
-        newElement,
-        ...sceneElements.slice(elementIndex + 1),
-      ];
+    if (hasChanges) {
       excalidrawAPI.updateScene({ elements: newSceneElements });
-      setSelectedElement(newElement as NonDeletedExcalidrawElement);
-      return;
+      setSelectedElements(updatedSelectedElements);
     }
+  };
 
-    const updatedElement = {
-      ...selectedElement,
-      customData: newCustomData,
-      strokeStyle: (newCustomData.isZone ? "dashed" : "solid") as any,
-      backgroundColor: selectedElement.backgroundColor, // Behalte die aktuelle Farbe bei, checkGameState kümmert sich darum
-    };
+  // Derive boolean flags from boardMode for compatibility
+  const isEditMode = boardMode === "editor";
+  const isGameMode = boardMode === "game";
 
-    const newSceneElements = [
-      ...sceneElements.slice(0, elementIndex),
-      updatedElement,
-      ...sceneElements.slice(elementIndex + 1),
-    ];
+  /**
+   * ============================================================================
+   * GAMIFYBOARD: GAMEPLAY ACTION DISPATCHER (triggerAction)
+   * ============================================================================
+   * Executes game mechanics triggered either by clicking interactive tokens in
+   * Game Mode (`onPointerDown`) or via the `PropertiesSidebar`.
+   *
+   * Supported Actions:
+   * 1. "startTimer" / "resetTimer":
+   *    - Identifies target timer display matching `targetElement.customData.targetTimerName`.
+   *    - "startTimer": Computes `endTime = Date.now() + duration * 1000`, clears `hasFrozen: false`,
+   *      and unlocks all cards on the board (`locked: false`).
+   *    - "resetTimer": Sets `endTime = 0`, clears `hasFrozen: false`, and unlocks all cards.
+   *    - Updates scene via `excalidrawAPI.updateScene`.
+   *
+   * 2. "teleport":
+   *    - Identifies target frame element matching `targetElement.customData.targetFrame`.
+   *    - Local Focus (`teleportAll: false`): Animates local camera to frame via `scrollToContent`.
+   *    - Global Broadcast (`teleportAll: true`): Sets `globalTeleportTrigger = Date.now()`
+   *      on the target frame element and increments its version. When synchronized over Yjs,
+   *      all connected clients' `processSceneElements` hook animates their viewports.
+   *
+   * @param action - Action identifier ("startTimer" | "resetTimer" | "teleport")
+   * @param targetElement - The triggering element containing action parameters in customData.
+   * ============================================================================
+   */
+  const triggerAction = (action: string, targetElement: NonDeletedExcalidrawElement) => {
+    if (!excalidrawAPI) return;
+    const sceneElements = excalidrawAPI.getSceneElements();
+    
+    if (action === "startTimer" || action === "resetTimer") {
+      const targetTimerName = targetElement.customData?.targetTimerName;
+      if (!targetTimerName) return;
 
-    excalidrawAPI.updateScene({ elements: newSceneElements });
-    setSelectedElement(updatedElement as NonDeletedExcalidrawElement);
+      let newSceneElements = [...sceneElements];
+      let found = false;
+
+      newSceneElements = newSceneElements.map(el => {
+        if (el.customData?.isTimerDisplay && el.customData?.timerName === targetTimerName) {
+           found = true;
+           if (action === "startTimer") {
+              const duration = el.customData.timerDuration || 300;
+              return { ...el, customData: { ...el.customData, endTime: Date.now() + duration * 1000, hasFrozen: false }, version: (el.version || 0) + 1 };
+           } else {
+              // reset
+              return { ...el, customData: { ...el.customData, endTime: 0, hasFrozen: false, timeText: "" }, version: (el.version || 0) + 1 };
+           }
+        }
+        return el;
+      });
+
+      if ((action === "resetTimer" || action === "startTimer") && found) {
+         // Unlock all cards on reset and start!
+         newSceneElements = newSceneElements.map(el => {
+           if (el.customData?.isCard) {
+              return { ...el, locked: false, version: (el.version || 0) + 1 };
+           }
+           return el;
+         });
+      }
+
+      if (found) {
+        excalidrawAPI.updateScene({ elements: newSceneElements as any });
+      } else {
+        excalidrawAPI.setToast({ message: "Timer '" + targetTimerName + "' nicht gefunden!", color: "danger" });
+      }
+    } else if (action === "teleport") {
+      const targetFrameName = targetElement.customData?.targetFrame;
+      if (targetFrameName) {
+        const frame = sceneElements.find(el => el.type === "frame" && el.name === targetFrameName);
+        if (frame) {
+          if (targetElement.customData?.teleportAll) {
+             const newSceneElements = sceneElements.map(el => {
+                if (el.id === frame.id) {
+                   return { ...el, customData: { ...el.customData, globalTeleportTrigger: Date.now() }, version: (el.version || 0) + 1 };
+                }
+                return el;
+             });
+             excalidrawAPI.updateScene({ elements: newSceneElements });
+          } else {
+             if (typeof (excalidrawAPI as any).scrollToContent === "function") {
+               (excalidrawAPI as any).scrollToContent(frame, { animate: true });
+             } else if (typeof excalidrawAPI.setViewport === "function") {
+               excalidrawAPI.setViewport({ target: [frame], fit: "contain", animation: { duration: 300 }, offsets: { ui: true } });
+             }
+          }
+        } else {
+          excalidrawAPI.setToast({ message: "Frame '" + targetFrameName + "' nicht gefunden!", color: "danger" });
+        }
+      }
+    } else if (action === "rollDice") {
+      // GAMIFYBOARD: DICE ROLLING MECHANIC
+      // Generates a cryptographically strong random value (1 to 6)
+      // Broadcasts isRolling: true for a brief animated sequence, then sets final value
+      const targetDiceId = targetElement.id;
+      const finalValue = Math.floor(Math.random() * 6) + 1;
+
+      // Start rolling animation
+      excalidrawAPI.updateScene({
+        elements: sceneElements.map(el =>
+          el.id === targetDiceId
+            ? { ...el, customData: { ...el.customData, isRolling: true }, version: (el.version || 0) + 1 }
+            : el
+        )
+      });
+
+      // Brief animation timeout to simulate dice roll before settling on final value
+      setTimeout(() => {
+        const currentElements = excalidrawAPI.getSceneElements();
+        excalidrawAPI.updateScene({
+          elements: currentElements.map(el =>
+            el.id === targetDiceId
+              ? { ...el, customData: { ...el.customData, isRolling: false, value: finalValue }, version: (el.version || 0) + 1 }
+              : el
+          )
+        });
+        excalidrawAPI.setToast({ message: `🎲 Gewürfelt: ${finalValue}!` });
+      }, 400);
+    }
+  };
+
+  /**
+   * Action handler invoked by the `PropertiesSidebar` action buttons.
+   * Routes user action requests to `triggerAction` for the selected element.
+   */
+  const handleAction = (action: string) => {
+    if (!excalidrawAPI || selectedElements.length === 0) return;
+    const sceneElements = excalidrawAPI.getSceneElements();
+    const element = selectedElements[0];
+
+    if (action === "startTimer") {
+      triggerAction("startTimer", element);
+    } else if (action === "resetTimer") {
+      handleUpdateElement({ endTime: 0, hasFrozen: false });
+      let newSceneElements = [...sceneElements];
+      newSceneElements = newSceneElements.map(el => {
+        if (el.customData?.isCard) {
+          return { ...el, locked: false, version: (el.version || 0) + 1 };
+        }
+        return el;
+      });
+      excalidrawAPI.updateScene({ elements: newSceneElements });
+    } else if (action === "teleport") {
+      triggerAction("teleport", element);
+    } else if (action === "rollDice") {
+      triggerAction("rollDice", element);
+    }
   };
 
   const renderCustomStats = (
@@ -897,12 +1595,9 @@ const ExcalidrawWrapper = ({
     );
   };
 
-  const isOffline = useAtomValue(isOfflineAtom);
+  
 
-  const onCollabDialogOpen = useCallback(
-    () => setShareDialogState({ isOpen: true, type: "collaborationOnly" }),
-    [setShareDialogState],
-  );
+  // onCollabDialogOpen removed
 
   // browsers generally prevent infinite self-embedding, there are
   // cases where it still happens, and while we disallow self-embedding
@@ -963,67 +1658,129 @@ const ExcalidrawWrapper = ({
   return (
     <div
       style={{ height: "100%" }}
-      className={clsx("excalidraw-app", {
-        "is-collaborating": isCollaborating,
-      })}
+      className={`excalidraw-app board-mode-${boardMode}`}
     >
       <Excalidraw
-        excalidrawAPI={excalidrawRefCallback}
-        onChange={(elements, appState, files) => {
-          onChange(elements, appState, files);
-          if (
-            appState.selectedElementIds &&
-            Object.keys(appState.selectedElementIds).length === 1
-          ) {
-            const selectedId = Object.keys(appState.selectedElementIds)[0];
-            const element = elements.find((el) => el.id === selectedId);
-            if (element) {
-              setSelectedElement(element as NonDeletedExcalidrawElement);
-            } else {
-              setSelectedElement(null);
-            }
-          } else {
-            setSelectedElement(null);
+        onPointerUpdate={onPointerUpdate}
+        onExcalidrawAPI={excalidrawRefCallback}
+        /**
+         * GAMIFYBOARD: GAME MODE INTERACTION DISPATCHER
+         * When in Game Mode (`isGameMode`), clicking canvas tokens directly activates
+         * their configured gameplay action without requiring the properties sidebar.
+         */
+        onPointerDown={(activeTool, pointerDownState) => {
+          const hitElement = pointerDownState.hit?.element;
+          if (hitElement && hitElement.customData && isGameMode) {
+             if (hitElement.customData.isTeleporter) {
+                triggerAction("teleport", hitElement as NonDeletedExcalidrawElement);
+             } else if (hitElement.customData.isTimerButton) {
+                triggerAction(hitElement.customData.timerAction === "reset" ? "resetTimer" : "startTimer", hitElement as NonDeletedExcalidrawElement);
+             } else if (hitElement.customData.isDice) {
+                triggerAction("rollDice", hitElement as NonDeletedExcalidrawElement);
+             }
           }
         }}
+        /**
+         * GAMIFYBOARD: REAL-TIME SCENE & TYPING SYNCHRONIZATION
+         * 1. Evaluates start frames & global teleport triggers via `processSceneElements`.
+         * 2. Real-Time Player Slot Typing Stream:
+         *    When a user actively edits text in a PlayerSlot (`editingTextElement`),
+         *    immediately registers this slot as the local user's active slot and streams
+         *    the text to `setCursorName(el.text)`. This allows other players to see the
+         *    user's cursor label change keystroke-by-keystroke in real-time before blur!
+         * 3. Maintains `selectedElements` state for the properties sidebar.
+         */
+        onChange={(elements, appState, files) => {
+          onChange(elements, appState, files);
+          
+          processSceneElements(elements);
+
+          const activeText = appState.editingTextElement || (appState as any).editingElement;
+          if (activeText?.id) {
+             const el = elements.find(e => e.id === activeText.id);
+             if (el && el.type === "text") {
+                 const slotId = getPlayerSlotId(el, elements);
+                 if (slotId) {
+                     localUserPlayerSlotId = slotId;
+                     lastActiveSlotElementId = el.id;
+                     lastActiveSlotTimestamp = Date.now();
+                     if (setCursorName && el.text) {
+                         setCursorName(el.text);
+                     }
+                 }
+             }
+          }
+
+          if (
+            appState.selectedElementIds &&
+            Object.keys(appState.selectedElementIds).length > 0
+          ) {
+            const selectedIds = Object.keys(appState.selectedElementIds);
+            const currentSelectedIds = selectedElements.map(el => el.id);
+            if (
+              selectedIds.length !== currentSelectedIds.length ||
+              !selectedIds.every(id => currentSelectedIds.includes(id)) ||
+              // Also check if version changed (e.g., customData was updated)
+              !selectedElements.every(el => {
+                const newEl = elements.find(e => e.id === el.id);
+                return newEl && newEl.version === el.version;
+              })
+            ) {
+              const els = elements.filter((el) => selectedIds.includes(el.id));
+              setSelectedElements(els as NonDeletedExcalidrawElement[]);
+            }
+          } else if (selectedElements.length > 0) {
+            setSelectedElements([]);
+          }
+        }}
+        /**
+         * GAMIFYBOARD: INTERACTION SETTLE TRIGGER
+         * Evaluates game rules (`checkGameState`) as soon as a user finishes dragging
+         * a card, releasing a token, or clicking on the canvas.
+         */
         onPointerUp={() => {
           // Trigger the check after user interaction
           if (excalidrawAPI) {
-            checkGameState(excalidrawAPI, excalidrawAPI.getSceneElements());
+            checkGameState(excalidrawAPI, excalidrawAPI.getSceneElements(), setCursorName);
           }
         }}
-        initialData={initialStatePromiseRef.current.promise}
-        isCollaborating={isCollaborating}
-        onPointerUpdate={collabAPI?.onPointerUpdate}
+        
         UIOptions={{
           canvasActions: {
             toggleTheme: true,
+            saveToActiveFile: false,
             export: {
-              onExportToBackend,
-              renderCustomUI: excalidrawAPI
-                ? (elements, appState, files) => {
-                    return (
-                      <ExportToExcalidrawPlus
-                        elements={elements}
-                        appState={appState}
-                        files={files}
-                        name={excalidrawAPI.getName()}
-                        onError={(error) => {
-                          excalidrawAPI?.updateScene({
-                            appState: {
-                              errorMessage: error.message,
-                            },
-                          });
-                        }}
-                        onSuccess={() => {
-                          excalidrawAPI.updateScene({
-                            appState: { openDialog: null },
-                          });
-                        }}
-                      />
-                    );
-                  }
-                : undefined,
+              onExportToBackend: onShareAndCollaborate,
+              renderCustomUI: (elements, appState, files) => {
+                if (!excalidrawAPI) {
+                  return null;
+                }
+                return (
+                  <Provider store={appJotaiStore}>
+                    <SaveToProDialog
+                      excalidrawAPI={excalidrawAPI}
+                      elements={elements}
+                      appState={appState}
+                      files={files}
+                      onSuccess={() => {
+                        excalidrawAPI.updateScene({
+                          appState: {
+                            openDialog: null,
+                            toast: { message: "Board saved successfully!" },
+                          },
+                        });
+                      }}
+                      onError={(error) => {
+                        excalidrawAPI.updateScene({
+                          appState: {
+                            errorMessage: error.message,
+                          },
+                        });
+                      }}
+                    />
+                  </Provider>
+                );
+              },
             },
           },
         }}
@@ -1034,20 +1791,21 @@ const ExcalidrawWrapper = ({
         autoFocus={true}
         theme={editorTheme}
         renderTopRightUI={(isMobile) => {
-          return (
-            <>
-              {collabError.message && <CollabError collabError={collabError} />}
-              {collabAPI && !isCollabDisabled && (
-                <LiveCollaborationTrigger
-                  isCollaborating={isCollaborating}
-                  onSelect={() =>
-                    setShareDialogState({ isOpen: true, type: "share" })
-                  }
-                />
-              )}
-              {excalidrawAPI && <GamifyToolbar excalidrawAPI={excalidrawAPI} />}
-            </>
-          );
+          return renderTopRightUI({
+            isMobile,
+            collabError,
+            isCollabDisabled,
+            setShareDialogState,
+            isLoggedIn,
+            loggedInUiState, // NEU: loggedInUiState übergeben
+            handleLogout,
+            onLoginClick,
+            excalidrawAPI,
+            isCollaborating,
+            boardMode,
+            setBoardMode,
+            setGlobalBoardMode,
+          });
         }}
         onLinkOpen={(element, event) => {
           if (element.link && isElementLink(element.link)) {
@@ -1056,23 +1814,44 @@ const ExcalidrawWrapper = ({
           }
         }}
       >
-        {selectedElement && (
+        {/* GAMIFYBOARD: Custom mechanics configuration panel (Cards, Zones, PlayerSlots, Timers, Teleporters)
+            Only rendered in Edit Mode when canvas elements are currently selected */}
+        {isEditMode && selectedElements.length > 0 && (
           <PropertiesSidebar
-            element={selectedElement}
+            elements={selectedElements}
             onUpdate={handleUpdateElement}
+            onAction={handleAction}
+          />
+        )}
+        {authPanelView && (
+          <AuthPanel
+            authPanelView={authPanelView}
+            setAuthPanelView={setAuthPanelView}
+            ref={authPanelRef}
+            onLoginSuccess={onLoginSuccess}
+          />
+        )}
+                {isBoardListDialogOpen && (
+          <BoardListDialog
+            onClose={() => setIsBoardListDialogOpen(false)}
+            onLoadBoard={onLoadBoard}
+            onLoadFromFile={handleLoadFromFile}
           />
         )}
         <AppMainMenu
-          onCollabDialogOpen={onCollabDialogOpen}
-          isCollaborating={isCollaborating}
           isCollabEnabled={!isCollabDisabled}
+          isCollaborating={isCollaborating}
+          onCollabDialogOpen={() => setShareDialogState({ isOpen: true, type: "share" })}
           theme={appTheme}
           setTheme={(theme) => setAppTheme(theme)}
           refresh={() => forceRefresh((prev) => !prev)}
+          onOpenBoardListDialog={() => setIsBoardListDialogOpen(true)}
+          onSaveToCloud={handleSaveToCloud}
         />
         <AppWelcomeScreen
-          onCollabDialogOpen={onCollabDialogOpen}
           isCollabEnabled={!isCollabDisabled}
+          isCollaborating={isCollaborating}
+          onCollabDialogOpen={() => setShareDialogState({ isOpen: true, type: "share" })}
         />
         <OverwriteConfirmDialog>
           <OverwriteConfirmDialog.Actions.ExportToImage />
@@ -1098,11 +1877,10 @@ const ExcalidrawWrapper = ({
         {excalidrawAPI && <AIComponents excalidrawAPI={excalidrawAPI} />}
 
         <TTDDialogTrigger />
-        {isCollaborating && isOffline && (
-          <div className="collab-offline-warning">
-            {t("alerts.collabOfflineWarning")}
-          </div>
+        {shareDialogState.isOpen && (
+          <ShareDialog onExportToBackend={onShareAndCollaborate} excalidrawAPI={excalidrawAPI} />
         )}
+        
         {latestShareableLink && (
           <ShareableLinkDialog
             link={latestShareableLink}
@@ -1110,26 +1888,9 @@ const ExcalidrawWrapper = ({
             setErrorMessage={setErrorMessage}
           />
         )}
-        {excalidrawAPI && !isCollabDisabled && (
-          <Collab excalidrawAPI={excalidrawAPI} />
-        )}
+        
 
-        <ShareDialog
-          collabAPI={collabAPI}
-          onExportToBackend={async () => {
-            if (excalidrawAPI) {
-              try {
-                await onExportToBackend(
-                  excalidrawAPI.getSceneElements(),
-                  excalidrawAPI.getAppState(),
-                  excalidrawAPI.getFiles(),
-                );
-              } catch (error: any) {
-                setErrorMessage(error.message);
-              }
-            }
-          }}
-        />
+        
 
         {errorMessage && (
           <ErrorDialog onClose={() => setErrorMessage("")}>
@@ -1139,67 +1900,6 @@ const ExcalidrawWrapper = ({
 
         <CommandPalette
           customCommandPaletteItems={[
-            {
-              label: t("labels.liveCollaboration"),
-              category: DEFAULT_CATEGORIES.app,
-              keywords: [
-                "team",
-                "multiplayer",
-                "share",
-                "public",
-                "session",
-                "invite",
-              ],
-              icon: usersIcon,
-              perform: () => {
-                setShareDialogState({
-                  isOpen: true,
-                  type: "collaborationOnly",
-                });
-              },
-            },
-            {
-              label: t("roomDialog.button_stopSession"),
-              category: DEFAULT_CATEGORIES.app,
-              predicate: () => !!collabAPI?.isCollaborating(),
-              keywords: [
-                "stop",
-                "session",
-                "end",
-                "leave",
-                "close",
-                "exit",
-                "collaboration",
-              ],
-              perform: () => {
-                if (collabAPI) {
-                  collabAPI.stopCollaboration();
-                  if (!collabAPI.isCollaborating()) {
-                    setShareDialogState({ isOpen: false });
-                  }
-                }
-              },
-            },
-            {
-              label: t("labels.share"),
-              category: DEFAULT_CATEGORIES.app,
-              predicate: true,
-              icon: share,
-              keywords: [
-                "link",
-                "shareable",
-                "readonly",
-                "export",
-                "publish",
-                "snapshot",
-                "url",
-                "collaborate",
-                "invite",
-              ],
-              perform: async () => {
-                setShareDialogState({ isOpen: true, type: "share" });
-              },
-            },
             {
               label: "GitHub",
               icon: GithubIcon,
@@ -1290,9 +1990,21 @@ export type AppRef = {
   checkGameState: (elements: readonly any[]) => void;
 };
 
-const ExcalidrawApp = forwardRef<AppRef>((_props, ref) => {
+const ExcalidrawApp = forwardRef<AppRef, { onLoginClick: () => void; }>((_props, ref) => {
   const [excalidrawAPI, _setExcalidrawAPI] =
     useState<ExcalidrawImperativeAPI | null>(null);
+
+  const [authPanelView, setAuthPanelView] = useState<"login" | "register" | null>(null);
+
+  const [wrapperKey, setWrapperKey] = useState(0); // NEW: State to force ExcalidrawWrapper re-render
+
+  const handleLoginSuccess = useCallback(() => { // In ExcalidrawApp-Scope definiert
+    setWrapperKey(prev => prev + 1);
+  }, []);
+
+  const handleLogoutSuccessInApp = useCallback(() => {
+    setWrapperKey(prev => prev + 1);
+  }, []);
 
   const setExcalidrawAPI = useCallback((api: ExcalidrawImperativeAPI) => {
     _setExcalidrawAPI(api);
@@ -1317,6 +2029,93 @@ const ExcalidrawApp = forwardRef<AppRef>((_props, ref) => {
     }
   }, [excalidrawAPI]);
 
+  
+  /**
+   * ============================================================================
+   * GAMIFYBOARD: GLOBAL TIMER TICK & CARD FREEZE ENGINE
+   * ============================================================================
+   * Runs a 1-second interval heartbeat loop to manage timer countdowns and game
+   * freeze states across the board.
+   *
+   * Responsibilities:
+   * 1. ACTIVE TIMER DETECTION:
+   *    - Scans for elements with `customData.isTimerDisplay` and an active `endTime`.
+   *    - Calculates `remaining = ceil((endTime - Date.now()) / 1000)`.
+   *
+   * 2. EXPIRATION & CARD LOCKING (Game Freeze):
+   *    - When `remaining === 0` and the timer has not yet frozen (`!hasFrozen`):
+   *      a) Sets `hasFrozen: true` on the timer display.
+   *      b) Freezes all game cards on the board by setting `locked: true` and
+   *         incrementing their version.
+   *      c) Displays a notification toast to the room.
+   *      d) Broadcasts the locked state via `excalidrawAPI.updateScene` to all peers.
+   *
+   * 3. ZERO-PAYLOAD LOCAL TIMER CANVAS TICK:
+   *    - When any timer is actively counting down (`remaining > 0`):
+   *      * The timer string ("MM:SS") is computed on-the-fly during canvas painting
+   *        in `renderElement.ts`. The scene element itself does NOT mutate each second.
+   *      * WHY NOT `refresh()`?
+   *        `refresh()` only recalculates container bounding rect offsets
+   *        (`offsetLeft`, `offsetTop`). It does NOT trigger a canvas repaint.
+   *      * WHY `triggerRender(true)`?
+   *        `triggerRender(true)` calls `this.scene.triggerUpdate()`, generating a new
+   *        `sceneNonce` and repainting the 2D canvas context. This causes
+   *        `renderElement.ts` to re-read `Date.now()` and redraw the visual countdown
+   *        without transferring a single byte across the Yjs WebSocket network!
+   * ============================================================================
+   */
+  useEffect(() => {
+    if (!excalidrawAPI) return;
+    const interval = setInterval(() => {
+      const elements = excalidrawAPI.getSceneElements();
+      let hasRunningTimer = false;
+      let freezeGame = false;
+      
+      let newElements = [...elements];
+      let needsSceneUpdate = false;
+      
+      for (let i = 0; i < newElements.length; i++) {
+        let el = newElements[i];
+        if (el.customData?.isTimerDisplay && el.customData?.endTime) {
+          const remaining = Math.max(0, Math.ceil((el.customData.endTime - Date.now()) / 1000));
+          
+          if (remaining > 0) {
+            hasRunningTimer = true;
+          }
+
+          if (remaining === 0 && !el.customData.hasFrozen) {
+            freezeGame = true;
+            el = { ...el, customData: { ...el.customData, hasFrozen: true }, version: (el.version || 0) + 1 };
+            newElements[i] = el as any;
+            needsSceneUpdate = true;
+          }
+        }
+      }
+
+      if (freezeGame) {
+        excalidrawAPI.setToast({ message: "Zeit abgelaufen! Karten sind eingefroren." });
+        newElements = newElements.map(el => {
+          if (el.customData?.isCard) {
+            return { ...el, locked: true, version: (el.version || 0) + 1 };
+          }
+          return el;
+        }) as any;
+        excalidrawAPI.updateScene({ elements: newElements });
+      } else if (needsSceneUpdate) {
+        excalidrawAPI.updateScene({ elements: newElements });
+      } else if (hasRunningTimer) {
+        // Broadcast local repaint tick to canvas without network overhead
+        (window as any).__gamifyTimerTick = Date.now();
+        if (typeof (excalidrawAPI as any).triggerRender === "function") {
+          (excalidrawAPI as any).triggerRender(true);
+        } else {
+          excalidrawAPI.refresh();
+        }
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [excalidrawAPI]);
+
   const isCloudExportWindow =
     window.location.pathname === "/excalidraw-plus-export";
   if (isCloudExportWindow) {
@@ -1327,8 +2126,14 @@ const ExcalidrawApp = forwardRef<AppRef>((_props, ref) => {
     <TopErrorBoundary>
       <Provider store={appJotaiStore}>
         <ExcalidrawWrapper
+          key={wrapperKey} // NEW: Apply key to force re-render
           setExcalidrawAPI={setExcalidrawAPI}
           onExcalidrawAPISet={setExcalidrawAPI}
+          onLoginClick={() => setAuthPanelView("login")}
+          authPanelView={authPanelView}
+          setAuthPanelView={setAuthPanelView}
+          onLoginSuccess={handleLoginSuccess} // Keep this
+          onLogoutSuccess={handleLogoutSuccessInApp} // NEW: Pass logout success handler
         />
       </Provider>
     </TopErrorBoundary>

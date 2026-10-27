@@ -1,4 +1,7 @@
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
+if (typeof window !== 'undefined') {
+  import('isomorphic-webcrypto');
+}
 import { copyTextToSystemClipboard } from "@excalidraw/excalidraw/clipboard";
 import { Dialog } from "@excalidraw/excalidraw/components/Dialog";
 import { FilledButton } from "@excalidraw/excalidraw/components/FilledButton";
@@ -19,9 +22,10 @@ import { KEYS, getFrame } from "@excalidraw/common";
 import { useEffect, useRef, useState } from "react";
 
 import { atom, useAtom, useAtomValue } from "../app-jotai";
-import { activeRoomLinkAtom } from "../collab/Collab";
+import { activeRoomLinkAtom, collabAPIAtom } from "../collab/Collab";
 
 import "./ShareDialog.scss";
+import { QRCode } from "./QRCode";
 
 import type { CollabAPI } from "../collab/Collab";
 
@@ -47,10 +51,10 @@ const getShareIcon = () => {
 };
 
 export type ShareDialogProps = {
-  collabAPI: CollabAPI | null;
   handleClose: () => void;
   onExportToBackend: OnExportToBackend;
   type: ShareDialogType;
+  excalidrawAPI: ExcalidrawImperativeAPI;
 };
 
 const ActiveRoomDialog = ({
@@ -142,6 +146,7 @@ const ActiveRoomDialog = ({
           }}
         />
       </div>
+      <QRCode value={activeRoomLink} />
       <div className="ShareDialog__active__description">
         <p>
           <span
@@ -176,10 +181,25 @@ const ActiveRoomDialog = ({
   );
 };
 
+import { createBoard } from "../src/api";
+
 const ShareDialogPicker = (props: ShareDialogProps) => {
   const { t } = useI18n();
 
-  const { collabAPI } = props;
+  const collabAPI = useAtomValue(collabAPIAtom);
+
+  const startCollab = async () => {
+    try {
+      const board = await createBoard("Untitled", {});
+      const boardId = board.data.id;
+      window.history.pushState({}, "", `?id=${boardId}`);
+      if (collabAPI) {
+        collabAPI.startCollaboration(boardId);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const startCollabJSX = collabAPI ? (
     <>
@@ -199,7 +219,7 @@ const ShareDialogPicker = (props: ShareDialogProps) => {
           icon={playerPlayIcon}
           onClick={() => {
             trackEvent("share", "room creation", `ui (${getFrame()})`);
-            collabAPI.startCollaboration(null);
+            startCollab();
           }}
         />
       </div>
@@ -231,7 +251,10 @@ const ShareDialogPicker = (props: ShareDialogProps) => {
               label={t("exportDialog.link_button")}
               icon={LinkIcon}
               onClick={async () => {
-                await props.onExportToBackend();
+                const elements = props.excalidrawAPI.getSceneElements();
+                const appState = props.excalidrawAPI.getAppState();
+                const files = props.excalidrawAPI.getFiles();
+                await props.onExportToBackend(elements, appState, files);
                 props.handleClose();
               }}
             />
@@ -244,13 +267,14 @@ const ShareDialogPicker = (props: ShareDialogProps) => {
 
 const ShareDialogInner = (props: ShareDialogProps) => {
   const activeRoomLink = useAtomValue(activeRoomLinkAtom);
+  const collabAPI = useAtomValue(collabAPIAtom);
 
   return (
     <Dialog size="small" onCloseRequest={props.handleClose} title={false}>
       <div className="ShareDialog">
-        {props.collabAPI && activeRoomLink ? (
+        {collabAPI && activeRoomLink ? (
           <ActiveRoomDialog
-            collabAPI={props.collabAPI}
+            collabAPI={collabAPI}
             activeRoomLink={activeRoomLink}
             handleClose={props.handleClose}
           />
@@ -263,10 +287,11 @@ const ShareDialogInner = (props: ShareDialogProps) => {
 };
 
 export const ShareDialog = (props: {
-  collabAPI: CollabAPI | null;
   onExportToBackend: OnExportToBackend;
+  excalidrawAPI: ExcalidrawImperativeAPI;
 }) => {
   const [shareDialogState, setShareDialogState] = useAtom(shareDialogStateAtom);
+  console.log("ShareDialog rendered, isOpen:", shareDialogState.isOpen);
 
   const { openDialog } = useUIAppState();
 
@@ -283,9 +308,9 @@ export const ShareDialog = (props: {
   return (
     <ShareDialogInner
       handleClose={() => setShareDialogState({ isOpen: false })}
-      collabAPI={props.collabAPI}
       onExportToBackend={props.onExportToBackend}
       type={shareDialogState.type}
+      excalidrawAPI={props.excalidrawAPI}
     />
   );
 };

@@ -8,11 +8,12 @@ import {
   IV_LENGTH_BYTES,
 } from "@excalidraw/excalidraw/data/encryption";
 import { serializeAsJSON } from "@excalidraw/excalidraw/data/json";
-import { restore } from "@excalidraw/excalidraw/data/restore";
 import { isInvisiblySmallElement } from "@excalidraw/element";
 import { isInitializedImageElement } from "@excalidraw/element";
 import { t } from "@excalidraw/excalidraw/i18n";
 import { bytesToHexString } from "@excalidraw/common";
+import { appJotaiStore } from "../app-jotai";
+import { authAtom } from "../state/authAtoms";
 
 import type { UserIdleState } from "@excalidraw/common";
 import type { ImportedDataState } from "@excalidraw/excalidraw/data/types";
@@ -63,8 +64,9 @@ export const getSyncableElements = (
     isSyncableElement(element),
   ) as SyncableExcalidrawElement[];
 
-const BACKEND_V2_GET = import.meta.env.VITE_APP_BACKEND_V2_GET_URL;
-const BACKEND_V2_POST = import.meta.env.VITE_APP_BACKEND_V2_POST_URL;
+const BACKEND_V2_BASE_URL = import.meta.env.VITE_APP_API_URL;
+const BACKEND_V2_GET = `${BACKEND_V2_BASE_URL}/boards/`;
+const BACKEND_V2_POST = `${BACKEND_V2_BASE_URL}/boards`;
 
 const generateRoomId = async () => {
   const buffer = new Uint8Array(ROOM_ID_BYTES);
@@ -84,13 +86,13 @@ export type SocketUpdateDataSource = {
   SCENE_INIT: {
     type: WS_SUBTYPES.INIT;
     payload: {
-      elements: readonly ExcalidrawElement[];
+      elements: readonly OrderedExcalidrawElement[];
     };
   };
   SCENE_UPDATE: {
     type: WS_SUBTYPES.UPDATE;
     payload: {
-      elements: readonly ExcalidrawElement[];
+      elements: readonly OrderedExcalidrawElement[];
     };
   };
   MOUSE_LOCATION: {
@@ -200,7 +202,7 @@ const legacy_decodeFromBackend = async ({
   };
 };
 
-const importFromBackend = async (
+export const importFromBackend = async (
   id: string,
   decryptionKey: string,
 ): Promise<ImportedDataState> => {
@@ -242,18 +244,58 @@ const importFromBackend = async (
   }
 };
 
+type ExportToBackendResult =
+  | { url: null; errorMessage: string }
+  | { url: string; errorMessage: null };
+
+import { createBoard } from "../src/api";
+
+export const exportToBackend = async (
+  elements: readonly ExcalidrawElement[],
+  appState: Partial<AppState>,
+  files: BinaryFiles,
+): Promise<ExportToBackendResult> => {
+  const boardName = appState.name || "Untitled";
+
+  try {
+    const response = await createBoard(boardName, {
+      elements,
+      appState,
+      files,
+    });
+
+    if (response.data && response.data.id) {
+      const url = new URL(window.location.href);
+      // Construct a shareable link using the board's public ID
+      url.searchParams.set("id", response.data.publicId);
+      return { url: url.toString(), errorMessage: null };
+    }
+
+    return { url: null, errorMessage: t("alerts.couldNotCreateShareableLink") };
+  } catch (error: any) {
+    console.error(error);
+    const errorMessage =
+      error.response?.data?.message || t("alerts.couldNotCreateShareableLink");
+    return { url: null, errorMessage };
+  }
+};
+
+import { restoreElements, restoreAppState } from "@excalidraw/excalidraw/data/restore";
+const restore = (savedData, localAppState, localElements, opts) => {
+  return {
+    elements: restoreElements(savedData?.elements || localElements || [], localElements, opts),
+    appState: restoreAppState(savedData?.appState || localAppState || {}, localAppState),
+    files: savedData?.files || {}
+  };
+};
+
 export const loadScene = async (
   id: string | null,
   privateKey: string | null,
-  // Supply local state even if importing from backend to ensure we restore
-  // localStorage user settings which we do not persist on server.
-  // Non-optional so we don't forget to pass it even if `undefined`.
   localDataState: ImportedDataState | undefined | null,
 ) => {
   let data;
   if (id != null && privateKey != null) {
-    // the private key is used to decrypt the content from the server, take
-    // extra care not to leak it
     data = restore(
       await importFromBackend(id, privateKey),
       localDataState?.appState,
@@ -269,74 +311,6 @@ export const loadScene = async (
   return {
     elements: data.elements,
     appState: data.appState,
-    // note: this will always be empty because we're not storing files
-    // in the scene database/localStorage, and instead fetch them async
-    // from a different database
     files: data.files,
   };
-};
-
-type ExportToBackendResult =
-  | { url: null; errorMessage: string }
-  | { url: string; errorMessage: null };
-
-export const exportToBackend = async (
-  elements: readonly ExcalidrawElement[],
-  appState: Partial<AppState>,
-  files: BinaryFiles,
-): Promise<ExportToBackendResult> => {
-  const encryptionKey = await generateEncryptionKey("string");
-
-  const payload = await compressData(
-    new TextEncoder().encode(
-      serializeAsJSON(elements, appState, files, "database"),
-    ),
-    { encryptionKey },
-  );
-
-  try {
-    const filesMap = new Map<FileId, BinaryFileData>();
-    for (const element of elements) {
-      if (isInitializedImageElement(element) && files[element.fileId]) {
-        filesMap.set(element.fileId, files[element.fileId]);
-      }
-    }
-
-    const filesToUpload = await encodeFilesForUpload({
-      files: filesMap,
-      encryptionKey,
-      maxBytes: FILE_UPLOAD_MAX_BYTES,
-    });
-
-    const response = await fetch(BACKEND_V2_POST, {
-      method: "POST",
-      body: payload.buffer,
-    });
-    const json = await response.json();
-    if (json.id) {
-      const url = new URL(window.location.href);
-      // We need to store the key (and less importantly the id) as hash instead
-      // of queryParam in order to never send it to the server
-      url.hash = `json=${json.id},${encryptionKey}`;
-      const urlString = url.toString();
-
-      await saveFilesToFirebase({
-        prefix: `/files/shareLinks/${json.id}`,
-        files: filesToUpload,
-      });
-
-      return { url: urlString, errorMessage: null };
-    } else if (json.error_class === "RequestTooLargeError") {
-      return {
-        url: null,
-        errorMessage: t("alerts.couldNotCreateShareableLinkTooBig"),
-      };
-    }
-
-    return { url: null, errorMessage: t("alerts.couldNotCreateShareableLink") };
-  } catch (error: any) {
-    console.error(error);
-
-    return { url: null, errorMessage: t("alerts.couldNotCreateShareableLink") };
-  }
 };

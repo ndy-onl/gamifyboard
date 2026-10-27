@@ -1,0 +1,622 @@
+yarn run v1.22.22
+$ yarn build:common && yarn build:fractional-indexing && yarn build:laser-pointer && yarn build:math && yarn build:element && yarn build:excalidraw
+$ yarn --cwd ./packages/common build:esm
+$ rimraf dist && node ../../scripts/buildBase.js && yarn gen:types
+$ rimraf types && tsc
+$ yarn --cwd ./packages/fractional-indexing build:esm
+$ rimraf dist && node ../../scripts/buildBase.js && yarn gen:types
+$ rimraf types && tsc
+$ yarn --cwd ./packages/laser-pointer build:esm
+$ rimraf dist && node ../../scripts/buildBase.js && yarn gen:types
+$ rimraf types && tsc
+$ yarn --cwd ./packages/math build:esm
+$ rimraf dist && node ../../scripts/buildBase.js && yarn gen:types
+$ rimraf types && tsc
+$ yarn --cwd ./packages/element build:esm
+$ rimraf dist && node ../../scripts/buildBase.js && yarn gen:types
+$ rimraf types && tsc
+$ yarn --cwd ./packages/excalidraw build:esm
+$ rimraf dist && node ../../scripts/buildPackage.js && yarn gen:types
+▲ [WARNING] Duplicate key "counter" in object literal [duplicate-object-key]
+
+    locales/en.json:353:4:
+      353 │     "counter": "Counter"
+          ╵     ~~~~~~~~~
+
+  The original key "counter" is here:
+
+    locales/en.json:325:4:
+      325 │     "counter": "Counter",
+          ╵     ~~~~~~~~~
+
+▲ [WARNING] sass warning: 127 repetitive deprecation warnings omitted.
+Run in verbose mode to see all warnings. [plugin sass-plugin]
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:31:12:
+      31 │ map-get($oc-gray-list, "0")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:32:12:
+      32 │ map-get($oc-gray-list, "1")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:33:12:
+      33 │ map-get($oc-gray-list, "2")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:34:12:
+      34 │ map-get($oc-gray-list, "3")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:35:12:
+      35 │ map-get($oc-gray-list, "4")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    css/theme.scss:0:8:
+      0 │ "open-color/open-color.scss"
+        ╵         ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    css/theme.scss:1:8:
+      1 │ "./variables.module.scss"
+        ╵         ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] transparentize() is deprecated. Suggestions:
+
+color.scale($color, $alpha: -12%)
+color.adjust($color, $alpha: -0.12)
+
+More info: https://sass-lang.com/d/color-functions [plugin sass-plugin]
+
+    css/theme.scss:24:24:
+      24 │ transparentize($oc-white, 0.12)
+         ╵                         ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] transparentize() is deprecated. Suggestions:
+
+color.scale($color, $alpha: -88%)
+color.adjust($color, $alpha: -0.88)
+
+More info: https://sass-lang.com/d/color-functions [plugin sass-plugin]
+
+    css/theme.scss:195:26:
+      195 │ transparentize($oc-gray-8, 0.88)
+          ╵                           ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] sass warning: 127 repetitive deprecation warnings omitted.
+Run in verbose mode to see all warnings. [plugin sass-plugin]
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:31:12:
+      31 │ map-get($oc-gray-list, "0")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:32:12:
+      32 │ map-get($oc-gray-list, "1")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:33:12:
+      33 │ map-get($oc-gray-list, "2")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:34:12:
+      34 │ map-get($oc-gray-list, "3")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:35:12:
+      35 │ map-get($oc-gray-list, "4")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    css/theme.scss:0:8:
+      0 │ "open-color/open-color.scss"
+        ╵         ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    css/theme.scss:1:8:
+      1 │ "./variables.module.scss"
+        ╵         ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] transparentize() is deprecated. Suggestions:
+
+color.scale($color, $alpha: -12%)
+color.adjust($color, $alpha: -0.12)
+
+More info: https://sass-lang.com/d/color-functions [plugin sass-plugin]
+
+    css/theme.scss:24:24:
+      24 │ transparentize($oc-white, 0.12)
+         ╵                         ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] transparentize() is deprecated. Suggestions:
+
+color.scale($color, $alpha: -88%)
+color.adjust($color, $alpha: -0.88)
+
+More info: https://sass-lang.com/d/color-functions [plugin sass-plugin]
+
+    css/theme.scss:195:26:
+      195 │ transparentize($oc-gray-8, 0.88)
+          ╵                           ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Duplicate key "counter" in object literal [duplicate-object-key]
+
+    locales/en.json:353:4:
+      353 │     "counter": "Counter"
+          ╵     ~~~~~~~~~
+
+  The original key "counter" is here:
+
+    locales/en.json:325:4:
+      325 │     "counter": "Counter",
+          ╵     ~~~~~~~~~
+
+▲ [WARNING] sass warning: 127 repetitive deprecation warnings omitted.
+Run in verbose mode to see all warnings. [plugin sass-plugin]
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:31:12:
+      31 │ map-get($oc-gray-list, "0")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:32:12:
+      32 │ map-get($oc-gray-list, "1")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:33:12:
+      33 │ map-get($oc-gray-list, "2")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:34:12:
+      34 │ map-get($oc-gray-list, "3")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:35:12:
+      35 │ map-get($oc-gray-list, "4")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    css/theme.scss:0:8:
+      0 │ "open-color/open-color.scss"
+        ╵         ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    css/theme.scss:1:8:
+      1 │ "./variables.module.scss"
+        ╵         ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] transparentize() is deprecated. Suggestions:
+
+color.scale($color, $alpha: -12%)
+color.adjust($color, $alpha: -0.12)
+
+More info: https://sass-lang.com/d/color-functions [plugin sass-plugin]
+
+    css/theme.scss:24:24:
+      24 │ transparentize($oc-white, 0.12)
+         ╵                         ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] transparentize() is deprecated. Suggestions:
+
+color.scale($color, $alpha: -88%)
+color.adjust($color, $alpha: -0.88)
+
+More info: https://sass-lang.com/d/color-functions [plugin sass-plugin]
+
+    css/theme.scss:195:26:
+      195 │ transparentize($oc-gray-8, 0.88)
+          ╵                           ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    index.tsx:35:7:
+      35 │ import "./css/styles.scss";
+         ╵        ~~~~~~~~~~~~~~~~~~~
+
+▲ [WARNING] sass warning: 127 repetitive deprecation warnings omitted.
+Run in verbose mode to see all warnings. [plugin sass-plugin]
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:31:12:
+      31 │ map-get($oc-gray-list, "0")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:32:12:
+      32 │ map-get($oc-gray-list, "1")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:33:12:
+      33 │ map-get($oc-gray-list, "2")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:34:12:
+      34 │ map-get($oc-gray-list, "3")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use map.get instead.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    ../../node_modules/open-color/open-color.scss:35:12:
+      35 │ map-get($oc-gray-list, "4")
+         ╵             ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    css/theme.scss:0:8:
+      0 │ "open-color/open-color.scss"
+        ╵         ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import [plugin sass-plugin]
+
+    css/theme.scss:1:8:
+      1 │ "./variables.module.scss"
+        ╵         ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] transparentize() is deprecated. Suggestions:
+
+color.scale($color, $alpha: -12%)
+color.adjust($color, $alpha: -0.12)
+
+More info: https://sass-lang.com/d/color-functions [plugin sass-plugin]
+
+    css/theme.scss:24:24:
+      24 │ transparentize($oc-white, 0.12)
+         ╵                         ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+▲ [WARNING] transparentize() is deprecated. Suggestions:
+
+color.scale($color, $alpha: -88%)
+color.adjust($color, $alpha: -0.88)
+
+More info: https://sass-lang.com/d/color-functions [plugin sass-plugin]
+
+    css/theme.scss:195:26:
+      195 │ transparentize($oc-gray-8, 0.88)
+          ╵                           ^
+
+  The plugin "sass-plugin" was triggered by this import
+
+    components/Button.tsx:6:7:
+      6 │ import "./Button.scss";
+        ╵        ~~~~~~~~~~~~~~~
+
+$ rimraf types && tsc
+Done in 77.73s.
+Exit code: 0

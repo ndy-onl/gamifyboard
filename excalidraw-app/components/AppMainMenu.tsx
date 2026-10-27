@@ -1,4 +1,5 @@
 import React from "react";
+import { t } from "@excalidraw/excalidraw/i18n";
 import { MainMenu } from "@excalidraw/excalidraw/index";
 import { loginIcon, eyeIcon } from "@excalidraw/excalidraw/components/icons";
 
@@ -20,11 +21,21 @@ export const AppMainMenu: React.FC<{
   theme: Theme | "system";
   setTheme: (theme: Theme | "system") => void;
   refresh: () => void;
+  onOpenBoardListDialog: () => void;
+  onSaveToCloud: () => void;
 }> = React.memo((props) => {
   return (
     <MainMenu>
       <MainMenu.DefaultItems.LoadScene />
+      <MainMenu.Item onSelect={props.onOpenBoardListDialog}>
+        Open from Cloud...
+      </MainMenu.Item>
+      <MainMenu.Separator />
       <MainMenu.DefaultItems.SaveToActiveFile />
+      <MainMenu.Item onSelect={props.onSaveToCloud}>
+        Save to Cloud
+      </MainMenu.Item>
+      <MainMenu.Separator />
       <MainMenu.DefaultItems.Export />
       <MainMenu.DefaultItems.SaveAsImage />
       {props.isCollabEnabled && (
@@ -50,15 +61,6 @@ export const AppMainMenu: React.FC<{
         GamifyBoard-Pro
       </MainMenu.ItemLink>
       <MainMenu.DefaultItems.Socials />
-      <MainMenu.ItemLink
-        icon={loginIcon}
-        href={`${import.meta.env.VITE_APP_PLUS_APP}${
-          isExcalidrawPlusSignedUser ? "" : "/sign-up"
-        }?utm_source=signin&utm_medium=app&utm_content=hamburger`}
-        className="highlighted"
-      >
-        {isExcalidrawPlusSignedUser ? "Sign in" : "Sign up"}
-      </MainMenu.ItemLink>
       {isDevEnv() && (
         <MainMenu.Item
           icon={eyeIcon}

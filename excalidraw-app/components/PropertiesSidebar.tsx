@@ -4,15 +4,19 @@ import { useI18n } from "@excalidraw/excalidraw/i18n";
 import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 
 interface PropertiesSidebarProps {
-  element: NonDeletedExcalidrawElement;
+  elements: NonDeletedExcalidrawElement[];
   onUpdate: (data: any) => void;
+  onAction?: (action: string, data?: any) => void;
 }
 
 export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
-  element,
+  elements,
   onUpdate,
+  onAction,
 }) => {
   const { t } = useI18n();
+  const element = elements[0];
+  if (!element) return null;
   const { customData = {} } = element;
 
   const handleIncrement = () => {
@@ -24,28 +28,31 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
   };
 
   const handleElementTypeChange = (type: string) => {
-    if (type === "counter") {
-      onUpdate({ isCounter: true, isCard: false, isZone: false });
-    } else if (type === "card") {
-      onUpdate({ isCounter: false, isCard: true, isZone: false });
-    } else if (type === "zone") {
-      onUpdate({ isCounter: false, isCard: false, isZone: true });
-    } else {
-      onUpdate({ isCounter: false, isCard: false, isZone: false });
-    }
+    const base = { isCounter: false, isCard: false, isZone: false, isTimerDisplay: false, isTimerButton: false, isTeleporter: false, isPlayerSlot: false, isDice: false };
+    if (type === "counter") onUpdate({ ...base, isCounter: true });
+    else if (type === "card") onUpdate({ ...base, isCard: true });
+    else if (type === "zone") onUpdate({ ...base, isZone: true });
+    else if (type === "timerDisplay") onUpdate({ ...base, isTimerDisplay: true });
+    else if (type === "timerButton") onUpdate({ ...base, isTimerButton: true, timerAction: "start" });
+    else if (type === "teleporter") onUpdate({ ...base, isTeleporter: true });
+    else if (type === "playerSlot") onUpdate({ ...base, isPlayerSlot: true });
+    else if (type === "dice") onUpdate({ ...base, isDice: true, value: 1 });
+    else onUpdate({ ...base });
   };
 
-  const elementType = customData.isCounter
-    ? "counter"
-    : customData.isCard
-    ? "card"
-    : customData.isZone
-    ? "zone"
+  const elementType = customData.isCounter ? "counter"
+    : customData.isCard ? "card"
+    : customData.isZone ? "zone"
+    : customData.isTimerDisplay ? "timerDisplay"
+    : customData.isTimerButton ? "timerButton"
+    : customData.isTeleporter ? "teleporter"
+    : customData.isPlayerSlot ? "playerSlot"
+    : customData.isDice ? "dice"
     : "none";
 
   return (
     <div className="properties-sidebar">
-      <h4>{t("propertiesSidebar.title")}</h4>
+      <h4>Gamify {elements.length > 1 ? `(${elements.length} ausgewählt)` : ""}</h4>
 
       <div style={{ marginBottom: "1rem" }}>
         <div>
@@ -57,7 +64,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               checked={elementType === "none"}
               onChange={() => handleElementTypeChange("none")}
             />
-            {t("propertiesSidebar.elementType.standard")}
+            {t("propertiesSidebar.elementType.standard") || "Standard"}
           </label>
         </div>
         <div>
@@ -69,7 +76,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               checked={elementType === "card"}
               onChange={() => handleElementTypeChange("card")}
             />
-            {t("propertiesSidebar.elementType.isCard")}
+            {t("propertiesSidebar.elementType.isCard") || "Karte"}
           </label>
         </div>
         <div>
@@ -81,7 +88,7 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               checked={elementType === "zone"}
               onChange={() => handleElementTypeChange("zone")}
             />
-            {t("propertiesSidebar.elementType.isZone")}
+            {t("propertiesSidebar.elementType.isZone") || "Zone"}
           </label>
         </div>
         <div>
@@ -93,7 +100,67 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
               checked={elementType === "counter"}
               onChange={() => handleElementTypeChange("counter")}
             />
-            {t("propertiesSidebar.elementType.isCounter")}
+            {t("propertiesSidebar.elementType.isCounter") || "Counter"}
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="timerDisplay"
+              checked={elementType === "timerDisplay"}
+              onChange={() => handleElementTypeChange("timerDisplay")}
+            />
+            Timer Anzeige
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="timerButton"
+              checked={elementType === "timerButton"}
+              onChange={() => handleElementTypeChange("timerButton")}
+            />
+            Timer Button (Start/Reset)
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="teleporter"
+              checked={elementType === "teleporter"}
+              onChange={() => handleElementTypeChange("teleporter")}
+            />
+            Teleport Button
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="playerSlot"
+              checked={elementType === "playerSlot"}
+              onChange={() => handleElementTypeChange("playerSlot")}
+            />
+            Spieler-Name (Synchronisiert & Cursor)
+          </label>
+        </div>
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="elementType"
+              value="dice"
+              checked={elementType === "dice"}
+              onChange={() => handleElementTypeChange("dice")}
+            />
+            🎲 Würfel (D6)
           </label>
         </div>
       </div>
@@ -101,17 +168,38 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
       {elementType === "counter" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            {t("propertiesSidebar.counter.countsCardType")}
+            Summiert alle Zähler der Gruppe (Master):
           </label>
           <input
             type="text"
-            placeholder={t("propertiesSidebar.counter.placeholder")}
+            placeholder="z.B. Spieler1"
+            defaultValue={customData.sumsCountersForZone || ""}
+            onChange={(e) => onUpdate({ sumsCountersForZone: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem", border: "1px solid #aaaaff" }}
+          />
+          <div style={{ margin: "10px 0", borderBottom: "1px solid #ccc" }} />
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Zähler-Gruppe / Zone (z.B. Spieler1):
+          </label>
+          <input
+            type="text"
+            placeholder="z.B. Spieler1"
+            defaultValue={customData.countsZone || ""}
+            onChange={(e) => onUpdate({ countsZone: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            {t("propertiesSidebar.counter.countsCardType") || "Zählt Karte:"}
+          </label>
+          <input
+            type="text"
+            placeholder={t("propertiesSidebar.counter.placeholder") || "Typ"}
             defaultValue={customData.countsType || ""}
             onChange={(e) => onUpdate({ countsType: e.target.value })}
             style={{ width: "200px", marginBottom: "0.5rem" }}
           />
           <p>
-            {t("propertiesSidebar.counter.value")}: {customData.value || 0}
+            {t("propertiesSidebar.counter.value") || "Wert"}: {customData.value || 0}
           </p>
           <button onClick={handleIncrement} disabled={!!customData.countsType}>
             +
@@ -125,30 +213,222 @@ export const PropertiesSidebar: React.FC<PropertiesSidebarProps> = ({
       {elementType === "card" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            {t("propertiesSidebar.card.cardType")}
+            {t("propertiesSidebar.card.cardType") || "Karten-Typ:"}
           </label>
           <input
             type="text"
-            placeholder={t("propertiesSidebar.card.placeholder")}
+            placeholder={t("propertiesSidebar.card.placeholder") || "Typ"}
             defaultValue={customData.cardType || ""}
             onChange={(e) => onUpdate({ cardType: e.target.value })}
-            style={{ width: "200px" }}
+            style={{ width: "200px", marginBottom: "0.75rem" }}
           />
+          <div style={{ marginTop: "0.5rem" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.85rem" }}>
+              <input
+                type="checkbox"
+                defaultChecked={!!customData.disableResize}
+                onChange={(e) => onUpdate({ disableResize: e.target.checked })}
+              />
+              🔒 Skalieren / Größe sperren (nur bewegen)
+            </label>
+          </div>
         </div>
       )}
 
       {elementType === "zone" && (
         <div style={{ marginBottom: "1rem" }}>
           <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            {t("propertiesSidebar.zone.acceptedCardTypes")}
+            Zonen-Name (für Zähler-Zuweisung):
           </label>
           <input
             type="text"
-            placeholder={t("propertiesSidebar.zone.placeholder")}
+            placeholder="z.B. Spieler1"
+            defaultValue={customData.zoneName || ""}
+            onChange={(e) => onUpdate({ zoneName: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            {t("propertiesSidebar.zone.acceptedCardTypes") || "Akzeptierte Karten:"}
+          </label>
+          <input
+            type="text"
+            placeholder={t("propertiesSidebar.zone.placeholder") || "Typ"}
             defaultValue={customData.acceptedCardTypes || ""}
             onChange={(e) => onUpdate({ acceptedCardTypes: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Farbe: Leer / Inaktiv (Hex):
+          </label>
+          <input
+            type="text"
+            placeholder="#ffaaaa"
+            defaultValue={customData.zoneColorDefault || ""}
+            onChange={(e) => onUpdate({ zoneColorDefault: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Farbe: Gefüllt / Aktiv (Hex):
+          </label>
+          <input
+            type="text"
+            placeholder="#aaffaa"
+            defaultValue={customData.zoneColorActive || ""}
+            onChange={(e) => onUpdate({ zoneColorActive: e.target.value })}
             style={{ width: "200px" }}
           />
+        </div>
+      )}
+
+      {elementType === "timerDisplay" && (
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Timer Name (z.B. "Level1"):
+          </label>
+          <input
+            type="text"
+            placeholder="Level1"
+            defaultValue={customData.timerName || ""}
+            onChange={(e) => onUpdate({ timerName: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <label style={{ display: "block", marginBottom: "0.5rem", marginTop: "10px" }}>
+            Dauer (Sekunden):
+          </label>
+          <input
+            type="number"
+            placeholder="z.B. 300"
+            defaultValue={customData.timerDuration || 300}
+            onChange={(e) => onUpdate({ timerDuration: parseInt(e.target.value, 10) || 0 })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+        </div>
+      )}
+
+      {elementType === "timerButton" && (
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Ziel-Timer Name (z.B. "Level1"):
+          </label>
+          <input
+            type="text"
+            placeholder="Level1"
+            defaultValue={customData.targetTimerName || ""}
+            onChange={(e) => onUpdate({ targetTimerName: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <label style={{ display: "block", marginBottom: "0.5rem", marginTop: "10px" }}>
+            Aktion:
+          </label>
+          <select
+            defaultValue={customData.timerAction || "start"}
+            onChange={(e) => onUpdate({ timerAction: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          >
+            <option value="start">Start</option>
+            <option value="reset">Reset</option>
+          </select>
+        </div>
+      )}
+
+      {elementType === "teleporter" && (
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Ziel-Frame Name (z.B. Runde 2):
+          </label>
+          <input
+            type="text"
+            placeholder="Name des Frames"
+            defaultValue={customData.targetFrame || ""}
+            onChange={(e) => onUpdate({ targetFrame: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <label style={{ display: "flex", alignItems: "center", marginBottom: "0.5rem", gap: "5px" }}>
+            <input
+              type="checkbox"
+              defaultChecked={customData.teleportAll || false}
+              onChange={(e) => onUpdate({ teleportAll: e.target.checked })}
+            />
+            Alle Spieler mit-teleportieren
+          </label>
+          <div style={{ marginTop: "10px" }}>
+            <button onClick={() => onAction && onAction("teleport")} style={{ padding: "5px 10px", cursor: "pointer", background: "#aaaaff", color: "white" }}>
+              Teleport Now
+            </button>
+          </div>
+        </div>
+      )}
+
+      {elementType === "playerSlot" && (
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            Slot-ID (z.B. Spieler1):
+          </label>
+          <input
+            type="text"
+            placeholder="Spieler1"
+            defaultValue={customData.playerSlotId || ""}
+            onChange={(e) => onUpdate({ playerSlotId: e.target.value })}
+            style={{ width: "200px", marginBottom: "0.5rem" }}
+          />
+          <p style={{ fontSize: "12px", color: "#666" }}>
+            Gleiche Slot-IDs werden synchronisiert. Wenn du deinen Namen einträgst, wird er auf dem gesamten Board und deinem Mauszeiger übernommen.
+          </p>
+        </div>
+      )}
+
+      {elementType === "dice" && (
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            🎲 Würfel-Wert: <strong>{customData.value || 1}</strong>
+          </label>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "0.5rem" }}>
+            <button
+              onClick={() => onAction && onAction("rollDice")}
+              style={{
+                padding: "6px 12px",
+                cursor: "pointer",
+                background: "#2f80ed",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                fontWeight: "bold",
+              }}
+            >
+              🎲 Jetzt würfeln
+            </button>
+            <button
+              onClick={() => onUpdate({ value: Math.min(6, (customData.value || 1) + 1) })}
+              style={{ padding: "4px 8px" }}
+              title="Wert erhöhen"
+            >
+              +
+            </button>
+            <button
+              onClick={() => onUpdate({ value: Math.max(1, (customData.value || 1) - 1) })}
+              style={{ padding: "4px 8px" }}
+              title="Wert verringern"
+            >
+              -
+            </button>
+          </div>
+          <p style={{ fontSize: "12px", color: "#666" }}>
+            Im Spielmodus (🎮 Game Mode) genügt ein Klick auf den Würfel auf dem Spielfeld, um ihn direkt rollen zu lassen.
+          </p>
+        </div>
+      )}
+
+      {element.type === "frame" && (
+        <div style={{ marginBottom: "1rem" }}>
+          <h4 style={{ margin: "10px 0 5px 0" }}>Frame-Einstellungen</h4>
+          <label style={{ display: "flex", alignItems: "center", marginBottom: "0.5rem", gap: "5px" }}>
+            <input
+              type="checkbox"
+              defaultChecked={customData.isStartFrame || false}
+              onChange={(e) => onUpdate({ isStartFrame: e.target.checked })}
+            />
+            Als Start-Ansicht beim Laden festlegen
+          </label>
         </div>
       )}
     </div>
